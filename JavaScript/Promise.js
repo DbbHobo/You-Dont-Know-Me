@@ -53,17 +53,17 @@ class fakePromise {
           // 回调函数返回的是否是Promise，是则执行then方法，否则resolve(callbackFn)
           callbackFn instanceof fakePromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
         } catch (err) {
-          reject(err)
+          reject(err);
         }
       });
 
       // reject执行队列
       this.rejectedArr.push(() => {
         try {
-          let callbackFn = this.rejectedCallBack(this.value);
+          let callbackFn = rejectedCallBack(this.value);
           callbackFn instanceof fakePromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
         } catch (err) {
-          reject(err)
+          reject(err);
         }
       })
     });
@@ -87,5 +87,5 @@ let p2 = p1.then(result => {
 let p3 = p2.then(result => {
   console.log(result);
 }, reason => {
-  console.log(reason)
+  console.log(reason);
 })
