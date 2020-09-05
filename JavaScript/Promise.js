@@ -68,14 +68,58 @@ class fakePromise {
       })
     });
   }
+
+  // catch就是在触发错误的时候调起reject回调
+  catch(rejectedCallBack) {
+    return this.then(null, rejectedCallBack);
+  }
+
+  // 所有的Promise都resolve才resolve，有一个reject就直接reject，入参是数组，里面是一个个Promise实例
+  all(promiseArr = []) {
+    let index = 0, result = [];
+    return new Promise((resolve, reject) => {
+      for (let i = 0; i < promiseArr.length; i++) {
+        promiseArr[i].then(val => {
+          index++;
+          result[i] = val;
+          if (index === promiseArr.length) {// 直到最后一个Promise都resolve为止
+            resolve(result)
+          }
+        }, reject);
+      }
+    })
+  }
+
+  // 只要一个Promise变成resolve就resolve，所有都reject才reject，入参同样是数组，里面是一个个Promise实例
+  race(promiseArr = []) {
+    return new Promise((resolve, reject) => {
+      for (let i = 0; i < promiseArr.length; i++) {
+        promiseArr[i].then(val => {
+          resolve(val);
+          return;
+        }, reject);
+      }
+    })
+  }
+
+  // 将现有对象转为 Promise 对象
+  resolve(obj) {
+    if (obj instanceof Promise) return obj
+    return new Promise(resolve => resolve(obj))
+  }
+
+  // 返回一个新的 Promise 实例，该实例的状态为rejected
+  reject(obj) {
+    return new Promise((resolve, reject) => reject(obj))
+  }
 }
 
 
 /*
-  测试用例
+  测试用例-then
 */
 let p1 = new fakePromise((resolve, reject) => {
-  let flag = 0
+  let flag = 1
   setTimeout(() => {
     flag == 1 ? resolve('我是resolve') : reject('我是reject');
   }, 500)
@@ -84,8 +128,33 @@ let p1 = new fakePromise((resolve, reject) => {
 let p2 = p1.then(result => {
   return result + '-来自新Promise';
 })
+
 let p3 = p2.then(result => {
   console.log(result);
 }, reason => {
   console.log(reason);
+})
+
+/*
+  测试用例-all&race
+*/
+const p4 = new fakePromise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('hello');
+  }, 1000);
+
+})
+
+const p5 = new fakePromise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('world');
+  }, 500);
+})
+
+fakePromise.prototype.all([p4, p5]).then(res => {
+  console.log(res)
+})
+
+fakePromise.prototype.race([p4, p5]).then(res => {
+  console.log(res)
 })
