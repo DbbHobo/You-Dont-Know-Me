@@ -24,7 +24,7 @@
 
 - 每个构造函数都有一个原型对象(prototype)
 - 原型对象包含一个指向构造函数的指针(constructor)
-- 实例都包含一个指向原型对象的内部指针(__proto__)。
+- 实例都包含一个指向原型对象的内部指针(**_proto_**)。
 - 所有对象都可以通过原型链最终找到 Object.prototype
 
 ```js
@@ -38,7 +38,8 @@ Fn---- > Function.prototype---- > Object.prototype---- > null;
 2. 链接到原型
 3. 绑定 this
 4. 返回新对象
-   这就是调用 new 的过程
+
+这就是调用 new 的过程
 
 ```js
 // 实现new
