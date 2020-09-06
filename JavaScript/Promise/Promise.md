@@ -77,4 +77,5 @@ const p = new Promise((resolve, reject) => reject("出错了"));
 ## 参考资料：
 
 [ES6 入门](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/promise)
+
 [Promise MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Promise)
