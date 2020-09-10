@@ -19,8 +19,8 @@ whatsThis.call(obj);   // 显式绑定-call方法把this指向obj
 whatsThis.apply(obj);  // 显式绑定-apply方法把this指向obj
 whatsThis.bind(obj)(); // 显式绑定-bind方法把this指向obj
 objHaveFn.fakeThis();  // 隐式绑定-whatsThis的执行环境在objHaveFn中，这里的this指向objHaveFn
-let newObj = new whatsThis('Im from new');  // new绑定-用new新建一个对象时，构造函数内部this会被指向这个新对象
-console.log(newObj.something);
+let newObj = new whatsThis('Im from new');
+console.log(newObj.something);  // new绑定-用new新建一个对象时，构造函数内部this会被指向这个新对象
 console.groupEnd();
 
 /*
