@@ -14,7 +14,7 @@
 
 - 块级作用域
 
-let 为 JavaScript 新增了块级作用域。
+let 为 JavaScript 新增了块级作用域。let 命令、const 命令、class 命令声明的全局变量，不属于顶层对象的属性。
 
 - 作用域链
 

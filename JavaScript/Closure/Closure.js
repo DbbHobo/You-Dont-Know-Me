@@ -21,7 +21,7 @@ for (var i = 1; i <= 3; i++) {
     console.log(i);
   }, i * 1000);
 }
-//闭包
+// 闭包
 for (var i = 1; i <= 3; i++) {
   (function (j) {
     setTimeout(function timer() {
