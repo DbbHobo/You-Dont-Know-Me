@@ -21,7 +21,7 @@ Generator 函数是一个状态机，封装了多个内部状态。
 
 形式上，Generator 函数是一个普通函数，但是有两个特征。一是，function 关键字与函数名之间有一个星号；二是，函数体内部使用 yield 表达式，定义不同的内部状态。
 
-调用遍历器对象的 next 方法，使得指针移向下一个状态。也就是说，每次调用 next 方法，内部指针就从函数头部或上一次停下来的地方开始执行，直到遇到下一个 yield 表达式（或 return 语句）为止。换言之，Generator 函数是分段执行的，yield 表达式是暂停执行的标记，而 next 方法可以恢复执行。
+调用遍历器对象的 next 方法，使得指针移向下一个状态。也就是说，每次调用 next 方法，内部指针就从函数头部或上一次停下来的地方开始执行，直到遇到下一个 yield 表达式（或 return 语句）为止。换言之，**Generator 函数是分段执行的，yield 表达式是暂停执行的标记，而 next 方法可以恢复执行**。
 
 ## async
 
@@ -29,7 +29,7 @@ async 函数完全可以看作多个异步操作，包装成的一个 Promise �
 
 async 函数返回一个 Promise 对象，可以使用 then 方法添加回调函数。当函数执行的时候，一旦遇到 await 就会先返回，等到异步操作完成，再接着执行函数体内后面的语句。
 
-带 async 关键字的函数，它使得你的函数的返回值必定是 promise 对象；如果 async 关键字函数返回的不是 promise，会自动用 Promise.resolve()包装；如果 async 关键字函数显式地返回 promise，那就以你返回的 promise 为准。
+带 async 关键字的函数，它使得你的函数的返回值必定是 **promise 对象**；如果 async 关键字函数返回的不是 promise，会自动用 Promise.resolve()包装；如果 async 关键字函数显式地返回 promise，那就以你返回的 promise 为准。
 
 async 函数内部 return 语句返回的值，会成为 then 方法回调函数的参数。
 
