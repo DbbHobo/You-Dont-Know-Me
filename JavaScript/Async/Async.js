@@ -18,15 +18,26 @@ console.groupEnd();
 /*
   Generator实现异步操作-Thunk 函数
 */
-const readFileThunk = (filename) => {// 包装一个读取文件的函数
-  return (callback) => {
-    console.log(`我读取${filename}中...`);
-    // fs.readFile(filename, callback);
+const Thunk = function (fn) {
+  return function (...args) {
+    return function (callback) {
+      return fn.call(this, ...args, callback);
+    }
   }
 }
+const readTxt = (filename) => {// 读取文件
+  return (next) => {
+    // fs.readFile(filename);
+    next();
+  }
+}
+const readFileThunk = Thunk(readTxt);
+const callback = (filename) => {// 读取文件的回调函数
+  console.log(`我读取了${filename}...`);
+}
 const gen = function* () {// Generator函数
-  const data1 = yield readFileThunk('001.txt');
-  const data2 = yield readFileThunk('002.txt');
+  const data1 = yield readFileThunk('001.txt')(callback('001.txt'));
+  const data2 = yield readFileThunk('002.txt')(callback('002.txt'));
 }
 function run(gen) {// 递归完成gen函数
   const next = (err, data) => {
@@ -38,4 +49,6 @@ function run(gen) {// 递归完成gen函数
   next();
 }
 let g = gen();
+console.group('---自动执行Generator---');
 run(g);
+console.groupEnd();
