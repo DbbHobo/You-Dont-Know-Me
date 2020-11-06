@@ -12,7 +12,7 @@ This repository contains all the material for studying frontend skills...
 
 我是吹拂而过的千缕之风
 
-已化为摧残似钻的雪花
+已化为璀璨似钻的雪花
 
 我是洒落在熟穗上的日光
 
