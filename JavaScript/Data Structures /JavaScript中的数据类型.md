@@ -42,6 +42,8 @@ typeof 9007199887740995n; // 'bigint'
 
 instanceof 可以正确的判断对象的类型，因为内部机制是通过查找原型链，只要处于原型链中，就会返回 true。
 
+The instanceof operator tests the presence of constructor.prototype in object's prototype chain.
+
 ```js
 function fakeInstanceOf(left, right) {
   // 获得类型的原型

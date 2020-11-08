@@ -19,6 +19,8 @@ console.groupEnd();
   实现instanceof
 */
 function fakeInstanceOf(left, right) {
+  // 基本数据类型直接返回false
+  if (typeof left !== 'object' || left === null) return false;
   // 获得类型的原型
   let prototype = right.prototype;
   // 获得对象的原型
@@ -33,7 +35,8 @@ function fakeInstanceOf(left, right) {
 console.group('---实现instanceof---');
 console.log(fakeInstanceOf(new String("666"), String));// true
 console.log(fakeInstanceOf(666, String));// false
-console.log(fakeInstanceOf("666", String));// true
-console.log('666' instanceof String);// false
+console.log(fakeInstanceOf("666", String));// false
 console.log(new String("666") instanceof String);// true
+console.log(666 instanceof String);// false
+console.log('666' instanceof String);// false
 console.groupEnd();
