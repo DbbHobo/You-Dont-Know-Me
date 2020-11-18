@@ -1,7 +1,5 @@
 # You-Dont-Know-Me
 
-This repository contains all the material for studying frontend skills...
-
 **I am a thousand winds that blow**
 
 **I am the diamond glints of snow**
@@ -18,7 +16,7 @@ This repository contains all the material for studying frontend skills...
 
 化为了温柔的秋雨
 
-绝望的主妇里面的一段悼词，很喜欢 ❤️…
+This repository contains all the material for studying frontend skills...
 
 JavaScript
 
