@@ -16,8 +16,6 @@
 
 化为了温柔的秋雨
 
-This repository contains all the material for studying frontend skills...
-
 JavaScript
 
 - [ ] 数据类型、类型判断、类型转换、typeof、instanceof
@@ -26,24 +24,24 @@ JavaScript
 - [ ] 原型链、继承、new、this、闭包、call、apply、bind
 - [ ] 浅拷贝、深拷贝
 - [ ] JavaScript 垃圾回收机制
-- [ ] 模块化 commonJs、AMD、CMD、ES6
-- [ ] 发布者订阅者模式、观察者模式
+- [ ] 模块化 CommonJs、AMD、CMD、ES6 Module
 - [ ] 防抖、节流
+- [ ] JavaScript 设计模式
 
 Browser
 
 - [ ] 跨域
 - [ ] 事件机制
-- [ ] 本地存储
+- [ ] 浏览器缓存
+- [ ] 浏览器本地存储
 - [ ] 渲染机制、重绘、回流
-- [ ] 事件循环、宏任务、微任务
+- [ ] EventLoop 事件循环、宏任务、微任务
 
 Network
 
 - [ ] TCP、UDP 协议、三次握手、四次握手
 - [ ] HTTP、HTTPS 协议
 - [ ] HTTP2
-- [ ] 强缓存、协商缓存
 - [ ] DNS 解析
 - [ ] 网络攻击、XSS、CSRF
 
