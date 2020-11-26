@@ -1,21 +1,5 @@
 # You-Dont-Know-Me
 
-**I am a thousand winds that blow**
-
-**I am the diamond glints of snow**
-
-**I am the sunlight on ripened rain**
-
-**I am the gentle autumn's rain**
-
-我是吹拂而过的千缕之风
-
-已化为璀璨似钻的雪花
-
-我是洒落在熟穗上的日光
-
-化为了温柔的秋雨
-
 JavaScript
 
 - [ ] 数据类型、类型判断、类型转换、typeof、instanceof
@@ -51,3 +35,19 @@ Vue
 - [ ] 路由原理
 - [ ] 依赖收集
 - [ ] 生命周期
+
+**I am a thousand winds that blow**
+
+**I am the diamond glints of snow**
+
+**I am the sunlight on ripened rain**
+
+**I am the gentle autumn's rain**
+
+我是吹拂而过的千缕之风
+
+已化为璀璨似钻的雪花
+
+我是洒落在熟穗上的日光
+
+化为了温柔的秋雨
