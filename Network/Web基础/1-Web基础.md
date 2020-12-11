@@ -32,11 +32,11 @@ UDP 是一个**面向无连接的**传输层协议。
 
 ![web](../assets/web1.png)
 
-IP（ Internet Protocol） 网际协议位于网络层。IP 协议的作用是把各种数据包传送给对方。 而要保证确实传送到对方那里， 则需要满足各类条件。 其中两个重要的条件是 **IP 地址**和 **MAC 地址**（ Media Access Control Address） 。在进行中转时， 会利用下一站中转设备的 MAC 地址来搜索下一个中转目标。 这时， 会采用 ARP 协议（ AddressResolution Protocol） 。 ARP 是一种用以解析地址的协议， 根据通信方的 IP 地址就可以反查出对应的 MAC 地址。
+DNS（ Domain Name System） 服务是和 HTTP 协议一样位于**应用层**的协议。 它提供域名到 IP 地址之间的解析服务。
 
-TCP 位于传输层， 提供可靠的字节流服务。 TCP 协议采用了三次握手（ three-way handshaking） 策略。发送端首先发送一个带 SYN 标志的数据包给对方。 接收端收到后，回传一个带有 SYN/ACK 标志的数据包以示传达确认信息。 最后， 发送端再回传一个带 ACK 标志的数据包， 代表“握手”结束。
+TCP 位于**传输层**， 提供可靠的字节流服务。 TCP 协议采用了三次握手（ three-way handshaking） 策略。发送端首先发送一个带 SYN 标志的数据包给对方。 接收端收到后，回传一个带有 SYN/ACK 标志的数据包以示传达确认信息。 最后， 发送端再回传一个带 ACK 标志的数据包， 代表“握手”结束。
 
-DNS（ Domain Name System） 服务是和 HTTP 协议一样位于应用层的协议。 它提供域名到 IP 地址之间的解析服务。
+IP（ Internet Protocol） 网际协议位于**网络层**。IP 协议的作用是把各种数据包传送给对方。 而要保证确实传送到对方那里， 则需要满足各类条件。 其中两个重要的条件是 **IP 地址**和 **MAC 地址**（ Media Access Control Address） 。在进行中转时， 会利用下一站中转设备的 MAC 地址来搜索下一个中转目标。 这时， 会采用 ARP 协议（ AddressResolution Protocol） 。 ARP 是一种用以解析地址的协议， 根据通信方的 IP 地址就可以反查出对应的 MAC 地址。
 
 URI 就是由某个协议方案表示的资源的定位标识符。 协议方案是指访问资源所使用的协议类型名称。采用 HTTP 协议时， 协议方案就是 http。 除此之外， 还有 ftp、mailto、 telnet、 file 等。URI 用字符串标识某一互联网资源， 而 URL 表示资源的地点（ 互联网上所处的位置） 。 可见 URL 是 URI 的子集。
 
