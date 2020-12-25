@@ -104,7 +104,7 @@ CommonJS 模块是**运行时**加载，而 ES6 模块是**编译时**输出接�
 关于模块顶层的 this 指向问题，在 CommonJS 顶层，this 指向当前模块；而在 ES6 模块中，this 指向 undefined；
 关于两个模块互相引用的问题，在 ES6 模块当中，是支持加载 CommonJS 模块的。但是反过来，CommonJS 并不能 requireES6 模块，在 NodeJS 中，两种模块方案是分开处理的。
 
-## AMD、CMD
+## AMD、CMD、UMD
 
 ```js
 // AMD
@@ -122,4 +122,19 @@ define(function (require, exports, module) {
 });
 ```
 
+## JavaScript 中的模块化方法
+
+- IIFE module: JavaScript module pattern
+- Revealing module: JavaScript revealing module pattern
+- CJS module: CommonJS module, or Node.js module
+- AMD module: Asynchronous Module Definition, or RequireJS module
+- UMD module: Universal Module Definition, or UmdJS module
+- ES module: ECMAScript 2015, or ES6 module
+- ES dynamic module: ECMAScript 2020, or ES11 dynamic module
+- System module: SystemJS module
+- Webpack module: transpile and bundle of CJS, AMD, ES modules
+- Babel module: transpile ES module
+- TypeScript: module and namespace
+
 [Module 的语法](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/module)
+[Understanding (all) JavaScript module formats and tools](https://weblogs.asp.net/dixin/understanding-all-javascript-module-formats-and-tools)

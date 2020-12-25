@@ -48,7 +48,7 @@ MD5 和 SHA-1 等散列值校验的方法，以及用来确认文件的数字签
 
 为了有效防止这些弊端， 有必要使用 HTTPS。 SSL 提供认证和加密处理及摘要功能。
 
-- HTTP 加上加密处理和认证以及完整性保护后即是 HTTPS。
+- HTTP 加上加密处理和认证以及完整性保护后即是 HTTPS。HTTPS = HTTP + SSL/TLS。
 - HTTPS 并非是应用层的一种新协议。 只是 HTTP 通信接口部分用 SSL（ Secure Socket Layer） 和 TLS（ Transport Layer Security） 协议代替而已。
 - HTTP 直接和 TCP 通信。 当使用 SSL 时， 则演变成先和 SSL 通信， 再由 SSL 和 TCP 通信了。 简言之，所谓 HTTPS， 其实就是身披 SSL 协议这层外壳的 HTTP。
 - SSL 采用一种叫做公开密钥加密（ Public-key cryptography） 的加密处理方式。
