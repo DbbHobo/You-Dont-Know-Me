@@ -3,8 +3,8 @@
 JavaScript
 
 - [ ] 数据类型、类型判断、类型转换、typeof、instanceof
-- [ ] 常用数据类型 Array Object String Function
-- [ ] 同步、异步、Promise、Generator、async
+- [ ] 常用数据类型 Array Object String Function Date 等
+- [ ] 同步、异步、Promise、Generator、async、await
 - [ ] 原型链、继承、new、this、闭包、call、apply、bind
 - [ ] 浅拷贝、深拷贝
 - [ ] JavaScript 垃圾回收机制
