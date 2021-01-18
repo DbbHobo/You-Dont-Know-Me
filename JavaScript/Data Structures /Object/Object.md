@@ -96,13 +96,75 @@ Bar.ptototype = Object.create( Foo.prototype );
 // ES6 开始可以直接修改现有的 Bar.prototype
 Object.setPrototypeOf( Bar.prototype, Foo.prototype );
 
-## Object.keys()，Object.values()，Object.entries()，Object.fromEntries()
+## Object.keys()
 
 object.keys 方法，返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键名。
-Object.values 方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值。
+
+```js
+// simple array
+var arr = ["a", "b", "c"];
+console.log(Object.keys(arr)); // console: ['0', '1', '2']
+
+// array like object
+var obj = { 0: "a", 1: "b", 2: "c" };
+console.log(Object.keys(obj)); // console: ['0', '1', '2']
+```
+
+## Object.values()
+
+Object.values 方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值，值的顺序与使用 for...in 循环的顺序相同 ( 区别在于 for-in 循环枚举原型链中的属性 )。
+
+```js
+// array like object
+var obj = { 0: "a", 1: "b", 2: "c" };
+console.log(Object.values(obj)); // ['a', 'b', 'c']
+
+// array like object with random key ordering
+// when we use numeric keys, the value returned in a numerical order according to the keys
+var an_obj = { 100: "a", 2: "b", 7: "c" };
+console.log(Object.values(an_obj)); // ['b', 'c', 'a']
+```
+
+## Object.entries()
+
 Object.entries()方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值对数组。
+
+```js
+// array like object
+const obj = { 0: "a", 1: "b", 2: "c" };
+console.log(Object.entries(obj)); // [ ['0', 'a'], ['1', 'b'], ['2', 'c'] ]
+
+// array like object with random key ordering
+const anObj = { 100: "a", 2: "b", 7: "c" };
+console.log(Object.entries(anObj)); // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
+```
+
+## Object.fromEntries()
+
 Object.fromEntries()方法是 Object.entries()的逆操作，用于将一个键值对数组转为对象。
+
+```js
+const map = new Map([
+  ["foo", "bar"],
+  ["baz", 42],
+]);
+const obj = Object.fromEntries(map);
+console.log(obj); // { foo: "bar", baz: 42 }
+```
 
 ## Object.prototype.hasOwnProperty()
 
 会返回一个布尔值，指示对象自身属性中是否具有指定的属性（也就是，是否有指定的键）。
+
+```js
+const object1 = {};
+object1.property1 = 42;
+
+console.log(object1.hasOwnProperty("property1"));
+// expected output: true
+
+console.log(object1.hasOwnProperty("toString"));
+// expected output: false
+```
+
+[Object-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object)

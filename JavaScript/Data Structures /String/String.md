@@ -107,9 +107,11 @@ console.log(text.substring(5, 2)); // => "zil"
 console.log(text.slice(5, 2)); // => ""
 ```
 
-## String.prototype.trim()
+## String.prototype.trim()、String.prototype.trimStart()、String.prototype.trimEnd()
 
 - removes whitespace from both ends of a string. Whitespace in this context is all the whitespace characters (space, tab, no-break space, etc.) and all the line terminator characters (LF, CR, etc.).
+
+会从一个字符串的两端（左侧、右侧）删除空白字符。在这个上下文中的空白字符是所有的空白字符 (space, tab, no-break space 等) 以及所有行终止符字符（如 LF，CR 等）。
 
 ```js
 var orig = "   foo  ";
@@ -160,6 +162,24 @@ const found = paragraph.match(regex);
 
 console.log(found);
 // expected output: Array ["T", "I"]
+```
+
+## String.prototype.padStart()
+
+- 用另一个字符串填充当前字符串(如果需要的话，会重复多次)，以便产生的字符串达到给定的长度。从当前字符串的左侧开始填充。
+
+```js
+"abc".padStart(10); // "       abc"
+"abc".padStart(10, "foo"); // "foofoofabc"
+```
+
+## String.prototype.padEnd()
+
+- 用另一个字符串填充当前字符串（如果需要的话则重复填充），返回填充后达到指定长度的字符串。从当前字符串的右侧开始填充。
+
+```js
+"abc".padEnd(10); // "abc       "
+"abc".padEnd(10, "foo"); // "abcfoofoof"
 ```
 
 [String-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String)
