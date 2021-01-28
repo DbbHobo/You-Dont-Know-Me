@@ -9,7 +9,7 @@
 | flex-wrap       | flex-basis   |
 | flex-flow       | order        |
 | justify-content | align-self   |
-| align-content   |              |
+| align-content   | flex         |
 | align-items     |              |
 
 - 容器上
