@@ -14,11 +14,13 @@
 
 - 容器上
 
-flex-flow 是 flex-direction 和 flex-wrap 的缩写
+flex-flow 是 flex-direction 和 flex-wrap 的缩写。
+
+align-content 和 align-items 的差异在于 align-content 针对的是多行、换行的情况。
 
 - 项目上
 
-flex 是 flex-grow, flex-shrink 和 flex-basis 的缩写
+flex 是 flex-grow, flex-shrink 和 flex-basis 的缩写。
 
 flex-basis 指定了 flex 元素在主轴方向上的初始大小。
 
