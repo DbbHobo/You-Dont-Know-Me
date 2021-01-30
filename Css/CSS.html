@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSS TRICKS</title>
+  <style>
+    .triangle {
+      position: relative;
+      top: 30px;
+      left: 30px;
+      background-color: orange;
+      text-align: left;
+    }
+    .triangle:before,
+    .triangle:after {
+      content: '';
+      position: absolute;
+      background-color: inherit;
+    }
+    .triangle,
+    .triangle:before,
+    .triangle:after {
+      width:  30px;
+      height: 30px;
+      border-top-right-radius: 30%;
+    }
+
+    .triangle {
+      transform: rotate(-60deg) skewX(-30deg) scale(1,.866);
+    }
+    .triangle:before {
+      transform: rotate(-135deg) skewX(-45deg) scale(1.414,.707) translate(0,-50%);
+    }
+    .triangle:after {
+      transform: rotate(135deg) skewY(-45deg) scale(.707,1.414) translate(50%);
+    }
+
+    .triangle:hover { background: rgba(0,0,255,.5) }
+    .triangle:hover:before { background: rgba(255,0,0,.5) }
+    .triangle:hover:after { background: rgba(255,255,0,.5) }
+  </style>
+  <style>
+    body{
+      width: 100%;
+      height: 100vh;
+      background-color: black;
+    }
+  
+    .netflix{
+      position: relative;
+      top: 100px;
+      left: 100px;
+      width: 7vh;
+      height: 30vh;
+      background-color: #b1060f;
+      position: relative;
+    }
+      
+    .netflix:before{
+      content: "";
+      position: absolute;
+      width: 7vh;
+      height: 30vh;
+      background-color: #e50913;
+      transform: skew(20deg);
+      left: 5.5vh;
+      box-shadow: 0 0 2.5vh -1vh black;
+    }
+    .netflix:after{
+      content: "";
+      position: absolute;
+      width: 7vh;
+      height: 30vh;
+      background-color: #b1060f;
+      left: 11vh;
+      z-index: -1;
+    }
+    .thing{
+      width: 7.5vh;
+      height: 2vh;
+      position: absolute;
+      background-color: black;
+      bottom: -1vh;
+      transform: rotateZ(-5deg);
+    }
+    
+    .thing:before{
+      content: "";
+      width: 7.8vh;
+      height: 2vh;
+      position: absolute;
+      background-color: black;
+      bottom: -1vh;
+      transform: rotateZ(12deg);
+      left: 10.2vh;
+    }
+  </style>
+</head>
+<body>
+  <div class="triangle"></div>
+  <div class="netflix"><div class="thing"></div></div>
+</body>
+</html>
