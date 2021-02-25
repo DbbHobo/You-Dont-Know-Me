@@ -4,7 +4,7 @@
 
 HTTP 状态码负责表示客户端 HTTP 请求的返回结果、 标记服务器端的处理是否正常、 通知出现的错误等工作。
 
-![web](../assets/http5.png)
+![web](./assets/http5.png)
 
 ### 2XX 状态码
 

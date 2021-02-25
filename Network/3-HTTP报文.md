@@ -51,19 +51,19 @@ HTTP 协议中也采纳了多部分对象集合（Multipart）， 发送的一�
 
 通用首部字段是指， 请求报文和响应报文双方都会使用的首部。
 
-![web](../assets/http1.png)
+![web](./assets/http1.png)
 
 <u>请求首部字段:</u>
 
 请求首部字段是从客户端往服务器端发送请求报文中所使用的字段，用于补充请求的附加信息、 客户端信息、 对响应内容相关的优先级等内容。
 
-![web](../assets/http2.png)
+![web](./assets/http2.png)
 
 <u>实体首部字段:</u>
 
 实体首部字段是包含在请求报文和响应报文中的实体部分所使用的首部， 用于补充内容的更新时间等与实体相关的信息。
 
-![web](../assets/http3.png)
+![web](./assets/http3.png)
 
 ## HTTP 请求报文
 
@@ -73,4 +73,4 @@ HTTP 协议中也采纳了多部分对象集合（Multipart）， 发送的一�
 
 在响应中， HTTP 报文由 HTTP 版本、 状态码（ 数字和原因短语） 、HTTP 首部字段、实体等部分构成。
 
-![web](../assets/http4.png)
+![web](./assets/http4.png)

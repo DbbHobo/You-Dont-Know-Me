@@ -30,7 +30,7 @@ UDP 是一个**面向无连接的**传输层协议。
 
 用来处理连接网络的硬件部分。 包括控制操作系统、 硬件的设备驱动、 NIC（ Network Interface Card， 网络适配器， 即网卡） ， 及光纤等物理可见部分（ 还包括连接器等一切传输媒介） 。 硬件上的范畴均在链路层的作用范围之内。
 
-![web](../assets/web1.png)
+![web](./assets/web1.png)
 
 DNS（ Domain Name System） 服务是和 HTTP 协议一样位于**应用层**的协议。 它提供域名到 IP 地址之间的解析服务。
 
@@ -47,4 +47,4 @@ URI 就是由某个协议方案表示的资源的定位标识符。 协议方案
 - query 表示查询参数，为 key=val 这种形式，多个键值对之间用&隔开。
 - fragment 表示 URI 所定位的资源内的一个锚点，浏览器可以根据这个锚点跳转到对应的位置。
 
-![web](../assets/web2.png)
+![web](./assets/web2.png)
