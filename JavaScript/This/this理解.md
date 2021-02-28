@@ -1,6 +1,6 @@
 ## this
 
-- 背景
+### 背景
 
 JavaScript 允许在函数体内部，引用当前环境的其他变量。
 
@@ -14,15 +14,9 @@ var f = function () {
 
 现在问题就来了，由于函数可以在不同的运行环境执行，所以需要有一种机制，能够在函数体内部获得当前的运行环境（context）。所以，this 就出现了，它的设计目的就是**在函数体内部，指代函数当前的运行环境**。
 
-```
-var f = function () {
-  console.log(this.x);
-}
-```
-
 上面代码中，函数体里面的 this.x 就是指当前运行环境的 x。
 
-- 理解 this
+### 理解 this
 
 JavaScript 中有个神秘的 this，要理解 this 其实也很简单，按接下来几种方式去解析理解会发现 this 其实很简单。new 的方式优先级最高，接下来是 call/apply/bind 这些函数，然后是 obj.foo() 这种对象的方法调用方式，最后是 foo 这种直接函数调用方式，同时，箭头函数的 this 一旦被绑定，就不会再被任何方式所改变。
 
@@ -37,18 +31,10 @@ function foo(a) {
 var bar = new foo(2);
 console.log(bar.a); // 2
 // 使用 new 来调用 foo(..) 时， 我们会构造一个新对象并把它绑定到 foo(..) 调用中的 this 上。
-
-var i = 0;
-const o = {
-  i: 1,
-  fn: function () {
-    console.log(this.i);
-  },
-};
-setTimeout(o.fn, 1000); // 0
 ```
 
 - 独立函数调用
+  时刻记住，引用数据类型的值是按引用访问的。
 
 ```js
 function foo() {
@@ -111,6 +97,15 @@ var obj = {
 };
 var a = "oops, global"; // a 是全局对象的属性
 doFoo(obj.foo); // "oops, global"
+
+var i = 0;
+const o = {
+  i: 1,
+  fn: function () {
+    console.log(this.i);
+  },
+};
+setTimeout(o.fn, 1000); // 0
 ```
 
 - 显式绑定
@@ -141,7 +136,7 @@ var obj = {
 // 1 awesome 2 awesome 3 awesome
 ```
 
-## call apply bind
+### call apply bind
 
 - Function.prototype.call
 

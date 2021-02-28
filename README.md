@@ -35,6 +35,7 @@ Network
 - [ ] HTTP2
 - [ ] DNS 解析
 - [ ] 网络攻击、XSS、CSRF
+- [ ] CDN
 
 Vue
 

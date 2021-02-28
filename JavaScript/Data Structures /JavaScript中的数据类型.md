@@ -10,7 +10,7 @@ JS 中有两大类型：基本数据类型和对象（Object）。
 
 引用数据类型的值是保存在内存中的对象。与其他语言不同， JavaScript 不允许直接访问内存中的位置，也就是说不能直接操作对象的内存空间。在操作对象时，实际上是在操作对象的引用而不是实际的对象。为此，**引用数据类型的值是按引用访问的**。因此如果对象作为参数传入函数，在函数传参的时候传递的是对象在堆中的内存地址值。
 
-引用数据类型和基本数据类型不同的是，基本数据类型存储的是值，对象类型存储的是地址（指针）。
+引用数据类型和基本数据类型不同的是，基本数据类型存储的是值，引用数据类型存储的是地址（指针）。
 
 ## bigint
 
@@ -30,7 +30,7 @@ typeof "1"; // 'string'
 typeof undefined; // 'undefined'
 typeof true; // 'boolean'
 typeof Symbol(); // 'symbol'
-typeof b; // b 没有声明，但是还会显示 undefined
+typeof b; // b 没有声明，会显示 undefined
 typeof null; // ---'object' 历史遗留问题---
 typeof []; // 'object'
 typeof {}; // 'object'
@@ -40,9 +40,14 @@ typeof 9007199887740995n; // 'bigint'
 
 ## instanceof
 
-instanceof 可以正确的判断对象的类型，因为内部机制是通过查找原型链，只要处于原型链中，就会返回 true。
+instanceof 可以正确的判断**对象**的类型，因为内部机制是通过查找原型链，只要处于原型链中，就会返回 true，字面量是无法判断的。
 
 The instanceof operator tests the presence of constructor.prototype in object's prototype chain.
+
+object instanceof constructor
+
+- object-某个实例对象
+- constructor-某个构造函数
 
 ```js
 function fakeInstanceOf(left, right) {
@@ -85,28 +90,34 @@ class PrimitiveString {
 
 2. 对象在转换类型的时候，会调用内置的 [[ToPrimitive]] 函数，对于该函数来说，算法逻辑一般来说如下：
 
-   - 如果 Symbol.toPrimitive()方法，优先调用再返回
-   - 调用 valueOf()，如果转换为原始类型，则返回
-   - 调用 toString()，如果转换为原始类型，则返回
-   - 如果都没有返回原始类型，会报错
+- 如果 Symbol.toPrimitive()方法，优先调用再返回
+- 调用 valueOf()，如果转换为原始类型，则返回
+- 调用 toString()，如果转换为原始类型，则返回
+- 如果都没有返回原始类型，会报错
 
 3. 四则运算
-   加法运算符不同于其他几个运算符，它有以下几个特点：
 
-   - 运算中其中一方为字符串，那么就会把另一方也转换为字符串
-   - 如果一方不是字符串或者数字，那么会将它转换为数字或者字符串
+加法运算符不同于其他几个运算符，它有以下几个特点：
 
-   ```js
-   1 + "1"; // '11'
-   true + true; // 2
-   4 + [1, 2, 3]; // "41,2,3"
-   ```
+- 运算中其中一方为字符串，那么就会把另一方也转换为字符串
+- 如果一方不是字符串或者数字，那么会将它转换为数字或者字符串
 
-   对于除了加法的运算符来说，只要其中一方是数字，那么另一方就会被转为数字
+```js
+1 + "1"; // '11'
+true + true; // 2
+4 + [1, 2, 3]; // "41,2,3"
+```
+
+对于除了加法的运算符来说，只要其中一方是数字，那么另一方就会被转为数字
 
 4. 比较运算符
-   - 如果是对象，就通过 [[ToPrimitive]] 转换对象
-   - 如果是字符串，就通过 unicode 字符索引来比较
+
+- 如果是对象，就通过 [[ToPrimitive]] 转换对象
+- 如果是字符串，就通过 unicode 字符索引来比较
+
+```js
+console.log([] == ![]); //true
+```
 
 ## 数据存储
 

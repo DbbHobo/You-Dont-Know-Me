@@ -1,4 +1,31 @@
 /*
+  数据属性&访问器属性
+*/
+let o = {};
+
+Object.defineProperty(o, "a", {
+  value: 37,
+  writable: true,
+  enumerable: true,
+  configurable: true,
+});
+console.group('---数据属性&访问器属性---');
+console.log(o.a);
+
+let bValue = 38;
+Object.defineProperty(o, "b", {
+  get() {
+    return bValue;
+  },
+  set(newValue) {
+    bValue = newValue;
+  },
+  enumerable: true,
+  configurable: true,
+});
+console.log(o.b);
+console.groupEnd();
+/*
   实现new
 */
 function fakeNew() {
@@ -168,3 +195,6 @@ child9.walk();
 let child10 = new inheritChild5();
 console.log(child10.actions);
 console.groupEnd();
+
+
+
