@@ -54,7 +54,6 @@ module 每个模块内部，都有一个 module 对象，代表当前模块。
 - module.loaded 返回一个布尔值，表示模块是否已经完成加载。
 - module.parent 返回一个对象，表示调用该模块的模块。
 - module.children 返回一个数组，表示该模块要用到的其他模块。
-- module.exports 表示模块对外输出的值。
 - module.exports 属性表示当前模块对外输出的接口，其他文件加载该模块，实际上就是读取 module.exports 变量。
 - exports Node 为每个模块提供一个 exports 变量，指向 module.exports。不能直接将 exports 变量指向一个值，因为这样等于切断了 exports 与 module.exports 的联系。这等同在每个模块头部，有一行这样的命令。
 
@@ -103,7 +102,7 @@ CommonJS 模块是**运行时**加载，而 ES6 模块是**编译时**输出接�
 因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。CommonJS 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 ES6 模块相反，使用 import 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
 
 关于模块顶层的 this 指向问题，在 CommonJS 顶层，this 指向当前模块；而在 ES6 模块中，this 指向 undefined；
-关于两个模块互相引用的问题，在 ES6 模块当中，是支持加载 CommonJS 模块的。但是反过来，CommonJS 并不能 requireES6 模块，在 NodeJS 中，两种模块方案是分开处理的。
+关于两个模块互相引用的问题，在 ES6 模块当中，是支持加载 CommonJS 模块的。但是反过来，CommonJS 并不能 require ES6 模块，在 NodeJS 中，两种模块方案是分开处理的。
 
 ## AMD、CMD、UMD
 
