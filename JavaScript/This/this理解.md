@@ -5,7 +5,7 @@
 JavaScript 允许在函数体内部，引用当前环境的其他变量。
 
 ```js
-var f = function () {
+let f = function () {
   console.log(x);
 };
 ```
@@ -132,7 +132,7 @@ function foo(el) {
 var obj = {
   id: "awesome",
 };
-// 调用 foo(..) 时把 this 绑定到 obj
+// 调用 foo(..) 时把 this 绑定到 obj,forEach第二个参数指定this的指向
 [1, 2, 3].forEach(foo, obj);
 // 1 awesome 2 awesome 3 awesome
 ```
@@ -143,6 +143,25 @@ var obj = {
 2. 函数是否通过 call、 apply（显式绑定） 或者硬绑定调用？ 如果是的话， this 绑定的是指定的对象。
 3. 函数是否在某个上下文对象中调用（隐式绑定） ？ 如果是的话， this 绑定的是那个上下文对象。
 4. 如果都不是的话， 使用默认绑定。 如果在严格模式下， 就绑定到 undefined， 否则绑定到全局对象。
+
+箭头函数的绑定无法被修改。new 也不行！
+
+```js
+function foo() {
+  return (a) => {
+    //this 继承自 foo()
+    console.log(this.a);
+  };
+}
+let obj1 = {
+  a: 2,
+};
+let obj2 = {
+  a: 3,
+};
+let bar = foo.call(obj1);
+bar.call(obj2); // 2, 不是 3 ！因为箭头函数的绑定无法被修改
+```
 
 ### call apply bind
 

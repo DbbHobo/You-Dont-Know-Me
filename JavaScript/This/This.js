@@ -109,3 +109,17 @@ const bindTestFn = function () {
 console.group('---bind---');
 bindTestFn.fakeBind(bindTestObj, 'next1', 'next2')();
 console.groupEnd();
+
+
+/*
+  测试this
+*/
+function foo() {
+  console.log("name: " + this.name);
+}
+let test = { name: "test" },
+  test2 = { name: "test2" };
+let fooOBJ = foo.bind(test);
+fooOBJ(); // name: test
+test2.foo = foo.bind(test);
+test2.foo(); // name: test2 <---- 看！ ！ ！
