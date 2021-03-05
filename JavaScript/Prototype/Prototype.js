@@ -115,7 +115,7 @@ console.log(child4.actions);// child4被child3影响了(引用属性)
 console.log(child4.name);// child4没有被child3影响（数据属性）
 console.groupEnd();
 // 实例化两个Child，在实例child3中为父类的actions属性push了一个动作，但是child4也被跟着改变了。
-// 缺点-原型链上中的原型对象它俩是共用的，这不是我们想要的，s1和s2这个两个对象应该是隔离的，这是这种继承方式的缺点。
+// 缺点-原型链上中的原型对象它俩是共用的，这不是我们想要的。
 
 /*
   组合式继承(原型链+调用构造函数)
@@ -128,13 +128,15 @@ inheritParent3.prototype.walk = function () {
   console.log('Im walking...');
 }
 function inheritChild3(name) {
-  this.name = name;
-  inheritParent3.call(this, 'son');
+  inheritParent3.call(this, name);
 }
 inheritChild3.prototype = new inheritParent3();
 console.group('---组合实现继承---');
-let child5 = new inheritChild3();
+let child5 = new inheritChild3('grd');
+console.log(child5.name);
 child5.actions.push("run");
+console.log(child5.actions);
+console.log(child5.constructor);// constructor没有指回来
 child5.walk();
 let child6 = new inheritChild3();
 console.log(child6.actions);// child6没有被child5影响
@@ -153,6 +155,7 @@ inheritParent4.prototype.walk = function () {
 }
 function inheritChild4(name) {
   this.name = name;
+  this.extra = [1, 2, 3];
   inheritParent4.call(this, 'son');
 }
 inheritChild4.prototype = Object.create(inheritParent4.prototype, {
@@ -167,6 +170,8 @@ console.group('---寄生组合继承---');
 let child7 = new inheritChild4();
 child7.actions.push("run");
 child7.walk();
+console.log(child7.extra);
+console.log(child7.constructor);//指定子类的原型对象的同时，要把constructor指回来
 let child8 = new inheritChild4();
 console.log(child8.actions);
 console.groupEnd();
