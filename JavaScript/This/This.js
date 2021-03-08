@@ -31,6 +31,7 @@ Function.prototype.fakeCall = function (obj) {
   let context = obj || window;// call的第一个入参是调用call的函数的this指向，也就是确定要执行的函数的执行环境
   context.fn = this;// 把函数绑定到这个执行对象上
   let args = [...arguments].slice(1);// 获取剩下的参数
+  console.log([...arguments])
   let result = context.fn(...args);// 通过绑定的这个执行对象来调用函数
   delete context.fn;// 删除绑定关系
   return result;// 返回执行结果
