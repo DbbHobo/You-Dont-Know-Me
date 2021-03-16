@@ -52,3 +52,19 @@ let g = gen();
 console.group('---自动执行Generator---');
 run(g);
 console.groupEnd();
+
+
+function sleep() {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      console.log('finish')
+      resolve("sleep");
+    }, 2000);
+  });
+}
+async function test() {
+  let value = await sleep();
+  console.log(value);
+  console.log("object");
+}
+test()

@@ -1,88 +1,74 @@
-/*
-  实现一个Promise对象
-*/
-class fakePromise {
-  constructor(executorCallBack) {
-    this.status = 'pending';// Promise的状态
-    this.value = undefined;// 回调函数的入参
-    this.fulfilledArr = [];// resolve的执行队列
-    this.rejectedArr = [];// reject的执行队列
+class myPromise {
+  constructor(excuteCallback) {
+    this.status = 'pending';
+    this.value = 'null';
+    this.fulfilledArr = [];
+    this.rejectedArr = [];
 
-    // resolve函数
-    let resolveFn = result => {
+    let resolveFn = (result) => {
       if (this.status !== 'pending') return;
-      let timer = setTimeout(() => {
+      setTimeout(() => {
         this.status = 'fulfilled';
         this.value = result;
-        this.fulfilledArr.forEach(Fn => Fn(this.value));
+        this.fulfilledArr.forEach(Fn => Fn(result));
       }, 0);
     }
 
-    // reject函数
-    let rejectFn = reason => {
+    let rejectFn = (reason) => {
       if (this.status !== 'pending') return;
-      let timer = setTimeout(() => {
+      setTimeout(() => {
         this.status = 'rejected';
         this.value = reason;
-        this.rejectedArr.forEach(Fn => Fn(this.value));
+        this.rejectedArr.forEach(Fn => Fn(reason));
       }, 0);
     }
 
     try {
-      // new Promise的时候立刻执行传入的函数
-      executorCallBack(resolveFn, rejectFn);
-    } catch (err) {
-      rejectFn(err);
+      excuteCallback(resolveFn, rejectFn);
+    } catch (error) {
+      rejectFn(error);
     }
   }
 
-  // then方法可以接受两个回调函数作为参数。第一个回调函数是Promise对象的状态变为resolved时调用，第二个回调函数是Promise对象的状态变为rejected时调用。
-  then(fulfilledCallBack, rejectedCallBack) {
-    // 判断传入的是函数
-    typeof fulfilledCallBack !== 'function' ? fulfilledCallBack = result => result : null;
-    typeof rejectedCallBack !== 'function' ? rejectedCallBack = reason => {
-      throw new Error(reason instanceof Error ? reason.message : reason);
-    } : null;
-    // 调用then方法会返回一个新的Promise对象，从而可以链式调用
-    return new fakePromise((resolve, reject) => {
-      // resolve执行队列
+  then(fulfilledFn, rejectedFn) {
+    typeof fulfilledFn !== 'function' ? fulfilledFn = fulfilledFn => fulfilledFn : null;
+    typeof rejectedFn !== 'function' ? rejectedFn = rejectedFn => { throw new Error(typeof rejectedFn === 'Error' ? rejectedFn.message : rejectedFn) } : null;
+    return new myPromise((resolve, reject) => {
       this.fulfilledArr.push(() => {
         try {
-          // 执行then方法传入的第一个方法fulfilledCallBack，也就是上一个Promise能resolve时的回调函数
-          let callbackFn = fulfilledCallBack(this.value);
+          // 执行then方法传入的第一个方法fulfilledFn，也就是上一个Promise能resolve时的回调函数
+          let callbackFn = fulfilledFn(this.value);
           // 回调函数返回的是否是Promise，是则执行then方法，否则resolve(callbackFn)
-          callbackFn instanceof fakePromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
-        } catch (err) {
-          reject(err);
+          callbackFn instanceof myPromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
+        } catch (error) {
+          reject(error);
         }
       });
 
-      // reject执行队列
       this.rejectedArr.push(() => {
         try {
-          let callbackFn = rejectedCallBack(this.value);
-          callbackFn instanceof fakePromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
-        } catch (err) {
-          reject(err);
+          let callbackFn = rejectedFn(this.value);
+          // 回调函数返回的是否是Promise，是则执行then方法，否则resolve(callbackFn)
+          callbackFn instanceof myPromise ? callbackFn.then(resolve, reject) : resolve(callbackFn);
+        } catch (error) {
+          reject(error);
         }
       })
     });
   }
 
-  // catch就是在触发错误的时候调起reject回调
-  catch(rejectedCallBack) {
-    return this.then(null, rejectedCallBack);
+  catch(rejectedFn) {
+    return this.then(null, rejectedFn);
   }
 
-  // 所有的Promise都resolve才resolve，有一个reject就直接reject，入参是数组，里面是一个个Promise实例
-  all(promiseArr = []) {
-    let index = 0, result = [];
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < promiseArr.length; i++) {
-        promiseArr[i].then(val => {
-          index++;
-          result[i] = val;
-          if (index === promiseArr.length) {// 直到最后一个Promise都resolve为止
+  all(promisesArr = []) {
+    let count = 0, result = [];
+    return new myPromise((resolve, reject) => {
+      for (let i = 0; i < promisesArr.length; i++) {
+        promisesArr[i].then((value) => {
+          count++;
+          result[i] = value;
+          if (count === promisesArr.length) {
             resolve(result)
           }
         }, reject);
@@ -90,14 +76,13 @@ class fakePromise {
     })
   }
 
-  // 只要一个Promise变成resolve就resolve，所有都reject才reject，入参同样是数组，里面是一个个Promise实例
-  race(promiseArr = []) {
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < promiseArr.length; i++) {
-        promiseArr[i].then(val => {
-          resolve(val);
-          return;
-        }, reject);
+  race(promisesArr = []) {
+    return new myPromise((resolve, reject) => {
+      for (let i = 0; i < promisesArr.length; i++) {
+        promisesArr[i].then((result) => {
+          resolve(result)
+          return
+        }, reject)
       }
     })
   }
@@ -114,47 +99,38 @@ class fakePromise {
   }
 }
 
-
-/*
-  测试用例-then
-*/
-let p1 = new fakePromise((resolve, reject) => {
-  let flag = 1
+let flag = true;
+let pro = new myPromise(function (resolve, reject) {
   setTimeout(() => {
-    flag == 1 ? resolve('我是resolve') : reject('我是reject');
-  }, 500)
-})
-
-let p2 = p1.then(result => {
-  return result + '-来自新Promise';
-})
-
-let p3 = p2.then(result => {
-  console.log(result);
-}, reason => {
-  console.log(reason);
-})
-
-/*
-  测试用例-all&race
-*/
-const p4 = new fakePromise((resolve, reject) => {
-  setTimeout(() => {
-    resolve('hello');
-  }, 1000);
-
-})
-
-const p5 = new fakePromise((resolve, reject) => {
-  setTimeout(() => {
-    resolve('world');
+    Math.random() < 0.5 ? resolve(100) : reject(-100);
   }, 500);
 })
-
-fakePromise.prototype.all([p4, p5]).then(res => {
-  console.log(res)
+let pro1 = new myPromise(function (resolve, reject) {
+  setTimeout(() => {
+    Math.random() < 0.5 ? resolve(200) : reject(-200);
+  }, 100);
 })
 
-fakePromise.prototype.race([p4, p5]).then(res => {
-  console.log(res)
+pro.then((result) => {
+  console.log('promise resolve了啥？', result);
+  return 666
+}, (reason) => {
+  console.log('promise reject了啥？', reason);
+  return 777
+}).then((result) => {
+  console.log('promise resolve了啥？', result);
+}, (reason) => {
+  console.log('promise reject了啥？', reason);
+})
+
+Promise.all([pro, pro1]).then((result) => {
+  console.log('promise.all resolve了啥？', result);
+}, (reason) => {
+  console.log('promise.all reject了啥？', reason);
+})
+
+Promise.race([pro, pro1]).then((result) => {
+  console.log('promise.race resolve了啥？', result);
+}, (reason) => {
+  console.log('promise.race reject了啥？', reason);
 })
