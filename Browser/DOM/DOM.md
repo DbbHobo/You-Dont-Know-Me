@@ -104,6 +104,34 @@ bindEvent(p1, "click", function (e) {
 
 如果我们在 p1 div1 body 中都绑定了事件，它是会根据 DOM 的结构来冒泡，从下到上挨个执行的。但是我们使用 e.stopPropagation()就可以阻止冒泡
 
+## 浏览器中的事件
+
+事件触发有三个阶段
+
+- document 往事件触发处传播，遇到注册的**捕获**事件会触发
+- 传播到事件触发处时触发注册的事件
+- 从事件触发处往 document 传播，遇到注册的**冒泡**事件会触发
+
+事件触发一般来说会按照上面的顺序进行，但也有特例，如果给一个目标节点同时注册冒泡和捕获事件，事件触发会按照注册的顺序执行
+
+```js
+// 以下会先打印冒泡然后是捕获-addEventListener第三个参数是true是捕获，false是冒泡，默认false
+node.addEventListener(
+  "click",
+  (event) => {
+    console.log("冒泡");
+  },
+  false
+);
+node.addEventListener(
+  "click",
+  (event) => {
+    console.log("捕获 ");
+  },
+  true
+);
+```
+
 ## 事件代理
 
 我们设定一种场景，如下代码，一个`<div>`中包含了若干个`<a>`，而且还能继续增加。那如何快捷方便地为所有`<a>`绑定事件呢？

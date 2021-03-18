@@ -15,7 +15,7 @@ JavaScript
 - [ ] 原型链、继承、new、this、闭包、call、apply、bind
 - [ ] 浅拷贝、深拷贝
 - [ ] JavaScript 垃圾回收机制
-- [ ] 模块化 CommonJs、AMD、CMD、ES6 Module
+- [ ] 模块化 CommonJs、ES6 Module、AMD、CMD
 - [ ] 防抖、节流
 - [ ] JavaScript 设计模式
 
