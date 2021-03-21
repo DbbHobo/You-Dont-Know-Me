@@ -43,3 +43,5 @@ HTTP 状态码负责表示客户端 HTTP 请求的返回结果、 标记服务�
 
 - **500 Internal Server Error** 该状态码表明服务器端在执行请求时发生了错误。 也有可能是 Web 应用存在的 bug 或某些临时的故障。
 - **503 Service Unavailable** 表明服务器暂时处于超负载或正在进行停机维护， 现在无法处理请求。
+
+[HTTP 响应代码](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Status)
