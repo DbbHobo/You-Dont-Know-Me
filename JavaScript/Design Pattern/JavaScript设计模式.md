@@ -95,6 +95,39 @@ let m2 = Modal.create();
 console.log(m1 === m2); // true
 ```
 
+## 观察者模式
+
+观察者模式，也叫订阅-发布模式，观察者模式中的角色有两类：观察者（订阅者）和被观察者（发布者）。
+
+观察者只要订阅了被观察者的事件，那么当被观察者的状态改变时，被观察者会主动去通知观察者，而无需关心观察者得到事件后要去做什么，实际程序中可能是执行订阅者的回调函数。
+
+```js
+function Observer() {
+  this.observerContainer = [];
+}
+
+Observer.prototype.subscribe = function (element) {
+  this.observerContainer.push(element);
+};
+
+Observer.prototype.unsubscribe = function (element) {
+  const elementIndex = this.observerContainer.indexOf(element);
+  if (elementIndex > -1) {
+    this.observerContainer.splice(elementIndex, 1);
+  }
+};
+
+/**
+ * we notify elements added to the container by calling
+ * each subscribed components added to our container
+ */
+Observer.prototype.notifyAll = function (element) {
+  this.observerContainer.forEach(function (observerElement) {
+    observerElement(element);
+  });
+};
+```
+
 ## 适配器模式
 
 适配器模式（Adapter）是将一个类（对象）的接口（方法或属性）转化成适应当前场景的另一个接口（方法或属性），适配器模式使得原本由于接口不兼容而不能一起工作的那些类（对象）可以一些工作。所以，适配器模式必须包含目标（Target）、源（Adaptee）和适配器（Adapter）三个角色。
@@ -138,11 +171,6 @@ decorator.draw(); //画一个圆形，画一个红色边框
 - 使用者无权访问目标对象；
 - 中间加代理，通过代理做授权和控制。
 
-## 观察者模式
-
-观察者模式，也叫订阅-发布模式，观察者模式中的角色有两类：观察者（订阅者）和被观察者（发布者）。
-
-观察者只要订阅了被观察者的事件，那么当被观察者的状态改变时，被观察者会主动去通知观察者，而无需关心观察者得到事件后要去做什么，实际程序中可能是执行订阅者的回调函数。
-
 [深入 JavaScript 设计模式，从此有了优化代码的理论依据](https://juejin.cn/post/6844903918330347533)
 [设计模式之美-前端](https://zhuanlan.zhihu.com/p/111553641)
+[7 JavaScript Design Patterns Every developer should know](https://codesource.io/javascript-design-patterns/)
