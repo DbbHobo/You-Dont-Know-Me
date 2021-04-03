@@ -16,6 +16,8 @@ initProvide(vm); // resolve provide after data/props
 callHook(vm, "created");
 ```
 
+- `initState`
+
 其中`initState`方法如下：
 
 ```js
