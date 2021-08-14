@@ -39,3 +39,5 @@ Vue.js 2.0 支持了服务端渲染，所有服务端渲染相关的逻辑都在
 ### shared
 
 Vue.js 会定义一些工具方法，这里定义的工具方法都是会被浏览器端的 Vue.js 和服务端的 Vue.js 所共享的。
+
+[Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/prepare/directory.html)

@@ -231,3 +231,5 @@ Vue.prototype.$destroy = function () {
 ### 总结
 
 在 `created` 钩子函数中可以访问到数据，在 `mounted` 钩子函数中可以访问到 DOM，在 `destroy` 钩子函数中可以做一些定时器销毁工作。
+
+[Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/components/lifecycle.html)

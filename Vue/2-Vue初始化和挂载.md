@@ -609,3 +609,5 @@ export function appendChild(node: Node, child: Node) {
 这边我们就可以发现，最终其实就是调用原生 DOM 的 API 进行 DOM 操作了。
 
 再回到 patch 方法，首次渲染我们调用了 createElm 方法，这里传入的 parentElm 是 oldVnode.elm 的父元素，在我们的例子是 id 为 #app div 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
+
+[Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/data-driven/new-vue.html)

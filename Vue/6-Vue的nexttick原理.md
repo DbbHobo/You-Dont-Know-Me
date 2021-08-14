@@ -128,3 +128,5 @@ export function nextTick(cb?: Function, ctx?: Object) {
 next-tick.js 申明了 `microTimerFunc` 和 `macroTimerFunc` 2 个变量，它们分别对应的是 `micro task` 的函数和 `macro task` 的函数。对于 `macro task` 的实现，优先检测是否支持原生 `setImmediate`，这是一个高版本 IE 和 Edge 才支持的特性，不支持的话再去检测是否支持原生的 `MessageChannel`，如果也不支持的话就会降级为 `setTimeout 0`；而对于 `micro task` 的实现，则检测浏览器是否原生支持 `Promise`，不支持的话直接指向 `macro task` 的实现。
 
 数据的变化到 `DOM` 的重新渲染是一个异步过程，发生在下一个 `tick`。这就是我们平时在开发的过程中，比如从服务端接口去获取数据的时候，数据做了修改，如果我们的某些方法去依赖了数据修改后的 `DOM` 变化，我们就必须在 `nextTick` 后执行。
+
+[Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/reactive/next-tick.html)
