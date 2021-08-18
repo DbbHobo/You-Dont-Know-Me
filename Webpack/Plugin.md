@@ -85,4 +85,24 @@ module.export = {
 
 `Webpack` 启动后，在读取配置的过程中会先执行 `new BasicPlugin(options)` 初始化一个 `BasicPlugin` 获得其实例。 在初始化 `compiler` 对象后，再调用 `basicPlugin.apply(compiler) `给插件实例传入 `compiler` 对象。 插件实例在获取到 `compiler` 对象后，就可以通过 `compiler.plugin(事件名称, 回调函数)` 监听到 `Webpack` 广播出来的事件。 并且可以通过 `compiler` 对象去操作 `Webpack`。
 
+### Plugin 开发和调试
+
+在项目的开发过程中，为了方便资源的共享，创建了 npm 私有包。在开发私有包的时候，频繁的发版上线很繁琐，如何在本地项目直接访问 npm 私有包。进入 `npmPackage`, 执行下面代码：
+
+```js
+npm link <packageName>
+```
+
+执行该命令后，`npmPackage` 会根据 `package.json` 中的配置链接到全局, `{prefix}/lib/node_modules/<packageName>` 可以理解为一个快捷方式。进入本地项目,连接到 `npmPackage` 的名字，取自 `package.json` 中的 `name` 字段，导入私有包：
+
+```js
+import sth from <packageName>
+```
+
+使用 `npmPackage`,当修改 `npmPackage` 中的代码，就能实时同步到本地项目的响应。最后，如果要取消链接：
+
+```js
+npm unlink <packageName>
+```
+
 [深入浅出 webpack](http://webpack.wuhaolin.cn/5%E5%8E%9F%E7%90%86/5-4%E7%BC%96%E5%86%99Plugin.html)
