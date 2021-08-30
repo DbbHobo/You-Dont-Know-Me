@@ -9,9 +9,8 @@ HTTP 协议中也采纳了多部分对象集合（Multipart）， 发送的一�
 - multipart/form-data
 - multipart/byteranges
 - multipart/form-data
-- multipart/byteranges
 
-在 HTTP 报文中使用多部分对象集合（Multipart）时， 需要在首部字段里加上 Content-type。
+在 HTTP 报文中使用多部分对象集合（Multipart）时， 需要在首部字段里加上 `Content-type`。
 
 从之前下载中断处恢复下载，实现该功能需要指定下载的实体范围。 像这样， 指定范围发送的请求叫做范围请求（ Range Request） 。
 针对范围请求， 响应会返回状态码为 **206 Partial Content** 的响应报文。

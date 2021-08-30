@@ -1,6 +1,6 @@
 # DOM（文档对象模型）
 
-DOM（文档对象模型）是针对 HTML 和 XML 文档的一个 API（应用程序编程接口）。 DOM 描绘了一个层次化的节点树，允许开发人员添加、移除和修改页面的某一部分。
+DOM（文档对象模型）是针对 HTML 和 XML 文档的一个 API（应用程序编程接口）。 DOM 描绘了一个层次化的**节点树**，允许开发人员添加、移除和修改页面的某一部分。
 
 HTML 元素通过元素节点表示，特性（attribute）通过**特性节点**表示，文档类型通过**文档类型节点**表示，而注释则通过**注释节点**表示。总共有 12 种节点类型，这些类型都继承自一个基类型。
 
@@ -10,7 +10,7 @@ HTML 元素通过元素节点表示，特性（attribute）通过**特性节点*
 
 父节点的 firstChild 和 lastChild 属性分别指向其 childNodes 列表中的第一个和最后一个节点。
 
-## 获取 DOM 节点
+## 获取 DOM 节点(查找)
 
 最常用的 DOM API 就是获取节点，其中常用的获取方法如下面代码示例：
 
@@ -30,7 +30,7 @@ var containerList = document.getElementsByClassName("container"); // 集合
 var pList = document.querySelectorAll("p"); // 集合
 ```
 
-## DOM 树操作
+## DOM 树操作(插入、删除)
 
 - 新增节点
 
@@ -86,7 +86,7 @@ div1.removeChild(child[0]);
 </body>
 ```
 
-对于以上 HTML 代码结构，要求点击 p1 时候进入激活状态，点击其他任何<p>都取消激活状态，如何实现？代码如下，注意看注释：
+对于以上 HTML 代码结构，要求点击 p1 时候进入激活状态，点击其他任何`<p>`都取消激活状态，如何实现？
 
 ```js
 var body = document.body;
@@ -102,7 +102,7 @@ bindEvent(p1, "click", function (e) {
 });
 ```
 
-如果我们在 p1 div1 body 中都绑定了事件，它是会根据 DOM 的结构来冒泡，从下到上挨个执行的。但是我们使用 e.stopPropagation()就可以阻止冒泡
+如果我们在 p1 div1 body 中都绑定了事件，它是会根据 DOM 的结构来冒泡，从下到上挨个执行的。但是我们使用 `e.stopPropagation()`就可以阻止冒泡。
 
 ## 浏览器中的事件
 

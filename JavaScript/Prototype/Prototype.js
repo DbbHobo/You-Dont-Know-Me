@@ -84,7 +84,7 @@ console.group('---借用构造函数实现继承---');
 let child1 = new inheritChild1();
 child1.actions.push("run");
 console.log(child1);
-// child1.walk();会报错，找不到这个方法
+// child1.walk();//会报错，找不到这个方法
 let child2 = new inheritChild1();
 console.log(child2);
 console.groupEnd();
