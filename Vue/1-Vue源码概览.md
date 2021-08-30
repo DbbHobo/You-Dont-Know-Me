@@ -120,4 +120,18 @@ export function initGlobalAPI(Vue: GlobalAPI) {
 
 `Vue` 本质上就是一个用 `Function` 实现的 `Class`，然后它的原型 `prototype` 以及它本身都扩展了一系列的方法和属性。
 
+## runtime + compiler 和 runtime-only
+
+- runtime-compiler
+
+`template -> ast -> render -> virtual dom -> UI`
+
+首先将 vue 中的 `template` 模板进行解析解析成 abstract syntax tree （ast）抽象语法树，将抽象语法树在编译成 `render` 函数，将 `render` 函数再翻译成 `virtual dom`（虚拟 dom），将虚拟 dom 显示在浏览器上。
+
+- runtime-only
+
+`render -> virtual dom -> UI`
+
+可以看出它省略了从 `template -> ast -> render` 的过程，所以 `runtime-only` 比 `runtime-compiler` 更快，代码量更少。`runtime-only` 模式中不是没有写 `template` ，只是把 `template` 放在了.vue 的文件中了，并有一个叫`vue-template-compiler` 的开发依赖时将.vue 文件中的 `template` 解析成 `render` 函数。 因为是开发依赖，不在最后生产中，所以最后生产出来的运行的代码没有 `template`。
+
 [Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/prepare/directory.html)

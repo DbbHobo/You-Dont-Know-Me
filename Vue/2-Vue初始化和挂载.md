@@ -11,7 +11,7 @@ new Vue({
 }).$mount("#app");
 ```
 
-Vue 实际上是一个类，类在 Javascript 中是用 Function 来实现的，来看一下源码，在 src/core/instance/index.js 中。
+Vue 实际上是一个类，类在 Javascript 中是用 Function 来实现的，来看一下源码，在 `src/core/instance/index.js` 中。
 
 ```js
 function Vue(options) {
@@ -20,9 +20,11 @@ function Vue(options) {
   }
   this._init(options);
 }
+
+initMixin(Vue);
 ```
 
-可以看到 Vue 构造函数调用了\_init 方法，这个方法在 src/core/instance/init.js 中定义。
+可以看到 Vue 构造函数调用了`\_init` 方法，这个方法在 `src/core/instance/init.js` 中定义，通过 initMixin 方法在 Vue 的原型对象上添加了这个`\_init` 方法用于初始化：
 
 ```js
 export function initMixin(Vue: Class<Component>) {
@@ -85,11 +87,11 @@ export function initMixin(Vue: Class<Component>) {
 }
 ```
 
-可以看到最后调用了 $mount 方法，将 el 挂载到传入的 el 属性所指的 dom 元素下。
+Vue 初始化主要就干了几件事情，**合并配置**，**初始化生命周期**，**初始化事件中心**，**初始化渲染**，**初始化 data**、**props**、**computed**、**watcher** 等等。可以看到最后调用了 `$mount` 方法，将 `el` 挂载到传入的 `el` 属性所指的 `dom` 元素下。
 
 ## Vue 实例的挂载
 
-$mount 方法在多个文件中都有定义，因为这个方法是和平台、构建方式都相关的。先看 src/platform/web/entry-runtime-with-compiler.js 文件中定义：
+`$mount` 方法在多个文件中都有定义，因为这个方法是和平台、构建方式都相关的。先看 `src/platform/web/entry-runtime-with-compiler.js` 文件中定义：
 
 ```js
 const mount = Vue.prototype.$mount;
