@@ -24,7 +24,7 @@ function Vue(options) {
 initMixin(Vue);
 ```
 
-可以看到 Vue 构造函数调用了`\_init` 方法，这个方法在 `src/core/instance/init.js` 中定义，通过 initMixin 方法在 Vue 的原型对象上添加了这个`\_init` 方法用于初始化：
+可以看到 Vue 构造函数调用了`_init` 方法，这个方法在 `src/core/instance/init.js` 中定义，通过 initMixin 方法在 Vue 的原型对象上添加了这个`_init` 方法用于初始化：
 
 ```js
 export function initMixin(Vue: Class<Component>) {
@@ -167,13 +167,13 @@ Vue.prototype.$mount = function (
 };
 ```
 
-首先缓存了原型上的 $mount 方法，再重新定义该方法，我们先来分析这段代码。
+首先缓存了原型上的 `$mount` 方法，再重新定义该方法，我们先来分析这段代码。
 
-- 首先，它对 el 做了限制，Vue 不能挂载在 body、html 这样的根节点上。
-- 如果没有定义 render 方法，则会把 el 或者 template 字符串转换成 render 方法。这里我们要牢记，在 Vue 2.0 版本中，所有 Vue 的组件的渲染最终都需要 render 方法，无论我们是用单文件 .vue 方式开发组件，还是写了 el 或者 template 属性，最终都会转换成 render 方法，那么这个过程是 Vue 的一个“在线编译”的过程，它是调用 compileToFunctions 方法实现的。
-- 最后，调用原先原型上的 $mount 方法挂载。
+- 首先，它对 `el` 做了限制，Vue 不能挂载在 body、html 这样的根节点上。
+- 如果没有定义 `render` 方法，则会把 `el` 或者 `template` 字符串转换成 `render` 方法。这里我们要牢记，在 Vue 2.0 版本中，所有 Vue 的组件的渲染最终都需要 `render` 方法，无论我们是用单文件 .vue 方式开发组件，还是写了 `el` 或者 `template` 属性，最终都会转换成 `render` 方法，那么这个过程是 Vue 的一个“在线编译”的过程，它是调用 `compileToFunctions` 方法实现的。
+- 最后，调用原先原型上的 `$mount` 方法挂载。
 
-原先原型上的 $mount 方法在 src/platform/web/runtime/index.js 中定义，之所以这么设计完全是为了复用，因为它是可以被 runtime only 版本的 Vue 直接使用的。
+原先原型上的 `$mount` 方法在 `src/platform/web/runtime/index.js` 中定义，之所以这么设计完全是为了复用，因为它是可以被 runtime only 版本的 Vue 直接使用的。
 
 ```js
 // public mount method
@@ -186,7 +186,7 @@ Vue.prototype.$mount = function (
 };
 ```
 
-mountComponent 方法，这个方法定义在 src/core/instance/lifecycle.js 文件中：
+`mountComponent` 方法，这个方法定义在 `src/core/instance/lifecycle.js` 文件中：
 
 ```js
 export function mountComponent(
@@ -273,11 +273,11 @@ export function mountComponent(
 }
 ```
 
-mountComponent 核心就是先实例化一个渲染 Watcher，在它的回调函数中会调用 updateComponent 方法，在此方法中调用 vm.\_render 方法先生成虚拟 Node，最终调用 vm.\_update 更新 DOM。
+`mountComponent` 核心就是先实例化一个渲染 Watcher，在它的回调函数中会调用 `updateComponent` 方法，在此方法中调用 `vm._render` 方法先生成虚拟 Node，最终调用 `vm._update` 更新 DOM。
 
 ## Vue.prototype.\_render
 
-Vue 的 \_render 方法是实例的一个私有方法，它用来把实例渲染成一个虚拟 Node。它的定义在 src/core/instance/render.js 文件中：
+Vue 的 `_render` 方法是实例的一个私有方法，它用来把实例渲染成一个虚拟 Node。它的定义在 `src/core/instance/render.js` 文件中：
 
 ```js
 Vue.prototype._render = function (): VNode {
@@ -344,13 +344,13 @@ Vue.prototype._render = function (): VNode {
 };
 ```
 
-其中最关键的是`vnode = render.call(vm._renderProxy, vm.$createElement);`，render 的调用， 最终是通过执行 createElement 方法并返回的是 vnode，它是一个虚拟 Node。
+其中最关键的是`vnode = render.call(vm._renderProxy, vm.$createElement);`，`render` 的调用， 最终是通过执行 `createElement` 方法并返回的是 vnode，它是一个虚拟 Node。`vm.$createElement` 方法定义是在执行 `initRender` 方法的时候，可以看到除了 `vm.$createElement` 方法，还有一个 `vm._c` 方法，它是被**模板编译成的 `render` 函数**使用，而 `vm.$createElement` 是**用户手写 `render` 方法**使用的， 这俩个方法支持的参数相同，并且内部都调用了 `createElement` 方法。
 
 ```html
 <div id="app">{{ message }}</div>
 ```
 
-相当于我们编写如下 render 函数：
+相当于我们编写如下 `render` 函数：
 
 ```js
 render: function (createElement) {
@@ -362,7 +362,7 @@ render: function (createElement) {
 }
 ```
 
-接下来看 createElement 方法，实际调用的是\_createElement,定义在 src/core/vdom/create-element.js 中：
+接下来看 `createElement` 方法，实际调用的是`_createElement`,定义在 `src/core/vdom/create-element.js` 中：
 
 ```js
 export function _createElement(
@@ -461,7 +461,7 @@ export function _createElement(
 
 ## Vue.prototype.\_update
 
-Vue 的 \_update 是实例的一个私有方法，它被调用的时机有 2 个，一个是首次渲染，一个是数据更新的时候；\_update 方法的作用是把 VNode 渲染成真实的 DOM，它的定义在 src/core/instance/lifecycle.js 中：
+Vue 的 `_update` 是实例的一个私有方法，它被调用的时机有 2 个，一个是**首次渲染**，一个是**数据更新**的时候；`_update` 方法的作用是把 `VNode` 渲染成真实的 `DOM`，它的定义在 `src/core/instance/lifecycle.js` 中：
 
 ```js
 Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
