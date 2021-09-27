@@ -19,7 +19,7 @@ var app = new Vue({
 });
 ```
 
-可以看到例子中传入的是一个 App 对象，它本质上是一个 **Component 类型**，那么它会直接通过 `createComponent` 方法来创建 vnode。可以看一下 `createComponent` 方法的实现，它定义在 src/core/vdom/create-component.js 文件中：
+可以看到例子中传入的是一个 App 对象，它本质上是一个 **Component 类型**，那么它会直接通过 `createComponent` 方法来创建 `vnode`。可以看一下 `createComponent` 方法的实现，它定义在 `src/core/vdom/create-component.js` 文件中：
 
 ```js
 export function createComponent(
@@ -139,7 +139,7 @@ if (isObject(Ctor)) {
 }
 ```
 
-在这里 `baseCtor` 实际上就是 Vue，这个的定义是在最开始初始化 Vue 的阶段。然后调用了 extend 方法：
+在这里 `baseCtor` 实际上就是 `Vue`，这个的定义是在最开始初始化 `Vue` 的阶段。然后调用了 `extend` 方法：
 
 ```js
 export function initExtend(Vue: GlobalAPI) {
@@ -226,7 +226,7 @@ Sub.prototype = Object.create(Super.prototype);
 Sub.prototype.constructor = Sub;
 ```
 
-Vue.extend 的作用就是构造一个 Vue 的子类，它使用一种非常经典的**原型继承**的方式把一个纯对象转换一个继承于 Vue 的构造器 Sub 并返回，然后对 Sub 这个对象本身扩展了一些属性，如扩展 options、添加全局 API 等；并且对配置中的 props 和 computed 做了初始化工作；最后对于这个 Sub 构造函数做了缓存，避免多次执行 Vue.extend 的时候对同一个子组件重复构造。当我们去实例化 Sub 的时候，就会执行 this.\_init 逻辑再次走到了 Vue 实例的初始化逻辑。
+`Vue.extend` 的作用就是构造一个 `Vue` 的子类，它使用一种非常经典的**原型继承**的方式把一个纯对象转换一个继承于 `Vue` 的构造器 `Sub` 并返回，然后对 `Sub` 这个对象本身扩展了一些属性，如扩展 options、添加全局 API 等；并且对配置中的 `props` 和 `computed` 做了初始化工作；最后对于这个 `Sub` 构造函数做了缓存，避免多次执行 `Vue.extend` 的时候对同一个子组件重复构造。当我们去实例化 `Sub` 的时候，就会执行 `this._init` 逻辑再次走到了 Vue 实例的初始化逻辑。
 
 - VNode 的 patch 过程中加入钩子函数
 
@@ -234,6 +234,8 @@ Vue.extend 的作用就是构造一个 Vue 的子类，它使用一种非常经�
 // install component management hooks onto the placeholder node
 installComponentHooks(data);
 ```
+
+整个 `installComponentHooks` 的过程就是把 `componentVNodeHooks` 的钩子函数合并到 `data.hook` 中，在 `VNode` 执行 `patch` 的过程中执行相关的钩子函数。这里要注意的是合并策略，在合并过程中，如果某个时机的钩子已经存在 `data.hook` 中，那么通过执行 `mergeHook` 函数做合并，这个逻辑很简单，就是在最终执行的时候，依次执行这两个钩子函数即可。
 
 - 实例化 vnode
 
@@ -252,6 +254,8 @@ const vnode = new VNode(
 return vnode;
 ```
 
+当我们通过 `createComponent` 创建了组件 VNode，接下来会走到 `vm._update`，执行 `vm.__patch__` 去把 `VNode` 转换成真正的 `DOM` 节点。
+
 ## Vue 全局注册组件和局部注册组件
 
 - 全局注册
@@ -264,7 +268,7 @@ Vue.component("my-component", {
 });
 ```
 
-`Vue.component` 函数是在什么时候定义的呢，它的定义过程发生在最开始初始化 Vue 的全局函数的时候，代码在 src/core/global-api/assets.js 中：
+`Vue.component` 函数是在什么时候定义的呢，它的定义过程发生在最开始初始化 Vue 的全局函数的时候，代码在 `src/core/global-api/assets.js` 中：
 
 ```js
 import { ASSET_TYPES } from "shared/constants";
@@ -305,7 +309,7 @@ export const ASSET_TYPES = ["component", "directive", "filter"];
 
 Vue 是初始化了 3 个全局函数，并且如果 type 是 `component` 且 `definition` 是一个对象的话，通过 `this.opitons._base.extend`， 相当于 `Vue.extend` 把这个对象转换成一个继承于 Vue 的构造函数，最后通过 `this.options[type + 's'][id] = definition` 把它挂载到 `Vue.options.components` 上。
 
-在组件的 Vue 的实例化阶段有一个合并 option 的逻辑，所以就把 `components` 合并到 `vm.$options.components` 上，这样我们就可以在 `resolveAsset` 的时候拿到这个组件的构造函数，并作为 `createComponent` 的钩子的参数。
+在组件的 Vue 的实例化阶段有一个合并 `option` 的逻辑，所以就把 `components` 合并到 `vm.$options.components` 上，这样我们就可以在 `resolveAsset` 的时候拿到这个组件的构造函数，并作为 `createComponent` 的钩子的参数。
 
 - 局部注册
 
@@ -322,5 +326,7 @@ export default {
 ```
 
 局部注册和全局注册不同的是，只有该类型的组件才可以访问局部注册的子组件，而全局注册是扩展到 `Vue.options` 下，所以在所有组件创建的过程中，都会从全局的 `Vue.options.components` 扩展到当前组件的 `vm.$options.components` 下，这就是全局注册的组件能被任意使用的原因。
+
+## 异步组件
 
 [Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/components/component-register.html#%E5%85%A8%E5%B1%80%E6%B3%A8%E5%86%8C)

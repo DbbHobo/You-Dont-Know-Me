@@ -344,7 +344,7 @@ Vue.prototype._render = function (): VNode {
 };
 ```
 
-其中最关键的是`vnode = render.call(vm._renderProxy, vm.$createElement);`，`render` 的调用， 最终是通过执行 `createElement` 方法并返回的是 vnode，它是一个虚拟 Node。`vm.$createElement` 方法定义是在执行 `initRender` 方法的时候，可以看到除了 `vm.$createElement` 方法，还有一个 `vm._c` 方法，它是被**模板编译成的 `render` 函数**使用，而 `vm.$createElement` 是**用户手写 `render` 方法**使用的， 这俩个方法支持的参数相同，并且内部都调用了 `createElement` 方法。
+其中最关键的是`vnode = render.call(vm._renderProxy, vm.$createElement);`，`render` 的调用， 最终是通过执行 `createElement` 方法并返回的是 `vnode`，它是一个虚拟 Node。`vm.$createElement` 方法定义是在执行 `initRender` 方法的时候，可以看到除了 `vm.$createElement` 方法，还有一个 `vm._c` 方法，它是被**模板编译成的 `render` 函数**使用，而 `vm.$createElement` 是**用户手写 `render` 方法**使用的， 这俩个方法支持的参数相同，并且内部都调用了 `createElement` 方法。
 
 ```html
 <div id="app">{{ message }}</div>
@@ -457,7 +457,53 @@ export function _createElement(
 }
 ```
 
-主要做了两大块工作：一方面参数 children 是任意类型的，因此我们需要把它们规范成 VNode 类型。另一方面创建 VNode 形成 VNode 树。
+由于虚拟 DOM 实际上是一个树状结构，每一个 `VNode` 可能会有若干个子节点，这些子节点应该也是 `VNode` `的类型。_createElement` 接收的第 4 个参数 `children` 是任意类型的，因此我们需要把它们规范成 `VNode` 类型。根据 `normalizationType` 的不同，调用了 `normalizeChildren(children)` 和 `simpleNormalizeChildren(children)` 方法。
+
+```js
+if (normalizationType === ALWAYS_NORMALIZE) {
+  children = normalizeChildren(children);
+} else if (normalizationType === SIMPLE_NORMALIZE) {
+  children = simpleNormalizeChildren(children);
+}
+```
+
+规范化 children 后，接下来会去创建一个 `VNode` 的实例：
+
+```js
+let vnode, ns;
+if (typeof tag === "string") {
+  let Ctor;
+  ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag);
+  if (config.isReservedTag(tag)) {
+    // platform built-in elements
+    vnode = new VNode(
+      config.parsePlatformTagName(tag),
+      data,
+      children,
+      undefined,
+      undefined,
+      context
+    );
+  } else if (
+    isDef((Ctor = resolveAsset(context.$options, "components", tag)))
+  ) {
+    // component
+    vnode = createComponent(Ctor, data, context, children, tag);
+  } else {
+    // unknown or unlisted namespaced elements
+    // check at runtime because it may get assigned a namespace when its
+    // parent normalizes children
+    vnode = new VNode(tag, data, children, undefined, undefined, context);
+  }
+} else {
+  // direct component options / constructor
+  vnode = createComponent(tag, data, context, children);
+}
+```
+
+先对 tag 做判断，如果是 string 类型，则接着判断如果是内置的一些节点，则直接创建一个普通 `VNode`，如果是为已注册的组件名，则通过 `createComponent` 创建一个组件类型的 `VNode`，否则创建一个未知的标签的 `VNode`。 如果是 tag 一个 Component 类型，则直接调用 `createComponent` 创建一个组件类型的 `VNode` 节点。对于 `createComponent` 创建组件类型的 `VNode` 的过程，我们之后会去介绍，本质上它还是返回了一个 `VNode`。
+
+可以看到`_createElement`方法主要做了两大块工作：一方面参数 children 是任意类型的，因此我们需要把它们规范成 `VNode` 类型。另一方面创建 `VNode` 形成 `VNode` 树。
 
 ## Vue.prototype.\_update
 
@@ -497,7 +543,7 @@ Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
 };
 ```
 
-\_update 的核心就是调用 vm.\_\_patch\_\_ 方法，这个方法实际上在不同的平台，比如 web 和 weex 上的定义是不一样的，在 web 平台中它的定义在 src/platforms/web/runtime/index.js 中：
+`_update` 的核心就是调用 `vm.__patch__` 方法，这个方法实际上在不同的平台，比如 web 和 weex 上的定义是不一样的，在 web 平台中它的定义在 `src/platforms/web/runtime/index.js` 中：
 
 ```js
 // install platform patch function
@@ -507,7 +553,7 @@ Vue.prototype.__patch__ = inBrowser ? patch : noop;
 export const patch: Function = createPatchFunction({ nodeOps, modules });
 ```
 
-在 createPatchFunction 这个方法中定义了一系列的辅助方法，最终返回了一个 patch 方法，这个方法就赋值给了 vm.\_update 函数里调用的 vm.\_\_patch\_\_。这里传入了一个对象，包含 nodeOps 参数和 modules 参数。其中，nodeOps 封装了一系列 DOM 操作的方法，modules 定义了一些模块的钩子函数的实现。
+在 `createPatchFunction` 这个方法中定义了一系列的辅助方法，最终返回了一个 `patch` 方法，这个方法就赋值给了 `vm._update` 函数里调用的 `vm.__patch__`。这里传入了一个对象，包含 `nodeOps` 参数和 `modules` 参数。其中，`nodeOps` 封装了一系列 `DOM` 操作的方法，`modules` 定义了一些模块的钩子函数的实现。每个平台都有各自的 `nodeOps` 和 `modules`。
 
 此处我们分析一下首次渲染的过程，如下：
 
@@ -531,14 +577,14 @@ var app = new Vue({
 });
 ```
 
-针对上面首次渲染的情况，我们是这样调用 vm.\_\_patch\_\_方法的：
+针对上面首次渲染的情况，我们是这样调用 `vm.__patch__` 方法的：
 
 ```js
 // initial render
 vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */);
 ```
 
-传入的 vm.$el 对应的是例子中 id 为 app 的 DOM 对象，这个也就是我们在 index.html 模板中写的 `<div id="app">`， vm.$el 的赋值是在之前 mountComponent 函数做的，vnode 对应的是调用 render 函数的返回值，hydrating 在非服务端渲染情况下为 false，removeOnly 为 false。其中一些关键步骤如下：
+传入的 `vm.$el` 对应的是例子中 id 为 app 的 DOM 对象，这个也就是我们在 index.html 模板中写的 `<div id="app">`， `vm.$el` 的赋值是在之前 `mountComponent` 函数做的，vnode 对应的是调用 `render` 函数的返回值，hydrating 在非服务端渲染情况下为 false，removeOnly 为 false。其中一些关键步骤如下：
 
 ```js
 const isRealElement = isDef(oldVnode.nodeType);
@@ -590,9 +636,82 @@ if (!isRealElement && sameVnode(oldVnode, vnode)) {
 }
 ```
 
-这里调用了 createElm 方法，createElm 的作用是通过虚拟节点创建真实的 DOM 并插入到它的父节点中。createElm 方法会调用 createChildren 方法，实际上是遍历子虚拟节点，递归调用 createElm，这是一种常用的深度优先的遍历算法，这里要注意的一点是在遍历过程中会把 vnode.elm 作为父容器的 DOM 节点占位符传入。
+这里调用了 `createElm` 方法，`createElm` 的作用是**通过虚拟节点创建真实的 DOM 并插入到它的父节点中**。`createElm` 方法会调用 `createChildren` 方法，实际上是遍历子虚拟节点，递归调用 `createElm`，这是一种常用的**深度优先**的遍历算法，这里要注意的一点是在遍历过程中会把 vnode.elm 作为父容器的 DOM 节点占位符传入。
 
-最后调用 insert 方法把 DOM 插入到父节点中，insert 逻辑很简单，调用一些 nodeOps 把子节点插入到父节点中，这些辅助方法定义在 src/platforms/web/runtime/node-ops.js 中：
+```js
+function createElm(
+  vnode,
+  insertedVnodeQueue,
+  parentElm,
+  refElm,
+  nested,
+  ownerArray,
+  index
+) {
+  if (isDef(vnode.elm) && isDef(ownerArray)) {
+    // This vnode was used in a previous render!
+    // now it's used as a new node, overwriting its elm would cause
+    // potential patch errors down the road when it's used as an insertion
+    // reference node. Instead, we clone the node on-demand before creating
+    // associated DOM element for it.
+    vnode = ownerArray[index] = cloneVNode(vnode);
+  }
+
+  vnode.isRootInsert = !nested; // for transition enter check
+  if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
+    return;
+  }
+
+  const data = vnode.data;
+  const children = vnode.children;
+  const tag = vnode.tag;
+  if (isDef(tag)) {
+    if (process.env.NODE_ENV !== "production") {
+      if (data && data.pre) {
+        creatingElmInVPre++;
+      }
+      if (isUnknownElement(vnode, creatingElmInVPre)) {
+        warn(
+          "Unknown custom element: <" +
+            tag +
+            "> - did you " +
+            "register the component correctly? For recursive components, " +
+            'make sure to provide the "name" option.',
+          vnode.context
+        );
+      }
+    }
+
+    vnode.elm = vnode.ns
+      ? nodeOps.createElementNS(vnode.ns, tag)
+      : nodeOps.createElement(tag, vnode);
+    setScope(vnode);
+
+    /* istanbul ignore if */
+    if (__WEEX__) {
+      // ...
+    } else {
+      createChildren(vnode, children, insertedVnodeQueue);
+      if (isDef(data)) {
+        invokeCreateHooks(vnode, insertedVnodeQueue);
+      }
+      insert(parentElm, vnode.elm, refElm);
+    }
+
+    if (process.env.NODE_ENV !== "production" && data && data.pre) {
+      creatingElmInVPre--;
+    }
+  } else if (isTrue(vnode.isComment)) {
+    vnode.elm = nodeOps.createComment(vnode.text);
+    insert(parentElm, vnode.elm, refElm);
+  } else {
+    vnode.elm = nodeOps.createTextNode(vnode.text);
+    insert(parentElm, vnode.elm, refElm);
+  }
+}
+```
+
+最后调用 `insert` 方法把 `DOM` 插入到父节点中，`insert` 逻辑很简单，调用一些 `nodeOps` 把子节点插入到父节点中，这些辅助方法定义在 `src/platforms/web/runtime/node-ops.js` 中：
 
 ```js
 export function insertBefore(
@@ -608,8 +727,8 @@ export function appendChild(node: Node, child: Node) {
 }
 ```
 
-这边我们就可以发现，最终其实就是调用原生 DOM 的 API 进行 DOM 操作了。
+这边我们就可以发现，最终其实就是调用**原生 DOM** 的 API 进行 DOM 操作了。
 
-再回到 patch 方法，首次渲染我们调用了 createElm 方法，这里传入的 parentElm 是 oldVnode.elm 的父元素，在我们的例子是 id 为 #app div 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
+再回到 `patch` 方法，首次渲染我们调用了 `createElm` 方法，这里传入的 `parentElm` 是 oldVnode.elm 的父元素，在我们的例子是 id 为 #app div 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
 
 [Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/data-driven/new-vue.html)
