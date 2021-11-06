@@ -1,6 +1,14 @@
 # Vue 组件化
 
+Vue.js 另一个核心思想是**组件化**。所谓组件化，就是把页面拆分成多个组件 (component)，每个组件依赖的 CSS、JavaScript、模板、图片等资源放在一起开发和维护。组件是资源独立的，组件在系统内部可复用，组件和组件之间可以嵌套。
+
 编写一个组件实际上是编写一个 `JavaScript` 对象，对象的描述就是各种配置。
+
+```js
+vm._update(vm._render(), hydrating);
+```
+
+此段代码中调用 `vm._render` 方法先生成虚拟 Node，最终调用 `vm._update` 更新 DOM。组件和 Vue 初始化挂载的区别在于调用 `createElement` 方法时传入参数不同。它最终会调用 `_createElement` 方法，其中有一段逻辑是对参数 `tag` 的判断，如果是一个普通的 html 标签，像上一章的例子那样是一个普通的 div，则会实例化一个**普通 VNode 节点**，否则通过 `createComponent` 方法创建一个**组件 VNode**。
 
 ## Vue 组件的构建过程
 
