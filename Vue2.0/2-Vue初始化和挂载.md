@@ -2,7 +2,7 @@
 
 ## Vue 初始化
 
-通常我们用 vue-cli 脚手架初始化一个项目，main.js 里初始化 Vue 如下：
+通常我们用 `vue-cli` 脚手架初始化一个项目，`main.js` 里初始化 `Vue` 如下：
 
 ```js
 new Vue({
@@ -11,7 +11,7 @@ new Vue({
 }).$mount("#app");
 ```
 
-Vue 实际上是一个类，类在 Javascript 中是用 Function 来实现的，来看一下源码，在 `src/core/instance/index.js` 中。
+`Vue` 实际上是一个类，类在 `Javascript` 中是用 `Function` 来实现的，来看一下源码，在 `src/core/instance/index.js` 中。
 
 ```js
 function Vue(options) {
@@ -169,11 +169,11 @@ Vue.prototype.$mount = function (
 
 首先缓存了原型上的 `$mount` 方法，再重新定义该方法，我们先来分析这段代码。
 
-- 首先，它对 `el` 做了限制，Vue 不能挂载在 body、html 这样的根节点上。
-- 如果没有定义 `render` 方法，则会把 `el` 或者 `template` 字符串转换成 `render` 方法。这里我们要牢记，在 Vue 2.0 版本中，所有 Vue 的组件的渲染最终都需要 `render` 方法，无论我们是用单文件 .vue 方式开发组件，还是写了 `el` 或者 `template` 属性，最终都会转换成 `render` 方法，那么这个过程是 Vue 的一个“在线编译”的过程，它是调用 `compileToFunctions` 方法实现的。
+- 首先，它对 `el` `做了限制，Vue` 不能挂载在 body、html 这样的根节点上。
+- 如果没有定义 `render` 方法，则会把 `el` 或者 `template` 字符串转换成 `render` 方法。这里我们要牢记，在 `Vue` 2.0 版本中，所有 `Vue` 的组件的渲染最终都需要 `render` 方法，无论我们是用单文件 `.vue` 方式开发组件，还是写了 `el` 或者 `template` 属性，最终都会转换成 `render` 方法，那么这个过程是 `Vue` 的一个“在线编译”的过程，它是调用 `compileToFunctions` 方法实现的。
 - 最后，调用原先原型上的 `$mount` 方法挂载。
 
-原先原型上的 `$mount` 方法在 `src/platform/web/runtime/index.js` 中定义，之所以这么设计完全是为了复用，因为它是可以被 runtime only 版本的 Vue 直接使用的。
+原先原型上的 `$mount` 方法在 `src/platform/web/runtime/index.js` 中定义，之所以这么设计完全是为了**复用**，因为它是可以被 runtime only 版本的 `Vue` 直接使用的。
 
 ```js
 // public mount method
@@ -273,7 +273,7 @@ export function mountComponent(
 }
 ```
 
-`mountComponent` 核心就是先实例化一个渲染 Watcher，在它的回调函数中会调用 `updateComponent` 方法，在此方法中调用 `vm._render` 方法先生成虚拟 Node，最终调用 `vm._update` 更新 DOM。
+`mountComponent` 核心就是先实例化一个渲染 `Watcher`，在它的回调函数中会调用 `updateComponent` 方法，在此方法中调用 `vm._render` 方法先生成虚拟 Node，最终调用 `vm._update` 更新 DOM。
 
 ## Vue.prototype.\_render
 
@@ -555,7 +555,7 @@ export const patch: Function = createPatchFunction({ nodeOps, modules });
 
 在 `createPatchFunction` 这个方法中定义了一系列的辅助方法，最终返回了一个 `patch` 方法，这个方法就赋值给了 `vm._update` 函数里调用的 `vm.__patch__`。这里传入了一个对象，包含 `nodeOps` 参数和 `modules` 参数。其中，`nodeOps` 封装了一系列 `DOM` 操作的方法，`modules` 定义了一些模块的钩子函数的实现。每个平台都有各自的 `nodeOps` 和 `modules`。
 
-此处我们分析一下首次渲染的过程，如下：
+此处我们分析一下**首次渲染**的过程，如下：
 
 ```js
 var app = new Vue({
@@ -636,7 +636,7 @@ if (!isRealElement && sameVnode(oldVnode, vnode)) {
 }
 ```
 
-这里调用了 `createElm` 方法，`createElm` 的作用是**通过虚拟节点创建真实的 DOM 并插入到它的父节点中**。`createElm` 方法会调用 `createChildren` 方法，实际上是遍历子虚拟节点，递归调用 `createElm`，这是一种常用的**深度优先**的遍历算法，这里要注意的一点是在遍历过程中会把 vnode.elm 作为父容器的 DOM 节点占位符传入。
+这里调用了 `createElm` 方法，`createElm` 的作用是**通过虚拟节点创建真实的 DOM 并插入到它的父节点中**。`createElm` 方法会调用 `createChildren` 方法，实际上是遍历子虚拟节点，递归调用 `createElm`，这是一种常用的**深度优先**的遍历算法，这里要注意的一点是在遍历过程中会把 `vnode.elm` 作为父容器的 DOM 节点占位符传入。
 
 ```js
 function createElm(
@@ -729,6 +729,6 @@ export function appendChild(node: Node, child: Node) {
 
 这边我们就可以发现，最终其实就是调用**原生 DOM** 的 API 进行 DOM 操作了。
 
-再回到 `patch` 方法，首次渲染我们调用了 `createElm` 方法，这里传入的 `parentElm` 是 oldVnode.elm 的父元素，在我们的例子是 id 为 #app div 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
+再回到 `patch` 方法，首次渲染我们调用了 `createElm` 方法，这里传入的 `parentElm` 是 `oldVnode.elm` 的父元素，在我们的例子是 id 为 `#app div` 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
 
 [Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/data-driven/new-vue.html)
