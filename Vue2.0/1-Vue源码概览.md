@@ -12,29 +12,25 @@ src
 
 ### compiler
 
-compiler 目录包含 `Vue.js` 所有编译相关的代码。它包括把**模板解析成 ast 语法树，ast 语法树优化，代码生成**等功能。
+compiler 目录包含 `Vue.js` 所有编译相关的代码。它包括把**模板解析成 ast 语法树**，**ast 语法树优化**，**代码生成**等功能。
 
-编译的工作可以在构建时做（借助 webpack、vue-loader 等辅助插件）；也可以在运行时做，使用包含构建功能的 `Vue.js`。显然，编译是一项耗性能的工作，所以更推荐前者——离线编译。
+编译的工作可以在**构建时**做（借助 webpack、vue-loader 等辅助插件），也可以在**运行时**做，使用包含构建功能的 `Vue.js`。显然，编译是一项耗性能的工作，所以更推荐前者——离线编译。
 
 ### core
 
-core 目录包含了 `Vue.js` 的核心代码，包括**内置组件、全局 API 封装，Vue 实例化、观察者、虚拟 DOM、工具函数**等等。
+core 目录包含了 `Vue.js` 的核心代码，包括**内置组件**、**全局 API 封装**、**Vue 实例化**、**观察者**、**虚拟 DOM**、**工具函数**等等。
 
 ### platform
 
-`Vue.js` 是一个跨平台的 MVVM 框架，它可以跑在 web 上，也可以配合 weex 跑在 native 客户端上。platform 是 `Vue.js` 的入口，2 个目录代表 2 个主要入口，分别打包成运行在 web 上和 weex 上的 `Vue.js`。
+`Vue.js` 是一个跨平台的 MVVM 框架，它可以跑在 `web` 上，也可以配合 `weex` 跑在 `native` 客户端上。platform 是 `Vue.js` 的入口，2 个目录代表 2 个主要入口，分别打包成运行在 web 上和 weex 上的 `Vue.js`。
 
 ### server
 
-`Vue.js` 2.0 支持了服务端渲染，所有服务端渲染相关的逻辑都在这个目录下。这部分代码是跑在服务端的 `Node.js`，不要和跑在浏览器端的 `Vue.js` 混为一谈。
-
-服务端渲染主要的工作是把组件渲染为服务器端的 `HTML` 字符串，将它们直接发送到浏览器，最后将静态标记"混合"为客户端上完全交互的应用程序。
+`Vue.js` 2.0 支持了服务端渲染，所有服务端渲染相关的逻辑都在这个目录下。这部分代码是跑在服务端的 `Node.js`，不要和跑在浏览器端的 `Vue.js` 混为一谈。服务端渲染主要的工作是把组件渲染为服务器端的 `HTML` 字符串，将它们直接发送到浏览器，最后将静态标记"混合"为客户端上完全交互的应用程序。
 
 ### sfc
 
-通常我们开发 `Vue.js` 都会借助 `webpack` 构建， 然后通过 .vue 单文件来编写组件。
-
-这个目录下的代码逻辑会把 .vue 文件内容解析成一个 JavaScript 的对象。
+通常我们开发 `Vue.js` 都会借助 `webpack` 构建， 然后通过 `.vue` 单文件来编写组件。这个目录下的代码逻辑会把 `.vue` 文件内容解析成一个 `JavaScript` 的对象。
 
 ### shared
 
@@ -42,7 +38,11 @@ core 目录包含了 `Vue.js` 的核心代码，包括**内置组件、全局 AP
 
 ## Vue 的入口
 
-`src/platforms/web/entry-runtime-with-compiler.js` => `src/platforms/web/runtime/index.js` => `src/core/index.js` => `src/core/instance/index.js` 溯源之后我们发现这个用函数实现的 Vue 类：
+`src/platforms/web/entry-runtime-with-compiler.js` =>
+`src/platforms/web/runtime/index.js` =>
+`src/core/index.js` =>
+`src/core/instance/index.js`
+溯源之后我们发现这个用函数实现的 `Vue` 类：
 
 ```js
 import { initMixin } from "./init";
@@ -118,7 +118,7 @@ export function initGlobalAPI(Vue: GlobalAPI) {
 }
 ```
 
-`Vue` 本质上就是一个用 `Function` 实现的 `Class`，然后它的原型 `prototype` 以及它本身都扩展了一系列的方法和属性。
+<font style=background:rgb(247,238,241)>`Vue` 本质上就是一个用 `Function` 实现的 `Class`，然后它的原型 `prototype` 以及它本身都扩展了一系列的方法和属性。</font>
 
 ## runtime + compiler 和 runtime-only
 
@@ -126,12 +126,12 @@ export function initGlobalAPI(Vue: GlobalAPI) {
 
 `template -> ast -> render -> virtual dom -> UI`
 
-首先将 vue 中的 `template` 模板进行解析解析成 abstract syntax tree （ast）抽象语法树，将抽象语法树在编译成 `render` 函数，将 `render` 函数再翻译成 `virtual dom`（虚拟 dom），将虚拟 dom 显示在浏览器上。
+首先将 `Vue` 中的 `template` 模板进行解析解析成 `abstract syntax tree` （ast）抽象语法树，将抽象语法树在编译成 `render` 函数，将 `render` 函数再翻译成 `virtual dom`虚拟 dom，将虚拟 dom 显示在浏览器上。
 
 - runtime-only
 
 `render -> virtual dom -> UI`
 
-可以看出它省略了从 `template -> ast -> render` 的过程，所以 `runtime-only` 比 `runtime-compiler` 更快，代码量更少。`runtime-only` 模式中不是没有写 `template` ，只是把 `template` 放在了.vue 的文件中了，并有一个叫`vue-template-compiler` 的开发依赖时将.vue 文件中的 `template` 解析成 `render` 函数。 因为是开发依赖，不在最后生产中，所以最后生产出来的运行的代码没有 `template`。
+可以看出它省略了从 `template -> ast -> render` 的过程，所以 `runtime-only` 比 `runtime-compiler` 更快，代码量更少。`runtime-only` 模式中不是没有写 `template` ，只是把 `template` 放在了`.vue` 的文件中了，并有一个叫`vue-template-compiler` 的开发依赖时将`.vue` 文件中的 `template` 解析成 `render` 函数。 因为是开发依赖，不在最后生产中，所以最后生产出来的运行的代码没有 `template`。
 
 [Vue.js 技术揭秘](https://ustbhuangyi.github.io/vue-analysis/v2/prepare/directory.html)

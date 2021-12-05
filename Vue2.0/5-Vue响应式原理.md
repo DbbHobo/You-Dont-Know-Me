@@ -38,7 +38,67 @@ export function initState(vm: Component) {
 }
 ```
 
+### `initProps`方法
+
+`props` 的初始化主要过程，就是遍历定义的 `props` 配置。遍历的过程主要做两件事情：一个是调用 `defineReactive` 方法把每个 `prop` 对应的值变成响应式；另一个是通过 proxy 把 `vm._props.xxx` 的访问代理到 `vm.xxx` 上。
+
+`initProps`里初始化 props 方法如下：
+
+```js
+function initProps(vm: Component, propsOptions: Object) {
+  const propsData = vm.$options.propsData || {};
+  const props = (vm._props = {});
+  // cache prop keys so that future props updates can iterate using Array
+  // instead of dynamic object key enumeration.
+  const keys = (vm.$options._propKeys = []);
+  const isRoot = !vm.$parent;
+  // root instance props should be converted
+  if (!isRoot) {
+    toggleObserving(false);
+  }
+  for (const key in propsOptions) {
+    keys.push(key);
+    const value = validateProp(key, propsOptions, propsData, vm);
+    /* istanbul ignore else */
+    if (process.env.NODE_ENV !== "production") {
+      const hyphenatedKey = hyphenate(key);
+      if (
+        isReservedAttribute(hyphenatedKey) ||
+        config.isReservedAttr(hyphenatedKey)
+      ) {
+        warn(
+          `"${hyphenatedKey}" is a reserved attribute and cannot be used as component prop.`,
+          vm
+        );
+      }
+      defineReactive(props, key, value, () => {
+        if (vm.$parent && !isUpdatingChildComponent) {
+          warn(
+            `Avoid mutating a prop directly since the value will be ` +
+              `overwritten whenever the parent component re-renders. ` +
+              `Instead, use a data or computed property based on the prop's ` +
+              `value. Prop being mutated: "${key}"`,
+            vm
+          );
+        }
+      });
+    } else {
+      defineReactive(props, key, value);
+    }
+    // static props are already proxied on the component's prototype
+    // during Vue.extend(). We only need to proxy props defined at
+    // instantiation here.
+    if (!(key in vm)) {
+      proxy(vm, `_props`, key);
+    }
+  }
+  toggleObserving(true);
+}
+```
+
 ### `initData`方法
+
+`data` 的初始化主要过程也是做两件事，一个是对定义 `data` 函数返回对象的遍历，通过 proxy 把每一个值 `vm._data.xxx` 都代理到 `vm.xxx` 上；另一个是调用 `observe` 方法观测整个 `data` 的变化，把 `data` 也变成响应式。
 
 `initData`里初始化 data 方法如下：
 
@@ -240,268 +300,89 @@ export function defineReactive(
 }
 ```
 
+到这里为止完成了响应式的第一部，改造属性的 `setter` 和 `getter`。
+
 ## 依赖收集
 
-依赖收集关键过程是修改数据对象属性的 `getter` 过程，具体如下：
-
-### 修改`getter`
+对数据对象的访问会触发他们的 `getter` 方法，那么这些对象什么时候被访问呢？还记得 Vue 的 `mount` 过程是通过 `mountComponent` 函数，其中有一段比较重要的逻辑，大致如下：
 
 ```js
-export function defineReactive(
-  obj: Object,
-  key: string,
-  val: any,
-  customSetter?: ?Function,
-  shallow?: boolean
-) {
-  const dep = new Dep();
-
-  const property = Object.getOwnPropertyDescriptor(obj, key);
-  if (property && property.configurable === false) {
-    return;
-  }
-
-  // cater for pre-defined getter/setters
-  const getter = property && property.get;
-  const setter = property && property.set;
-  if ((!getter || setter) && arguments.length === 2) {
-    val = obj[key];
-  }
-
-  let childOb = !shallow && observe(val);
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get: function reactiveGetter() {
-      const value = getter ? getter.call(obj) : val;
-      if (Dep.target) {
-        dep.depend(); // 添加依赖
-        if (childOb) {
-          childOb.dep.depend();
-          if (Array.isArray(value)) {
-            dependArray(value);
-          }
-        }
+updateComponent = () => {
+  vm._update(vm._render(), hydrating);
+};
+new Watcher(
+  vm,
+  updateComponent,
+  noop,
+  {
+    before() {
+      if (vm._isMounted) {
+        callHook(vm, "beforeUpdate");
       }
-      return value;
     },
-    // ...
-  });
-}
+  },
+  true /* isRenderWatcher */
+);
 ```
 
-`const dep = new Dep()` 实例化一个 `Dep` 的实例，然后是在 `get` 函数中通过 `dep.depend` 做依赖收集。
-
-`Dep` 是一个 Class，它定义了一些属性和方法，这里需要特别注意的是它有一个静态属性 `target`，这是一个全局唯一 `Watcher`，这是一个非常巧妙的设计，因为在同一时间只能有一个全局的 `Watcher` 被计算，另外它的自身属性 `subs` 也是 `Watcher` 的数组。**`Dep` 实际上就是对 `Watcher` 的一种管理**。`Dep` 是整个 `getter` 依赖收集的核心，定义如下：
-
-### `Dep`类
+当我们去实例化一个渲染 `watcher` 的时候，首先进入 `watcher` 的构造函数逻辑
 
 ```js
-import type Watcher from "./watcher";
-import { remove } from "../util/index";
-
-let uid = 0;
-
-/**
- * A dep is an observable that can have multiple
- * directives subscribing to it.
- */
-export default class Dep {
-  static target: ?Watcher;
-  id: number;
-  subs: Array<Watcher>;
-
-  constructor() {
-    this.id = uid++;
-    this.subs = [];
-  }
-
-  addSub(sub: Watcher) {
-    this.subs.push(sub);
-  }
-
-  removeSub(sub: Watcher) {
-    remove(this.subs, sub);
-  }
-
-  depend() {
-    if (Dep.target) {
-      Dep.target.addDep(this);
+constructor (
+    vm: Component,
+    expOrFn: string | Function,
+    cb: Function,
+    options?: ?Object,
+    isRenderWatcher?: boolean
+  ) {
+    this.vm = vm
+    if (isRenderWatcher) {
+      vm._watcher = this
     }
-  }
-
-  notify() {
-    // stabilize the subscriber list first
-    const subs = this.subs.slice();
-    for (let i = 0, l = subs.length; i < l; i++) {
-      subs[i].update();
+    vm._watchers.push(this)
+    // options
+    if (options) {
+      this.deep = !!options.deep
+      this.user = !!options.user
+      this.computed = !!options.computed
+      this.sync = !!options.sync
+      this.before = options.before
+    } else {
+      this.deep = this.user = this.computed = this.sync = false
     }
-  }
-}
-
-// the current target watcher being evaluated.
-// this is globally unique because there could be only one
-// watcher being evaluated at any time.
-Dep.target = null;
-const targetStack = [];
-
-export function pushTarget(_target: ?Watcher) {
-  if (Dep.target) targetStack.push(Dep.target);
-  Dep.target = _target;
-}
-
-export function popTarget() {
-  Dep.target = targetStack.pop();
-}
-```
-
-## 派发更新
-
-### 修改`setter`
-
-派发更新关键过程是修改对象属性的 `setter` 过程，具体如下：
-
-```js
-/**
- * Define a reactive property on an Object.
- */
-export function defineReactive(
-  obj: Object,
-  key: string,
-  val: any,
-  customSetter?: ?Function,
-  shallow?: boolean
-) {
-  const dep = new Dep();
-
-  const property = Object.getOwnPropertyDescriptor(obj, key);
-  if (property && property.configurable === false) {
-    return;
-  }
-
-  // cater for pre-defined getter/setters
-  const getter = property && property.get;
-  const setter = property && property.set;
-  if ((!getter || setter) && arguments.length === 2) {
-    val = obj[key];
-  }
-
-  let childOb = !shallow && observe(val);
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    // ...
-    set: function reactiveSetter(newVal) {
-      const value = getter ? getter.call(obj) : val;
-      /* eslint-disable no-self-compare */
-      if (newVal === value || (newVal !== newVal && value !== value)) {
-        return;
+    this.cb = cb
+    this.id = ++uid // uid for batching
+    this.active = true
+    this.dirty = this.computed // for computed watchers
+    this.deps = []
+    this.newDeps = []
+    this.depIds = new Set()
+    this.newDepIds = new Set()
+    this.expression = process.env.NODE_ENV !== 'production'
+      ? expOrFn.toString()
+      : ''
+    // parse expression for getter
+    if (typeof expOrFn === 'function') {
+      this.getter = expOrFn
+    } else {
+      this.getter = parsePath(expOrFn)
+      if (!this.getter) {
+        this.getter = function () {}
+        process.env.NODE_ENV !== 'production' && warn(
+          `Failed watching path: "${expOrFn}" ` +
+          'Watcher only accepts simple dot-delimited paths. ' +
+          'For full control, use a function instead.',
+          vm
+        )
       }
-      /* eslint-enable no-self-compare */
-      if (process.env.NODE_ENV !== "production" && customSetter) {
-        customSetter();
-      }
-      if (setter) {
-        setter.call(obj, newVal);
-      } else {
-        val = newVal;
-      }
-      childOb = !shallow && observe(newVal);
-      dep.notify();
-    },
-  });
-}
-```
-
-`setter` 的逻辑有 2 个关键的点，一个是 `childOb = !shallow && observe(newVal)`，如果 `shallow` 为 `false` 的情况，会对新设置的值变成一个响应式对象；另一个是 `dep.notify()`，通知所有的订阅者。
-
-### `Dep`类
-
-`dep.notify()`会遍历所有的 `subs`，也就是 `Watcher` 的实例数组，然后调用每一个 `watcher` 的 `update` 方法：
-
-```js
-class Dep {
-  // ...
-  notify() {
-    // stabilize the subscriber list first
-    const subs = this.subs.slice();
-    for (let i = 0, l = subs.length; i < l; i++) {
-      subs[i].update();
     }
-  }
-}
-```
-
-### `Watcher`类
-
-每个组件实例都对应一个 `watcher` 实例，它会在组件渲染的过程中把“接触”过的数据 `property` 记录为依赖。`watcher` 的 `update` 方法对于 `Watcher` 的不同状态，会执行不同的逻辑，在一般组件数据更新的场景，会走到最后一个 `queueWatcher(this)` 的逻辑
-
-```js
-class Watcher {
-  // ...
-  update() {
-    /* istanbul ignore else */
     if (this.computed) {
-      // A computed property watcher has two modes: lazy and activated.
-      // It initializes as lazy by default, and only becomes activated when
-      // it is depended on by at least one subscriber, which is typically
-      // another computed property or a component's render function.
-      if (this.dep.subs.length === 0) {
-        // In lazy mode, we don't want to perform computations until necessary,
-        // so we simply mark the watcher as dirty. The actual computation is
-        // performed just-in-time in this.evaluate() when the computed property
-        // is accessed.
-        this.dirty = true;
-      } else {
-        // In activated mode, we want to proactively perform the computation
-        // but only notify our subscribers when the value has indeed changed.
-        this.getAndInvoke(() => {
-          this.dep.notify();
-        });
-      }
-    } else if (this.sync) {
-      this.run();
+      this.value = undefined
+      this.dep = new Dep()
     } else {
-      queueWatcher(this);
+      this.value = this.get()
     }
   }
-}
-```
-
-`queueWatcher(this)`方法这里引入了一个队列的概念，这也是 `Vue` 在做派发更新的时候的一个优化的点，它并不会每次数据改变都触发 `watcher` 的回调，而是把这些 `watcher` 先添加到一个队列里，然后在 `nextTick` 后执行 `flushSchedulerQueue`。
-
-```js
-const queue: Array<Watcher> = [];
-let has: { [key: number]: ?true } = {};
-let waiting = false;
-let flushing = false;
-/**
- * Push a watcher into the watcher queue.
- * Jobs with duplicate IDs will be skipped unless it's
- * pushed when the queue is being flushed.
- */
-export function queueWatcher(watcher: Watcher) {
-  const id = watcher.id;
-  if (has[id] == null) {
-    has[id] = true;
-    if (!flushing) {
-      queue.push(watcher);
-    } else {
-      // if already flushing, splice the watcher based on its id
-      // if already past its id, it will be run next immediately.
-      let i = queue.length - 1;
-      while (i > index && queue[i].id > watcher.id) {
-        i--;
-      }
-      queue.splice(i + 1, 0, watcher);
-    }
-    // queue the flush
-    if (!waiting) {
-      waiting = true;
-      nextTick(flushSchedulerQueue);
-    }
-  }
-}
 ```
 
 官方对响应式原理的图片解释：
