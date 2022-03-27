@@ -28,19 +28,19 @@ ls 会列举出当前工作目录的内容（文件或文件夹）。
 
 ## 文件操作相关
 
-### rm— Remove
+### rm — Remove
 
 rm 会删除给定的文件或文件夹
 
-### cp— Copy
+### cp — Copy
 
 cp 命令对文件或文件夹进行复制
 
-### mv— Move
+### mv — Move
 
 mv 命令对文件或文件夹进行移动，如果文件或文件夹存在于当前工作目录，还可以对文件或文件夹进行重命名。
 
-### cat— concatenate and print files
+### cat — concatenate and print files
 
 cat 用于在标准输出（监控器或屏幕）上查看文件内容
 
