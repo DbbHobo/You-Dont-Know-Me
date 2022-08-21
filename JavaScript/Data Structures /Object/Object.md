@@ -12,7 +12,7 @@
 
 可以为所有 Object 类型的对象添加属性。
 
-### Object 构造函数的方法
+### Object 的静态方法
 
 #### Object.create()
 
@@ -168,13 +168,7 @@ const obj = Object.fromEntries(map);
 console.log(obj); // { foo: "bar", baz: 42 }
 ```
 
-### Object 原型对象的属性
-
-#### Object.prototype.constructor
-
-特定的函数，用于创建一个对象的原型。
-
-### Object 原型对象的方法
+### Object 的实例方法
 
 #### Object.prototype.hasOwnProperty()
 

@@ -2,7 +2,8 @@
 
 收集数组常用的一些内置方法
 
-## Array.isArray()
+## Array的静态方法
+### Array.isArray()
 
 确定传递的值是否是一个 Array。
 
@@ -16,7 +17,37 @@ if (!Array.isArray) {
 }
 ```
 
-## Array.prototype.concat()
+### Array.of()
+
+创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。
+
+- creates a new Array instance from a variable number of arguments, regardless of number or type of the arguments.
+
+```js
+Array.of(7); // [7]
+Array.of(1, 2, 3); // [1, 2, 3]
+Array(7); // array of 7 empty slots
+Array(1, 2, 3); // [1, 2, 3]
+```
+
+### Array.from()
+
+从一个类似数组或可迭代对象创建一个新的，浅拷贝的数组实例。
+
+- creates a new, shallow-copied Array instance from an array-like or iterable object.
+
+create Arrays from:array-like objects (objects with a length property and indexed elements) or iterable objects (objects where you can get its elements, such as Map and Set).
+
+```js
+console.log(Array.from("foo"));
+// expected output: Array ["f", "o", "o"]
+
+console.log(Array.from([1, 2, 3], (x) => x + x));
+// expected output: Array [2, 4, 6]
+```
+
+## Array的实例方法
+### Array.prototype.concat()
 
 合并多个数组，不会改变原数组，最终会返回一个新数组。
 
@@ -30,7 +61,7 @@ console.log(array1.concat(array2));
 // expected output: Array ["a", "b", "c", "d", "e", "f"]
 ```
 
-## Array.prototype.splice()
+### Array.prototype.splice()
 
 通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回被修改的内容。此方法会改变原数组。
 
@@ -49,7 +80,7 @@ console.log(months);
 // expected output: Array ['Jan', 'Feb', 'March', 'April', 'May']
 ```
 
-## Array.prototype.slice()
+### Array.prototype.slice()
 
 返回一个新的数组对象，这一对象是一个由 begin 和 end 决定的原数组的浅拷贝（包括 begin，不包括 end）。原始数组不会被改变。
 
@@ -68,7 +99,7 @@ console.log(animals.slice(1, 5));
 // expected output: Array ["bison", "camel", "duck", "elephant"]
 ```
 
-## Array.prototype.join()
+### Array.prototype.join()
 
 将一个数组（或一个类数组对象）的所有元素连接成一个字符串并返回这个字符串。如果数组只有一个项目，那么将返回该项目而不使用分隔符。
 
@@ -82,7 +113,7 @@ a.join(" + "); // 'Wind + Water + Fire'
 a.join(""); // 'WindWaterFire'
 ```
 
-## Array.prototype.every()
+### Array.prototype.every()
 
 传入一个函数判断数组的每一项真假，全为 true 返回 true，有 false 即返回 false，最终返回一个 Boolean 值。
 
@@ -92,7 +123,7 @@ a.join(""); // 'WindWaterFire'
 [12, 5, 8, 130, 44].every((x) => x >= 10); // false
 ```
 
-## Array.prototype.some()
+### Array.prototype.some()
 
 传入一个函数判断数组的每一项真假，有 true 返回 true，全为 false 即返回 false，最终返回一个 Boolean 值。
 
@@ -103,7 +134,7 @@ a.join(""); // 'WindWaterFire'
 [12, 5, 8, 1, 4].some((x) => x > 10); // true
 ```
 
-## Array.prototype.filter()
+### Array.prototype.filter()
 
 返回一个新数组, 包含了通过传入的函数过滤后的所有元素。
 
@@ -120,7 +151,7 @@ console.log(filterItems(fruits, "ap")); // ['apple', 'grapes']
 console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
 ```
 
-## Array.prototype.map()
+### Array.prototype.map()
 
 返回一个新数组，包含了该数组中的每个元素调用一次传入的函数后的返回值。
 
@@ -138,7 +169,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 // numbers is still [1, 2, 3, 4]
 ```
 
-## Array.prototype.reduce()
+### Array.prototype.reduce()
 
 对数组中的每个元素执行一个由您提供的 reducer 函数（从左到右），将其结果汇总为单个返回值。
 
@@ -159,7 +190,7 @@ reduce 为数组中的每一个元素依次执行 callback 函数，不包括数
 );
 ```
 
-## Array.prototype.reduceRight()
+### Array.prototype.reduceRight()
 
 - applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
 
@@ -174,35 +205,6 @@ const array1 = [
 
 console.log(array1);
 // expected output: Array [4, 5, 2, 3, 0, 1]
-```
-
-## Array.of()
-
-创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。
-
-- creates a new Array instance from a variable number of arguments, regardless of number or type of the arguments.
-
-```js
-Array.of(7); // [7]
-Array.of(1, 2, 3); // [1, 2, 3]
-Array(7); // array of 7 empty slots
-Array(1, 2, 3); // [1, 2, 3]
-```
-
-## Array.from()
-
-从一个类似数组或可迭代对象创建一个新的，浅拷贝的数组实例。
-
-- creates a new, shallow-copied Array instance from an array-like or iterable object.
-
-create Arrays from:array-like objects (objects with a length property and indexed elements) or iterable objects (objects where you can get its elements, such as Map and Set).
-
-```js
-console.log(Array.from("foo"));
-// expected output: Array ["f", "o", "o"]
-
-console.log(Array.from([1, 2, 3], (x) => x + x));
-// expected output: Array [2, 4, 6]
 ```
 
 [Array-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)

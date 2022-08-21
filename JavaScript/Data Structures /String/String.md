@@ -2,6 +2,8 @@
 
 收集字符串常用的一些内置方法
 
+## String的实例方法
+
 ## String.prototype.concat()
 
 - concatenates the string arguments to the calling string and returns a new string.
