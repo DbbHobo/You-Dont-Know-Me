@@ -102,3 +102,5 @@ MAJOR version when you make incompatible API changes,
 MINOR version when you add functionality in a backwards compatible manner, and
 PATCH version when you make backwards compatible bug fixes.
 It's even more important to follow the above rule when publishing your packages to ensure that you're not breaking anyone's code as the default version matching in npm is ^ (aka the next minor version).
+
+[What is npm? A Node Package Manager Tutorial for Beginners](https://www.freecodecamp.org/news/what-is-npm-a-node-package-manager-tutorial-for-beginners/)
