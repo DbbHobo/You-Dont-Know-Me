@@ -142,6 +142,35 @@
         height: 50px;
       }
     </style>
+    <style>
+      .flex-box {
+        width: 120px;
+        height: 150px;
+        border: 1px solid white;
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        align-content: space-between;
+        flex-wrap: wrap;
+      }
+      .flex-item1 {
+        width: 50px;
+        height: 50px;
+        background-color: #e50913;
+        /* flex-basis: 20px; */
+      }
+      .flex-item2 {
+        width: 50px;
+        height: 50px;
+        background-color: bisque;
+      }
+      .flex-item3 {
+        width: 50px;
+        height: 50px;
+        background-color: aquamarine;
+      }
+    </style>
   </head>
   <body>
     <div class="triangle"></div>
@@ -151,6 +180,11 @@
       <img src="./assets/icon.png" alt="" />
       <img src="./assets/icon@2x.png" alt="" />
       <img src="./assets/icon@3x.png" alt="" />
+    </div>
+    <div class="flex-box">
+      <div class="flex-item1"></div>
+      <div class="flex-item2"></div>
+      <div class="flex-item3"></div>
     </div>
   </body>
 </html>

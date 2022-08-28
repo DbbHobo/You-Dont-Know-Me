@@ -103,4 +103,18 @@ MINOR version when you add functionality in a backwards compatible manner, and
 PATCH version when you make backwards compatible bug fixes.
 It's even more important to follow the above rule when publishing your packages to ensure that you're not breaking anyone's code as the default version matching in npm is ^ (aka the next minor version).
 
+### npm run 
+
+通常我们知道，启动vue项目 `npm run serve` 的时候，实际上就是执行了 `vue-cli-service serve` 这条命令。因为操作系统中没有存在 `vue-cli-service` 这一条指令，直接执行 `vue-cli-service serve` 是会报错的。
+
+我们在安装依赖的时候，是通过 `npm i xxx` 来执行的，例如 `npm i @vue/cli-service`，npm 在 安装这个依赖的时候，就会 `node_modules/.bin/` 目录中创建好`vue-cli-service` 为名的几个可执行文件了。
+
+由此我们可以知道，当使用 `npm run serve` 执行 `vue-cli-service serve` 时，虽然没有安装 `vue-cli-service` 的全局命令，但是 npm 会到 `./node_modules/.bin` 中找到 `vue-cli-service` 文件作为脚本来执行，则相当于执行了 `./node_modules/.bin/vue-cli-service serve`， 最后的 serve 作为参数传入。
+
+再看 `package-lock.json` 文件，当我们npm i 整个新建的vue项目的时候，npm 将 `bin/vue-cli-service.js` 作为 bin 声明了。所以在 `npm install` 时，npm 读到该配置后，就将该文件软链接到 `./node_modules/.bin` 目录下，而 npm 还会自动把`node_modules/.bin`加入$PATH，这样就可以直接作为命令运行依赖程序和开发依赖程序，不用全局安装了。
+
+也就是说，`npm i` 的时候，npm 就帮我们把这种软连接配置好了，其实这种软连接相当于一种映射，执行 `npm run xxx` 的时候，就会到 `node_modules/bin` 中找对应的映射文件，然后再找到相应的js文件来执行。
+
 [What is npm? A Node Package Manager Tutorial for Beginners](https://www.freecodecamp.org/news/what-is-npm-a-node-package-manager-tutorial-for-beginners/)
+
+[Helpers and tips for npm run scripts](https://michael-kuehnel.de/tooling/2018/03/22/helpers-and-tips-for-npm-run-scripts.html)
