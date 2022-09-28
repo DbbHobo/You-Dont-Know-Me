@@ -276,3 +276,13 @@ git branch -r -v
 git merge //形成一个新的提交，和主分支上的提交先合并再提交
 git rebase //和主分支上的提交还是线性关系提交，顺序清晰s
 ```
+
+![git](./assets/git1.png)
+### 常用注释
+feat: 新特性，添加功能
+fix: 修改 bug
+refactor: 代码重构
+docs: 文档修改
+style: 代码格式修改, 注意不是 css 修改
+test: 测试用例修改
+chore: 其他修改, 比如构建流程, 依赖管理
