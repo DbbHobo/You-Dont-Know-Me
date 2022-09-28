@@ -1,5 +1,7 @@
+## Git常用命令
 ### Git 提交的整个过程
 
+![git](./assets/git.png)
 - 工作区->add->暂存区->commit->当前分支->push->远程仓库
 
 ### 初始化 Git 仓库
@@ -8,10 +10,14 @@
 git init
 ```
 
-### 添加文件到 Git 仓库
-
+### 添加文件到暂存区
 ```
 git add <file>
+```
+
+### 添加文件到本地 Git 仓库
+
+```
 git commit -m <message>
 ```
 
@@ -150,13 +156,13 @@ git branch -D <name>
 
 多人协作的工作模式通常是这样：
 
-首先，可以试图用 `git push origin <branch-name>`c推送自己的修改；
+首先，可以试图用 `git push origin <branch-name>`推送自己的修改；
 
 如果推送失败，则因为远程分支比你的本地更新，需要先用 `git pull` 试图合并；
 
 如果合并有冲突，则解决冲突，并在本地提交；
 
-没有冲突或者解决掉冲突后，再用 `git push origin <branch-name>`c推送就能成功！
+没有冲突或者解决掉冲突后，再用 `git push origin <branch-name>`推送就能成功！
 
 如果 `git pull` 提示 no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令 `git branch --set-upstream-to <branch-name> origin/<branch-name>`。
 
@@ -216,6 +222,8 @@ git push origin --tags
 git push origin :refs/tags/<tagname>
 ```
 
+---
+
 ### 获取完整 commit
 
 ```
@@ -260,4 +268,11 @@ git branch -v
 
 ```
 git branch -r -v
+```
+
+### 合并分支
+
+```
+git merge //形成一个新的提交，和主分支上的提交先合并再提交
+git rebase //和主分支上的提交还是线性关系提交，顺序清晰s
 ```
