@@ -2,9 +2,12 @@
 
 收集字符串常用的一些内置方法
 
+## String的静态方法
+
+---
 ## String的实例方法
 
-## String.prototype.concat()
+### String.prototype.concat()
 
 - concatenates the string arguments to the calling string and returns a new string.
 
@@ -19,7 +22,7 @@ var greetList = ["Hello", " ", "Venkat", "!"];
 "".concat(...greetList); // "Hello Venkat!"
 ```
 
-## String.prototype.indexOf()
+### String.prototype.indexOf()
 
 - returns the index within the calling String object of the first occurrence of the specified value, starting the search at fromIndex. Returns -1 if the value is not found.
 
@@ -38,7 +41,7 @@ while (position !== -1) {
 console.log(count); // displays 4
 ```
 
-## String.prototype.replace()
+### String.prototype.replace()
 
 - returns a new string with some or all matches of a pattern replaced by a replacement. The pattern can be a string or a RegExp, and the replacement can be a string or a function to be called for each match. If pattern is a string, only the first occurrence will be replaced.
 
@@ -50,7 +53,7 @@ var newstr = str.replace(/xmas/i, "Christmas");
 console.log(newstr); // Twas the night before Christmas...
 ```
 
-## String.prototype.slice()
+### String.prototype.slice()
 
 - extracts a section of a string and returns it as a new string, without modifying the original string.
 
@@ -63,7 +66,7 @@ str.slice(-3, -1); // returns 'us'
 str.slice(0, -1); // returns 'The morning is upon us'
 ```
 
-## String.prototype.split()
+### String.prototype.split()
 
 - splits a String object into an array of strings by separating the string into substrings, using a specified separator string to determine where to make each split.
 
@@ -80,7 +83,7 @@ console.log(nameList);
 //[ "Harry Trump", "Fred Barney", "Helen Rigby", "Bill Abel", "Chris Hand", "" ]
 ```
 
-## String.prototype.substring()
+### String.prototype.substring()
 
 - returns the part of the string between the start and end indexes, or to the end of the string.
 
@@ -109,7 +112,7 @@ console.log(text.substring(5, 2)); // => "zil"
 console.log(text.slice(5, 2)); // => ""
 ```
 
-## String.prototype.trim()、String.prototype.trimStart()、String.prototype.trimEnd()
+### String.prototype.trim()、String.prototype.trimStart()、String.prototype.trimEnd()
 
 - removes whitespace from both ends of a string. Whitespace in this context is all the whitespace characters (space, tab, no-break space, etc.) and all the line terminator characters (LF, CR, etc.).
 
@@ -123,7 +126,7 @@ var orig = "foo    ";
 console.log(orig.trim()); // 'foo'
 ```
 
-## String.prototype.search()
+### String.prototype.search()
 
 - executes a search for a match between a regular expression and this String object.
 
@@ -137,7 +140,7 @@ console.log(str.search(re)); // returns 4, which is the index of the first capit
 console.log(str.search(re2)); // returns -1 cannot find '.' dot punctuation
 ```
 
-## String.prototype.charAt()
+### String.prototype.charAt()
 
 - returns a new string consisting of the single UTF-16 code unit located at the specified offset into the string.
 
@@ -151,7 +154,7 @@ console.log(`The character at index ${index} is ${sentence.charAt(index)}`);
 // expected output: "The character at index 4 is q"
 ```
 
-## String.prototype.match()
+### String.prototype.match()
 
 - retrieves the result of matching a string against a regular expression.
 
@@ -175,7 +178,7 @@ console.log(found);
 "abc".padStart(10, "foo"); // "foofoofabc"
 ```
 
-## String.prototype.padEnd()
+### String.prototype.padEnd()
 
 - 用另一个字符串填充当前字符串（如果需要的话则重复填充），返回填充后达到指定长度的字符串。从当前字符串的右侧开始填充。
 

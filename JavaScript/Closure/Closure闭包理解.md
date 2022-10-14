@@ -16,7 +16,9 @@
 
 - 块级作用域
 
-let 为 JavaScript 新增了块级作用域。let 命令、const 命令、class 命令声明的全局变量，不属于顶层对象的属性。
+1. 函数是 JavaScript 中最常见的作用域单元。 
+2. `let` 为 JavaScript 新增了块级作用域。`let` 命令、`const` 命令、`class` 命令声明的全局变量，不属于顶层对象的属性。
+3. `try/catch` 结构在 `catch` 分句中具有块作用域。
 
 - 作用域链
 

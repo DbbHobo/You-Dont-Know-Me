@@ -18,6 +18,7 @@
 
 创建一个新对象，使用现有的对象来提供新创建的对象的**proto**。新创建的对象就会在现有对象的原型链上。
 
+在 JavaScript 中创建一个空对象最简单的方法都是 `Object.create(null)` 。 `Object.create(null)` 和 `{}` 很像， 但是并不会创建 `Object.prototype` 这个委托， 所以它比 `{}` “更空” 
 ```js
 var person1 = {
   name: "张三",

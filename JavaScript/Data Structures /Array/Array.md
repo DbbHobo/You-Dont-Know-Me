@@ -46,6 +46,7 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 // expected output: Array [2, 4, 6]
 ```
 
+---
 ## Array的实例方法
 ### Array.prototype.concat()
 
