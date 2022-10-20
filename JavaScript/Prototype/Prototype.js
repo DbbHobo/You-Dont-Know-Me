@@ -25,6 +25,7 @@ Object.defineProperty(o, "b", {
 });
 console.log(o.b);
 console.groupEnd();
+
 /*
   实现new
 */
@@ -216,3 +217,32 @@ foo.funcB(); //Its a 实例方法
 
 let staticFns = Object.getOwnPropertyNames(Array);
 console.log("Array上的静态方法有：", staticFns);
+
+let shape = {
+  name: 'shape',
+  width: 22,
+  height: 33,
+}
+let rectangle = Object.create(shape, {
+  enumerableF: {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: 'false'
+  },
+  enumerableT: {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: 'true'
+  }
+})
+console.group('遍历属性循环：');
+for (let item in rectangle) {
+  console.log('for in',item)
+}
+console.log('Object.keys(obj)', Object.keys(rectangle))
+console.log('Reflect.ownKeys', Reflect.ownKeys(rectangle))
+console.log('Object.getOwnPropertyNames', Object.getOwnPropertyNames(rectangle))
+console.log('width' in rectangle)
+console.groupEnd();
