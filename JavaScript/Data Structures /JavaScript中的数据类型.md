@@ -14,9 +14,9 @@ JS 中有两大类型：**基本数据类型**和**对象类型**（Object）。
 
 ## typeof
 
-typeof 对于基本类型，除了 null 都可以显示正确的类型
+`typeof` 对于基本类型，除了 `null` 都可以显示正确的类型
 
-typeof 对于对象，除了函数都会显示 object
+`typeof` 对于对象，除了函数都会显示 `object`
 
 ```js
 typeof 1; // 'number'
@@ -30,6 +30,19 @@ typeof []; // 'object'
 typeof {}; // 'object'
 typeof console.log; // 'function'
 typeof 9007199887740995n; // 'bigint'
+```
+
+`typeof`可以作为安全防范机制，对在浏览器中运行的 JavaScript 代码来说还是很有帮助的，因为多个脚本文件会在共享的全局命名空间中加载变量：
+
+```js
+// 这样会抛出错误
+if (DEBUG) {
+  console.log( "Debugging is starting" );
+}
+// 这样是安全的
+if (typeof DEBUG !== "undefined") {
+  console.log( "Debugging is starting" );
+}
 ```
 
 ## instanceof
