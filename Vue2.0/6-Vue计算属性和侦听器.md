@@ -1,8 +1,8 @@
-# 计算属性和侦听器
+## 计算属性和侦听器
 
-## 计算属性 computed watchher
+### 计算属性 `computed watchher`
 
-### 计算属性computed初始化过程
+#### 计算属性computed初始化过程
 
 计算属性的初始化是发生在 `Vue` 实例初始化阶段的 `initState` 函数中，执行了 `if (opts.computed) initComputed(vm, opts.computed)`，`initComputed` 的定义在 `src/core/instance/state.js` 中：
 
@@ -102,7 +102,7 @@ function createComputedGetter (key) {
 ```
 `createComputedGetter` 返回一个函数 `computedGetter`，它就是计算属性对应的 `getter`。
 
-### 计算属性computed使用过程
+#### 计算属性computed使用过程
 比如我们写了如下一个computed：
 ```js
 var vm = new Vue({
@@ -233,10 +233,10 @@ getAndInvoke (cb: Function) {
 
 通过以上的分析，我们知道计算属性本质上就是一个 `computed watcher`，也了解了它的创建过程和被访问触发 `getter` 以及依赖更新的过程，其实这是最新的计算属性的实现，之所以这么设计是因为 `Vue` 想确保不仅仅是计算属性依赖的值发生变化，而是**当计算属性最终计算的值发生变化才会触发`渲染 watcher` 重新渲染**，本质上是一种优化。
 
----
-## 侦听器 user watcher
 
-### 侦听器初始化过程
+### 侦听器 `user watcher`
+
+#### 侦听器初始化过程
 
 侦听属性的初始化也是发生在 `Vue` 的实例初始化阶段的 `initState` 函数中，在 `computed` 初始化之后，执行了：
 ```js
@@ -301,9 +301,10 @@ Vue.prototype.$watch = function (
 ```
 也就是说，侦听属性 `watch` 最终会调用 `$watch` 方法，这个方法首先判断 `cb` 如果是一个对象，则调用 `createWatcher` 方法，这是因为 `$watch` 方法是用户可以直接调用的，它可以传递一个对象，也可以传递函数。接着执行 `const watcher = new Watcher(vm, expOrFn, cb, options)` 实例化了一个 `watcher`，这里需要注意一点这是一个 `user watcher`，因为 `options.user = true`。通过实例化 `watcher` 的方式，一旦我们 `watch` 的数据发送变化，它最终会执行 `watcher` 的 `run` 方法，执行回调函数 `cb`，并且如果我们设置了 `immediate` 为 `true`，则直接会执行回调函数 `cb`。最后返回了一个 `unwatchFn` 方法，它会调用 `teardown` 方法去移除这个 `watcher`。所以本质上侦听属性也是基于 `Watcher` 实现的，它是一个 `user watcher`。
 
-## 不同的Watcher类型
 
-`Watcher` 的构造函数对 `options` 做的了处理，代码如下：
+
+### 不同的Watcher类型
+`Watcher` 的构造函数对 `options` 做的了处理如下：
 ```js
 if (options) {
   this.deep = !!options.deep
@@ -316,7 +317,7 @@ if (options) {
 }
 ```
 
-### deep watcher
+#### deep watcher
 ```js
 var vm = new Vue({
   data() {
@@ -392,7 +393,7 @@ function _traverse (val: any, seen: SimpleSet) {
 
 对 `deep watcher` 的理解非常重要，如果大家观测一个复杂对象，并且会改变对象内部深层某个值的时候也希望触发回调，一定要设置 `deep` 为 `true`，但是因为设置了 `deep` 后会执行 `traverse` 函数，会有一定的性能开销，所以一定要根据应用场景权衡是否要开启这个配置。
 
-### user watcher
+#### user watcher
 通过 `vm.$watch` 创建的 `watcher` 是一个 `user watcher`，其实它的功能很简单，在对 `watcher` 求值以及在执行回调函数的时候，会处理一下错误，如下：
 ```js
 get() {
@@ -417,10 +418,10 @@ getAndInvoke() {
 ```
 `handleError` 在 `Vue` 中是一个错误捕获并且暴露给用户的一个利器。
 
-### computed watcher
+#### computed watcher
 `computed watcher` 就是为计算属性量身定制的。
 
-### sync watcher
+#### sync watcher
 在我们之前对 `setter` 的分析过程知道，当响应式数据发送变化后，触发了 `watcher.update()`，只是把这个 `watcher` 推送到一个队列中，在 `nextTick` 后才会真正执行 `watcher` 的回调函数。而一旦我们设置了 `sync`，就可以在当前 `Tick` 中**同步**执行 `watcher` 的回调函数。
 ```js
 update () {
@@ -435,6 +436,6 @@ update () {
 ```
 只有当我们需要 `watch` 的值的变化到执行 `watcher` 的回调函数是一个**同步**过程的时候才会去设置该属性为 `true`。
 
-### 不同watcher的应用场景
+#### 不同watcher的应用场景
 
 就应用场景而言，**计算属性适合用在模板渲染中，某个值是依赖了其它的响应式对象甚至是计算属性计算而来**；而**侦听属性适用于观测某个值的变化去完成一段复杂的业务逻辑**。同时我们又了解了 `watcher` 的 4 个 options，通常我们会在创建 `user watcher` 的时候配置 `deep` 和 `sync`，可以根据不同的场景做相应的配置。

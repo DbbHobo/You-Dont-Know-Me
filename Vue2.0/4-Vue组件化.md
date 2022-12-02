@@ -12,7 +12,7 @@ vm._update(vm._render(), hydrating);
 
 ## Vue 组件的构建过程
 
-- 构造子类构造函数
+### 构造子类构造函数
 
 例子如下：
 
@@ -236,7 +236,7 @@ Sub.prototype.constructor = Sub;
 
 `Vue.extend` 的作用就是构造一个 `Vue` 的子类，它使用一种非常经典的**原型继承**的方式把一个纯对象转换一个继承于 `Vue` 的构造器 `Sub` 并返回，然后对 `Sub` 这个对象本身扩展了一些属性，如扩展 options、添加全局 API 等；并且对配置中的 `props` 和 `computed` 做了初始化工作；最后对于这个 `Sub` 构造函数做了缓存，避免多次执行 `Vue.extend` 的时候对同一个子组件重复构造。当我们去实例化 `Sub` 的时候，就会执行 `this._init` 逻辑再次走到了 Vue 实例的初始化逻辑。
 
-- VNode 的 patch 过程中加入钩子函数
+### VNode 的 patch 过程中加入钩子函数
 
 ```js
 // install component management hooks onto the placeholder node
@@ -245,7 +245,7 @@ installComponentHooks(data);
 
 整个 `installComponentHooks` 的过程就是把 `componentVNodeHooks` 的钩子函数合并到 `data.hook` 中，在 `VNode` 执行 `patch` 的过程中执行相关的钩子函数。这里要注意的是合并策略，在合并过程中，如果某个时机的钩子已经存在 `data.hook` 中，那么通过执行 `mergeHook` 函数做合并，这个逻辑很简单，就是在最终执行的时候，依次执行这两个钩子函数即可。
 
-- 实例化 vnode
+### 实例化 vnode
 
 ```js
 const name = Ctor.options.name || tag;
