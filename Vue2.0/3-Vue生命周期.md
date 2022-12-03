@@ -255,44 +255,27 @@ Vue.prototype.$destroy = function () {
 
 ### 生命周期钩子函数
 
-- beforeCreate Function
+- create阶段：vue实例被创建
+    - beforeCreate: 创建前，此时data和methods中的数据都还没有初始化
+    - created： 创建完毕，data中有值，未挂载
 
-在实例初始化之后，数据观测 (data observer)和 event/watcher 事件配置之前被调用。
+- mount阶段： vue实例被挂载到真实DOM节点
+    - beforeMount：可以发起服务端请求，去数据
+    - mounted: 此时可以操作DOM
 
-- created Function
+- update阶段：当vue实例里面的data数据变化时，触发组件的重新渲染
+    - beforeUpdate :更新前
+    - updated：更新后
 
-在实例创建完成后被立即调用。在这一步，实例已完成以下的配置：数据观测 (data observer)， 属性和方法的运算， watch/event 事件回调。然而，挂载阶段还没开始， $el 属性目前不可见。
+- destroy阶段：vue实例被销毁
+    - beforeDestroy：实例被销毁前，此时可以手动销毁一些方法
+    - destroyed:销毁后
 
-- beforeMount Function
-
-在挂载开始之前被调用：相关的 render 函数首次被调用。
-
-- mounted Function
-
-el 被新创建的 vm.$el 替换，并挂载到实例上去之后调用该钩子。如果 root 实例挂载了一个文档内元素，当 mounted 被调用时vm.$el 也在文档内。
-
-- beforeUpdate Function
-
-数据更新时调用，发生在虚拟 DOM 打补丁之前。这里适合在更新之前访问现有的 DOM，比如手动移除已添加的事件监听器。该
-钩子在服务器端渲染期间不被调用，因为只有初次渲染会在服务端进行。updated Function 由于数据更改导致的虚拟 DOM 重新渲染和打补丁，在这之后会调用该钩子。
-
-- activatedFunction
-
-keep-alive 组件激活时调用。该钩子在服务器端渲染期间不被调用。
-
-- deactivated Function
-
-keep-alive 组件停用时调用。该钩子在服务器端渲染期间不被调用。
-
-- beforeDestroy Function
-
-实例销毁之前调用。在这一步，实例仍然完全可用。该钩子在服务器端渲染期间不被调用。
-
-- destroyed Function
-
-Vue 实例销毁后调用。调用后， Vue 实例指示的所有东西都会解绑定，所有的事件监听器会被移除，所有的子实例也会被销毁。该钩子在服务器端渲染期间不被调用。
-
-errorCaptured（2.5.0+ 新增） (err: Error, vm: Component, info: string)=> ?boolean 当捕获一个来自子孙组件的错误时被调用。此钩子会收到三个参数：错误对象、发生错误的组件实例以及一个包含错误来源信息的字符串。此钩子可以返回 false 以阻止该错误继续向上传播。
+1. 加载渲染过程 `父beforeCreate->父created->父beforeMount->子beforeCreate->子created->子beforeMount->子mounted->父mounted`
+2. 挂载阶段 `父created->子created->子mounted->父mounted`
+3. 父组件更新阶段 `父beforeUpdate->父updated`
+4. 子组件更新阶段 `父beforeUpdate->子beforeUpdate->子updated->父updated`
+5. 销毁阶段 `父beforeDestroy->子beforeDestroy->子destroyed->父destroyed`
 
 ### 总结
 
