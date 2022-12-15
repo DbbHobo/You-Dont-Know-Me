@@ -1,6 +1,6 @@
-# HTTPS
+## HTTPS
 
-## HTTPS 简介
+### HTTPS 简介
 
 在 HTTP 协议中有可能存在信息窃听或身份伪装等安全问题。 使用 HTTPS 通信机制可以有效地防止这些问题。
 HTTP 主要有这些不足， 例举如下：
@@ -58,7 +58,7 @@ MD5 和 SHA-1 等散列值校验的方法，以及用来确认文件的**数字�
 
 ![web](./assets/https1.png)
 
-## HTTPS 通信过程
+### HTTPS 通信过程
 
 步骤 1： 客户端通过发送 Client Hello 报文开始 SSL 通信。 报文中包含客户端支持的 SSL 的指定版本、 加密组件（ Cipher Suite） 列表（ 所使用的加密算法及密钥长度等） 。
 
