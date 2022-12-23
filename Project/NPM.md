@@ -1,17 +1,54 @@
-# NPM
+## NPM
 
-## npm配置
+拿一个开发中很常见的`package.json`为例来看一下：
+```json
+{
+  "name": "vue-demo",
+  "version": "0.1.0",
+  "description": "demo",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "dependencies": {
+    "core-js": "^2.6.5",
+    "vue": "^2.6.10",
+    "vue-router": "^3.0.3",
+    "vuex": "^3.0.1"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.1.1",
+    "@vue/cli-plugin-eslint": "^3.1.1",
+    "@vue/cli-service": "^3.1.1",
+    "@vue/eslint-config-prettier": "^5.0.0",
+    "babel-eslint": "^10.0.1",
+    "clean-webpack-plugin": "^4.0.0",
+    "eslint": "^5.16.0",
+    "eslint-plugin-prettier": "^3.1.0",
+    "eslint-plugin-vue": "^5.0.0",
+    "hot-hash-webpack-plugin": "^1.0.2",
+    "less": "^3.0.4",
+    "less-loader": "^5.0.0",
+    "prettier": "^1.18.2",
+    "style-resources-loader": "^1.5.0",
+    "vue-template-compiler": "^2.6.10",
+    "webpackbar": "^5.0.2"
+  }
+}
+```
 ### npm基础配置
 
-Every project in JavaScript – whether it's Node.js or a browser application – can be scoped as an npm package with its own package information and its package.json job to describe the project.
+Every project in JavaScript – whether it's `Node.js` or a browser application – can be scoped as an npm package with its own package information and its package.json job to describe the project.
 
-- name: the name of your JavaScript library/project
-- version: the version of your project. Often times, for application development, this field is often neglected as there's no apparent need for versioning opensource - libraies. But still, it can come handy as a source of the deployment's version.
-- description: the project's description
-- license: the project's license
+- `name`: the name of your JavaScript library/project
+- `version`: the version of your project. Often times, for application development, this field is often neglected as there's no apparent need for versioning opensource - libraies. But still, it can come handy as a source of the deployment's version.
+- `description`: the project's description
+- `license`: the project's license
 
-### npm scripts
-package.json also supports a scripts property that can be defined to run command-line tools that are installed in the project's local context. For example, the scripts portion of an npm project can look something like this:
+### scripts
+`package.json` also supports a scripts property that can be defined to run command-line tools that are installed in the project's local context. For example, the scripts portion of an npm project can look something like this:
 ```json
 {
   "scripts": {
@@ -27,9 +64,9 @@ package.json also supports a scripts property that can be defined to run command
 ```
 with `eslint`, `prettier`, `ncc`, `jest` not necessarily installed as global executables but rather as local to your project inside `node_modules/.bin/.`
 
-The recent introduction of npx allows us to run these node_modules project-scoped commands just like a globally installed program by prefixing npx ... (i.e. `npx prettier --write **/*.ts`).
+The recent introduction of `npx` allows us to run these `node_modules` project-scoped commands just like a globally installed program by prefixing `npx ...` (i.e. `npx prettier --write **/*.ts`).
 
-### dependencies vs devDependencies
+### dependencies & devDependencies
 
 These two come in form of key-value objects with npm libraries' names as the key and their semantic-formatted versions as the value. This is an example from Github's TypeScript Action template:
 
@@ -61,59 +98,81 @@ These dependencies are installed via the `npm install` command with `--save` and
 
 Meanwhile, it's important to understand the possible signs that come before the semantic versions (assuming you have read up on major.minor.patch model of semver):
 
-^: latest minor release. For example, a ^1.0.4 specification might install version 1.3.0 if that's the latest minor version in the 1 major series.
-~: latest patch release. In the same way as ^ for minor releases, ~1.0.4 specification might install version 1.0.7 if that's the latest minor version in the 1.0 minor series.
+- `^`: latest minor release. For example, a ^1.0.4 specification might install version 1.3.0 if that's the latest minor version in the 1 major series.
+- `~`: latest patch release. In the same way as ^ for minor releases, ~1.0.4 specification might install version 1.0.7 if that's the latest minor version in the 1.0 minor series.
+
 All of these exact package versions will be documented in a generated `package-lock.json` file.
 
 ### package-lock.json
 
-This file describes the **exact versions** of the dependencies used in an npm JavaScript project. If package.json is a generic descriptive label, package-lock.json is an ingredient table.
+This file describes the **exact versions** of the dependencies used in an npm JavaScript project. If `package.json` is a generic descriptive label, `package-lock.json` is an ingredient table.
 
-And just like how we don't usually read the ingredient table of a product (unless you are too bored or need to know), package-lock.json is not meant to be read line-by-line by developers (unless we're desperate to resolve "works in my machine" issues).
+And just like how we don't usually read the ingredient table of a product (unless you are too bored or need to know), `package-lock.json` is not meant to be read line-by-line by developers (unless we're desperate to resolve "works in my machine" issues).
 
-package-lock.json is usually generated by the npm install command, and is also read by our NPM CLI tool to ensure reproduction of build environments for the project with npm ci.
-
-## npm命令
+`package-lock.json` is usually generated by the `npm install` command, and is also read by our NPM CLI tool to ensure reproduction of build environments for the project with npm ci.
 
 ### npm install
 
-This is the most commonly used command as we develop JavaScript/Node.js applications nowadays.
+This is the most commonly used command as we develop `JavaScript`/`Node.js` applications nowadays.
 
-By default, `npm install <package-name>` will install the latest version of a package with the ^ version sign. An npm install within the context of an npm project will download packages into the project's node_modules folder according to package.json specifications, upgrading the package version (and in turn regenerating package-lock.json) wherever it can based on ^ and ~ version matching.
+By default, `npm install <package-name>` will install the latest version of a package with the `^` version sign. An `npm install` within the context of an npm project will download packages into the project's `node_modules` folder according to `package.json` specifications, upgrading the package version (and in turn regenerating `package-lock.json`) wherever it can based on `^` and `~` version matching.
 
 You can specify a global flag `-g` if you want to install a package in the global context which you can use anywhere across your machine (this is common for command-line tooling packages like live-server).
 
-npm has made installing JavaScript packages so easy that this command is often used incorrectly. This results in npm being the butt of a lot of programmers' jokes like these:
+`npm` has made installing JavaScript packages so easy that this command is often used incorrectly. This results in npm being the butt of a lot of programmers' jokes like these:
 
 npm-jokes
-This is where the --production flag comes to the rescue! In the previous section, we discussed dependencies and devDependencies meant for usage in production and development/test environment respectively. This --production flag is how the differences in node_modules are made.
+This is where the `--production` flag comes to the rescue! In the previous section, we discussed `dependencies` and `devDependencies` meant for usage in production and development/test environment respectively. This `--production` flag is how the differences in `node_modules` are made.
 
-By attaching this flag to the npm install command, we will only install packages from dependencies, thus drastically reducing the size of our node_modules to whatever is absolutely necessary for our applications to be up and running.
+By attaching this flag to the `npm install` command, we will only install packages from `dependencies`, thus drastically reducing the size of our `node_modules` to whatever is absolutely necessary for our applications to be up and running.
 
-Just like how as boy and girl scouts we didn't bring lemon squeezers to our lemonade booth, we shouldn't bring devDependencies to production!
+Just like how as boy and girl scouts we didn't bring lemon squeezers to our lemonade booth, we shouldn't bring `devDependencies` to production!
 
 ### npm publish
 
-Sending a package to our npmjs.com fulfillment centre is super easy as we only need to run npm publish. The tricky part, which is not specific to npm package authors, is determining the version of the package.
+Sending a package to our `npmjs.com` fulfillment centre is super easy as we only need to run `npm publish`. The tricky part, which is not specific to npm package authors, is determining the version of the package.
 
 The rule of thumb according to semver.org:
 
-MAJOR version when you make incompatible API changes,
-MINOR version when you add functionality in a backwards compatible manner, and
-PATCH version when you make backwards compatible bug fixes.
-It's even more important to follow the above rule when publishing your packages to ensure that you're not breaking anyone's code as the default version matching in npm is ^ (aka the next minor version).
+- MAJOR version when you make incompatible API changes,
+- MINOR version when you add functionality in a backwards compatible manner, and
+- PATCH version when you make backwards compatible bug fixes.
+
+It's even more important to follow the above rule when publishing your packages to ensure that you're not breaking anyone's code as the default version matching in npm is `^`(aka the next minor version).
 
 ### npm run 
 
 通常我们知道，启动vue项目 `npm run serve` 的时候，实际上就是执行了 `vue-cli-service serve` 这条命令。因为操作系统中没有存在 `vue-cli-service` 这一条指令，直接执行 `vue-cli-service serve` 是会报错的。
 
-我们在安装依赖的时候，是通过 `npm i xxx` 来执行的，例如 `npm i @vue/cli-service`，npm 在 安装这个依赖的时候，就会 `node_modules/.bin/` 目录中创建好`vue-cli-service` 为名的几个可执行文件了。
+我们在安装依赖的时候，是通过 `npm i xxx` 来执行的，例如 `npm i @vue/cli-service`，`npm` 在 安装这个依赖的时候，就会 `node_modules/.bin/` 目录中创建好`vue-cli-service` 为名的几个可执行文件了。
 
-由此我们可以知道，当使用 `npm run serve` 执行 `vue-cli-service serve` 时，虽然没有安装 `vue-cli-service` 的全局命令，但是 npm 会到 `./node_modules/.bin` 中找到 `vue-cli-service` 文件作为脚本来执行，则相当于执行了 `./node_modules/.bin/vue-cli-service serve`， 最后的 serve 作为参数传入。
+由此我们可以知道，当使用 `npm run serve` 执行 `vue-cli-service serve` 时，虽然没有安装 `vue-cli-service` 的全局命令，但是 `npm` 会到 `./node_modules/.bin` 中找到 `vue-cli-service` 文件作为脚本来执行，则相当于执行了 `./node_modules/.bin/vue-cli-service serve`， 最后的 `serve` 作为参数传入。
 
-再看 `package-lock.json` 文件，当我们npm i 整个新建的vue项目的时候，npm 将 `bin/vue-cli-service.js` 作为 bin 声明了。所以在 `npm install` 时，npm 读到该配置后，就将该文件软链接到 `./node_modules/.bin` 目录下，而 npm 还会自动把`node_modules/.bin`加入$PATH，这样就可以直接作为命令运行依赖程序和开发依赖程序，不用全局安装了。
+再看 `package-lock.json` 文件，当我们`npm i` 整个新建的`vue`项目的时候，`npm` 将 `bin/vue-cli-service.js` 作为 `bin` 声明了。所以在 `npm install` 时，`npm` 读到该配置后，就将该文件软链接到 `./node_modules/.bin` 目录下，而 `npm` 还会自动把`node_modules/.bin`加入`$PATH`，这样就可以直接作为命令运行依赖程序和开发依赖程序，不用全局安装了。`$PATH`环境变量，是告诉系统，当要求系统运行一个程序而没有告诉它程序所在的完整路径时，系统除了在当前目录下面寻找此程序外，还应到哪些目录下去寻找。
 
-也就是说，`npm i` 的时候，npm 就帮我们把这种软连接配置好了，其实这种软连接相当于一种映射，执行 `npm run xxx` 的时候，就会到 `node_modules/bin` 中找对应的映射文件，然后再找到相应的js文件来执行。
+也就是说，`npm i` 的时候，`npm` 就帮我们把这种软连接配置好了，其实这种软连接相当于一种映射，执行 `npm run xxx` 的时候，就会到 `node_modules/bin` 中找对应的映射文件，然后再找到相应的js文件来执行。
+
+### npm link
+
+假设你开发的是一个全局命令行包A，这时候你需要本地调试它，而不希望每次都`npm publish`后安装调试。这个时候你可以在模块的目录下执行：`npm link`。上述命令通过链接目录和可执行文件，实现任意位置的`npm`模块命令的全局可执行。执行完上述命令后，就可以全局调用A命令了。
+
+假设你开发的是一个功能包B，然后你需要在项目C中调试它，你可以直接暴力的将功能包B的代码拷贝到需要项目C中调试，但这不是很好的办法。我们可以执行如下操作：
+```js
+// 功能包 B 中，把 B link 到全局
+npm link
+// 项目 C 中，link 功能包 B
+npm link B
+
+// 项目 C 中
+npm unlink B
+// 功能包 B 中
+npm unlink
+```
+上述命令为功能包B在全局创建一个软链接，然后将其链接到项目C模块安装路径`./node_modules/`，等同于生成了本地模块的符号链接。当你的项目不再需要该模块的时候，需要解除软连接，否则当你在项目中安装npm上的包时将会出错。
+
+`npm link`主要操作如下：
+- 为目标`npm`模块创建软链接，将其链接到全局`node`模块安装路径`/usr/local/lib/node_modules/`。
+- 为目标`npm`模块的可执行`bin`文件创建软链接，将其链接到全局`node`命令安装路径`/usr/local/bin/`。
 
 [What is npm? A Node Package Manager Tutorial for Beginners](https://www.freecodecamp.org/news/what-is-npm-a-node-package-manager-tutorial-for-beginners/)
 
