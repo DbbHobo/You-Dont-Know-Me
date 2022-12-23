@@ -1,5 +1,14 @@
 # You-Dont-Know-Me
 
+Browser
+
+- [ ] 跨域
+- [ ] 事件机制
+- [ ] 浏览器缓存
+- [ ] 浏览器本地存储
+- [ ] 渲染机制、重绘、回流
+- [ ] EventLoop 事件循环、宏任务、微任务
+
 Css
 
 - [ ] Css 选择器、优先级
@@ -19,30 +28,44 @@ JavaScript
 - [ ] 防抖、节流
 - [ ] JavaScript 设计模式
 
-Browser
-
-- [ ] 跨域
-- [ ] 事件机制
-- [ ] 浏览器缓存
-- [ ] 浏览器本地存储
-- [ ] 渲染机制、重绘、回流
-- [ ] EventLoop 事件循环、宏任务、微任务
-
 Network
 
-- [ ] TCP、UDP 协议、三次握手、四次握手
-- [ ] HTTP、HTTPS 协议
+- [ ] TCP 协议、UDP 协议、三次握手、四次握手
+- [ ] HTTP 协议、HTTPS 协议
 - [ ] HTTP2
-- [ ] DNS 解析
-- [ ] 网络攻击、XSS、CSRF
+- [ ] Web服务器
+- [ ] 各类网络攻击
 - [ ] CDN
+- [ ] Nginx
+- [ ] WebSocket
 
-Vue
+Typescript
 
-- [ ] 数据双向绑定原理、虚拟 DOM、diff 算法
-- [ ] 路由原理
-- [ ] 依赖收集
+- [ ] 接口
+- [ ] 泛型
+- [ ] 枚举
+- [ ] 高级类型
+
+Vue2 & Vue3
+
+- [ ] 初始化和初次挂载
+- [ ] 虚拟 DOM、diff 算法
+- [ ] 依赖收集、派发更新的响应式原理
+- [ ] 计算属性、侦听器
+- [ ] 组件化
 - [ ] 生命周期
+- [ ] 路由原理
+
+Webpack
+
+- [ ] webpack 原理
+- [ ] Module、Loader 转换器
+- [ ] Plugin 插件
+- [ ] hot reload 原理
+- [ ] webpack 优化
+
+
+
 
 Webpack
 
