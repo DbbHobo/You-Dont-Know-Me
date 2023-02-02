@@ -73,3 +73,14 @@ HTTP 协议中也采纳了多部分对象集合（Multipart）， 发送的一�
 在响应中， HTTP 报文由 HTTP 版本、 状态码（ 数字和原因短语） 、HTTP 首部字段、实体等部分构成。
 
 ![web](./assets/http4.png)
+
+
+### HTTP头部常见字段
+
+- Content-Type 
+
+实体头部用于指示资源的 MIME 类型 media type 。
+
+在响应中，`Content-Type` 标头告诉客户端实际返回的内容的内容类型。浏览器会在某些情况下进行 MIME 查找，并不一定遵循此标题的值; 为了防止这种行为，可以将标题 `X-Content-Type-Options` 设置为 `nosniff`。
+
+在请求中 (如`POST` 或 `PUT`)，客户端告诉服务器实际发送的数据类型。

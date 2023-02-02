@@ -39,6 +39,15 @@ Network
 - [ ] Nginx
 - [ ] WebSocket
 
+Project
+
+- [ ] 前端调试工具
+- [ ] 项目优化经验
+- [ ] Git常用命令
+- [ ] HTTP 头部
+- [ ] Linux常用命令
+- [ ] Npm
+
 Typescript
 
 - [ ] 接口
@@ -64,15 +73,6 @@ Webpack
 - [ ] hot reload 原理
 - [ ] webpack 优化
 
-
-
-
-Webpack
-
-- [ ] webpack 原理
-- [ ] Module、Loaders
-- [ ] Plugin 插件
-- [ ] webpack 优化
 
 **Do not stand at my grave and weep**
 
