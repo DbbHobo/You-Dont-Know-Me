@@ -19,7 +19,7 @@ if (!Array.isArray) {
 
 ### Array.of()
 
-创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。
+创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。总是返回参数值组成的数组。如果没有参数，就返回一个空数组。用来替代Array()或new Array()，行为统一。
 
 - creates a new Array instance from a variable number of arguments, regardless of number or type of the arguments.
 
@@ -32,7 +32,7 @@ Array(1, 2, 3); // [1, 2, 3]
 
 ### Array.from()
 
-从一个类似数组或可迭代对象创建一个新的，浅拷贝的数组实例。
+用于将两类对象转为真正的数组：类似数组的对象（array-like object）和可遍历（iterable）的对象（包括 ES6 新增的数据结构 Set 和 Map）。
 
 - creates a new, shallow-copied Array instance from an array-like or iterable object.
 
@@ -47,24 +47,13 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 ```
 
 ---
+
 ## Array的实例方法
-### Array.prototype.concat()
+### Array.prototype.splice()*
 
-合并多个数组，不会改变原数组，最终会返回一个新数组。
+通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回**被修改的内容**。
 
-- is used to merge two or more arrays. This method does not change the existing arrays, but instead returns a new array.
-
-```js
-var array1 = ["a", "b", "c"];
-var array2 = ["d", "e", "f"];
-
-console.log(array1.concat(array2));
-// expected output: Array ["a", "b", "c", "d", "e", "f"]
-```
-
-### Array.prototype.splice()
-
-通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回被修改的内容。此方法会改变原数组。
+此方法会**改变原数组**。
 
 - changes the contents of an array by removing or replacing existing elements and/or adding new elements
 
@@ -80,6 +69,21 @@ months.splice(4, 1, "May");
 console.log(months);
 // expected output: Array ['Jan', 'Feb', 'March', 'April', 'May']
 ```
+
+### Array.prototype.concat()
+
+合并多个数组，不会改变原数组，最终会返回一个新数组。
+
+- is used to merge two or more arrays. This method does not change the existing arrays, but instead returns a new array.
+
+```js
+var array1 = ["a", "b", "c"];
+var array2 = ["d", "e", "f"];
+
+console.log(array1.concat(array2));
+// expected output: Array ["a", "b", "c", "d", "e", "f"]
+```
+
 
 ### Array.prototype.slice()
 
@@ -172,7 +176,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 
 ### Array.prototype.reduce()
 
-对数组中的每个元素执行一个由您提供的 reducer 函数（从左到右），将其结果汇总为单个返回值。
+对数组中的每个元素执行一个由您提供的 reducer 函数（从左到右），将其结果汇总为**单个返回值**。
 
 - executes a reducer function (that you provide) on each element of the array, resulting in a single output value.
 
@@ -207,5 +211,124 @@ const array1 = [
 console.log(array1);
 // expected output: Array [4, 5, 2, 3, 0, 1]
 ```
+
+### Array.prototype.find()/Array.prototype.findLast()
+
+- The find() method returns the first element in the provided array that satisfies the provided testing function. If no values satisfy the testing function, undefined is returned.
+
+数组实例的find方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
+
+```js
+const array1 = [5, 12, 8, 130, 44];
+
+const found = array1.find(element => element > 10);
+
+console.log(found);
+// Expected output: 12
+
+const array1 = [5, 12, 50, 130, 44];
+
+const found = array1.findLast((element) => element > 45);
+
+console.log(found);
+// Expected output: 130
+```
+
+### Array.prototype.findIndex()/Array.prototype.findLastIndex()
+
+- The findIndex() method returns the index of the first element in an array that satisfies the provided testing function. If no elements satisfy the testing function, -1 is returned.
+
+数组实例的findIndex方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
+
+```js
+[1, 5, 10, 15].findIndex(function(value, index, arr) {
+  return value > 9;
+}) // 2
+
+const array1 = [5, 12, 50, 130, 44];
+
+const isLargeNumber = (element) => element > 45;
+
+console.log(array1.findLastIndex(isLargeNumber));
+// Expected output: 3
+// Index of element with value: 130
+```
+
+### Array.prototype.fill()
+- The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
+
+fill方法使用给定值，填充一个数组。
+
+```js
+let arr = new Array(3).fill({name: "Mike"});
+arr[0].name = "Ben";
+// [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
+```
+
+### Array.prototype.entries()/Array.prototype.keys()/Array.prototype.values()
+- returns a new Array Iterator object that contains the key/value pairs for each index in the array.
+
+keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
+
+```js
+for (let [index, elem] of ['a', 'b'].entries()) {
+  console.log(index, elem);
+}
+// 0 "a"
+// 1 "b"
+
+for (let index of ['a', 'b'].keys()) {
+  console.log(index);
+}
+// 0
+// 1
+
+for (let elem of ['a', 'b'].values()) {
+  console.log(elem);
+}
+// 'a'
+// 'b'
+```
+
+### Array.prototype.includes()
+- The includes() method determines whether an array includes a certain value among its entries, returning true or false as appropriate.
+
+返回一个**布尔值**，表示某个数组是否包含给定的值。
+
+```js
+const array1 = [1, 2, 3];
+
+console.log(array1.includes(2));
+// Expected output: true
+
+const pets = ['cat', 'dog', 'bat'];
+
+console.log(pets.includes('cat'));
+// Expected output: true
+
+console.log(pets.includes('at'));
+// Expected output: false
+```
+
+### Array.prototype.indexOf()
+- The indexOf() method returns the first index at which a given element can be found in the array, or -1 if it is not present.
+
+返回找到的**第一个给定值的索引**，找不到则返回-1，表示某个数组是否包含给定的值。
+
+```js
+const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
+
+console.log(beasts.indexOf('bison'));
+// Expected output: 1
+
+// Start from index 2
+console.log(beasts.indexOf('bison', 2));
+// Expected output: 4
+
+console.log(beasts.indexOf('giraffe'));
+// Expected output: -1
+```
+
+
 
 [Array-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)
