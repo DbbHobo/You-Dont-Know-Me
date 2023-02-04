@@ -70,6 +70,48 @@ console.log(months);
 // expected output: Array ['Jan', 'Feb', 'March', 'April', 'May']
 ```
 
+### Array.prototype.reverse()*
+
+reverse() 方法将数组中元素的位置颠倒，并返回该数组。数组的第一个元素会变成最后一个，数组的最后一个元素变成第一个。
+
+此方法会**改变原数组**。
+
+- The reverse() method reverses an array in place and returns the reference to the same array, the first array element now becoming the last, and the last array element becoming the first. In other words, elements order in the array will be turned towards the direction opposite to that previously stated.
+
+```js
+const array1 = ['one', 'two', 'three'];
+console.log('array1:', array1);
+// Expected output: "array1:" Array ["one", "two", "three"]
+
+const reversed = array1.reverse();
+console.log('reversed:', reversed);
+// Expected output: "reversed:" Array ["three", "two", "one"]
+
+// Careful: reverse is destructive -- it changes the original array.
+console.log('array1:', array1);
+// Expected output: "array1:" Array ["three", "two", "one"]
+```
+
+### Array.prototype.sort()*
+
+sort() 方法用原地算法对数组的元素进行排序，并返回数组。默认排序顺序是在将元素转换为字符串，然后比较它们的 UTF-16 代码单元值序列时构建的。由于它取决于具体实现，因此无法保证排序的时间和空间复杂性。
+
+此方法会**改变原数组**。
+
+- The sort() method sorts the elements of an array in place and returns the reference to the same array, now sorted. The default sort order is ascending, built upon converting the elements into strings, then comparing their sequences of UTF-16 code units values.The time and space complexity of the sort cannot be guaranteed as it depends on the izhimplementation.
+- 
+```js
+const months = ['March', 'Jan', 'Feb', 'Dec'];
+months.sort();
+console.log(months);
+// Expected output: Array ["Dec", "Feb", "Jan", "March"]
+
+const array1 = [1, 30, 4, 21, 100000];
+array1.sort();
+console.log(array1);
+// Expected output: Array [1, 100000, 21, 30, 4]
+```
+
 ### Array.prototype.concat()
 
 合并多个数组，不会改变原数组，最终会返回一个新数组。
@@ -197,9 +239,9 @@ reduce 为数组中的每一个元素依次执行 callback 函数，不包括数
 
 ### Array.prototype.reduceRight()
 
-- applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
-
 接受一个函数作为累加器（accumulator）和数组的每个值（从右到左）将其减少为单个值。
+
+- applies a function against an accumulator and each value of the array (from right-to-left) to reduce it to a single value.
 
 ```js
 const array1 = [
@@ -214,9 +256,10 @@ console.log(array1);
 
 ### Array.prototype.find()/Array.prototype.findLast()
 
+数组实例的find方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
+
 - The find() method returns the first element in the provided array that satisfies the provided testing function. If no values satisfy the testing function, undefined is returned.
 
-数组实例的find方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
 
 ```js
 const array1 = [5, 12, 8, 130, 44];
@@ -236,9 +279,9 @@ console.log(found);
 
 ### Array.prototype.findIndex()/Array.prototype.findLastIndex()
 
-- The findIndex() method returns the index of the first element in an array that satisfies the provided testing function. If no elements satisfy the testing function, -1 is returned.
-
 数组实例的findIndex方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
+
+- The findIndex() method returns the index of the first element in an array that satisfies the provided testing function. If no elements satisfy the testing function, -1 is returned.
 
 ```js
 [1, 5, 10, 15].findIndex(function(value, index, arr) {
@@ -255,9 +298,9 @@ console.log(array1.findLastIndex(isLargeNumber));
 ```
 
 ### Array.prototype.fill()
-- The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
-
 fill方法使用给定值，填充一个数组。
+
+- The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
 
 ```js
 let arr = new Array(3).fill({name: "Mike"});
@@ -266,9 +309,10 @@ arr[0].name = "Ben";
 ```
 
 ### Array.prototype.entries()/Array.prototype.keys()/Array.prototype.values()
-- returns a new Array Iterator object that contains the key/value pairs for each index in the array.
 
 keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
+
+- returns a new Array Iterator object that contains the key/value pairs for each index in the array.
 
 ```js
 for (let [index, elem] of ['a', 'b'].entries()) {
@@ -291,9 +335,10 @@ for (let elem of ['a', 'b'].values()) {
 ```
 
 ### Array.prototype.includes()
-- The includes() method determines whether an array includes a certain value among its entries, returning true or false as appropriate.
 
 返回一个**布尔值**，表示某个数组是否包含给定的值。
+
+- The includes() method determines whether an array includes a certain value among its entries, returning true or false as appropriate.
 
 ```js
 const array1 = [1, 2, 3];
@@ -311,9 +356,10 @@ console.log(pets.includes('at'));
 ```
 
 ### Array.prototype.indexOf()
-- The indexOf() method returns the first index at which a given element can be found in the array, or -1 if it is not present.
 
 返回找到的**第一个给定值的索引**，找不到则返回-1，表示某个数组是否包含给定的值。
+
+- The indexOf() method returns the first index at which a given element can be found in the array, or -1 if it is not present.
 
 ```js
 const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
@@ -329,6 +375,14 @@ console.log(beasts.indexOf('giraffe'));
 // Expected output: -1
 ```
 
-
+## Array总结
+1. 会改变原数组的方法：
+  - push
+  - pop
+  - shift
+  - unshift
+  - splice
+  - sort
+  - reverse
 
 [Array-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)
