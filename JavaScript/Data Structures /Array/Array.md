@@ -1,4 +1,4 @@
-# Array
+## Array
 
 收集数组常用的一些内置方法
 
@@ -254,7 +254,7 @@ console.log(array1);
 // expected output: Array [4, 5, 2, 3, 0, 1]
 ```
 
-### Array.prototype.find()/Array.prototype.findLast()
+### Array.prototype.find() / Array.prototype.findLast()
 
 数组实例的find方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
 
@@ -277,7 +277,7 @@ console.log(found);
 // Expected output: 130
 ```
 
-### Array.prototype.findIndex()/Array.prototype.findLastIndex()
+### Array.prototype.findIndex() / Array.prototype.findLastIndex()
 
 数组实例的findIndex方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
 
@@ -308,7 +308,7 @@ arr[0].name = "Ben";
 // [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
 ```
 
-### Array.prototype.entries()/Array.prototype.keys()/Array.prototype.values()
+### Array.prototype.entries() / Array.prototype.keys() / Array.prototype.values()
 
 keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
 
@@ -384,5 +384,10 @@ console.log(beasts.indexOf('giraffe'));
   - splice
   - sort
   - reverse
+2. 数组转化为字符串的方法
+  - join
+
+
+
 
 [Array-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)
