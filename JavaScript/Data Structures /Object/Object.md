@@ -1,4 +1,4 @@
-# Object
+## Object
 
 收集对象常用的一些内置方法
 
@@ -8,6 +8,11 @@
 
 值为 1。
 
+### Object.is()
+
+`Object.is()` 用来比较两个值是否严格相等，与严格比较运算符（===）的行为基本一致。
+
+### 创建Object相关：
 ### Object.create()
 
 创建一个新对象，使用现有的对象来提供新创建的对象的**proto**。新创建的对象就会在现有对象的原型链上。
@@ -26,11 +31,13 @@ person2.name; // 张三
 person2.greeting(); // Hi! I'm 张三.
 ```
 
-上面代码中，对象 person1 是 person2 的模板，后者继承了前者的属性和方法。
+上面代码中，对象 person1 是 person2 的原型对象，后者继承了前者的属性和方法。
 
 ### Object.assgin()
 
 用于将所有可枚举属性的值从一个或多个源对象复制到目标对象。它将返回目标对象。方法只会拷贝源对象自身的并且可枚举的属性到目标对象。如果目标对象中的属性具有相同的键，则属性将被源对象中的属性覆盖。后面的源对象的属性将类似地覆盖前面的源对象的属性。
+
+`Object.assign`方法用于对象的合并，将源对象（source）的所有可枚举属性，复制到目标对象（target）。`Object.assign(target, source1, source2);`
 
 ```js
 const target = { a: 1, b: 2 };
@@ -42,23 +49,11 @@ console.log(returnedTarget);
 // expected output: Object { a: 1, b: 4, c: 5 }
 ```
 
-### Object.setPrototypeOf()，Object.getPrototypeOf()
+### Object.defineProperty() / Object.defineProperties()
 
-该属性没有写入 ES6 的正文，而是写入了附录，原因是**proto**前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的 API，只是由于浏览器广泛支持，才被加入了 ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的 `Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
-
-`Object.setPrototypeOf()` 方法的作用与**proto**相同，用来设置一个对象的 `prototype` 对象，返回参数对象本身。它是 ES6 正式推荐的设置原型对象的方法。
-
-`Object.getPrototypeOf()` 方法与 `Object.setPrototypeOf()` 方法配套，用于读取一个对象的原型对象。
-
-```js
-// ES6 之前需要抛弃默认的 Bar.prototype
-Bar.ptototype = Object.create( Foo.prototype );
-// ES6 开始可以直接修改现有的 Bar.prototype
-Object.setPrototypeOf( Bar.prototype, Foo.prototype );
-```
-
-### Object.defineProperty()
-
+- `Object.defineProperty(obj, prop, descriptor)`
+- `Object.defineProperties(obj, props)`
+  
 直接在一个对象上定义一个新属性，或者修改一个对象的现有属性， 并返回这个对象。
 数据属性：
 
@@ -83,31 +78,110 @@ ES5 有三个操作会忽略 enumerable 为 false 的属性
 ES6 新增了一个操作
 
 - `Object.assign()`，会忽略 enumerable 为 false 的属性，只拷贝对象自身的可枚举的属性。
+```js
+let obj = {};
+Object.defineProperties(obj, {
+  'property1': {
+    value: true,
+    writable: true
+  },
+  'property2': {
+    value: 'Hello',
+    writable: false
+  }
+  // etc. etc.
+});
+```
 
-### Object.preventExtensions()
+### Object.setPrototypeOf() / Object.getPrototypeOf()
 
-让一个对象变的不可扩展，也就是永远不能再添加新的属性。
+该属性没有写入 ES6 的正文，而是写入了附录，原因是**proto**前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的 API，只是由于浏览器广泛支持，才被加入了 ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的 `Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
 
-### Object.seal()
+`Object.setPrototypeOf()` 方法的作用与**proto**相同，用来设置一个对象的 `prototype` 对象，返回参数对象本身。它是 ES6 正式推荐的设置原型对象的方法。
 
-封闭一个对象，阻止添加新属性并将所有现有属性标记为不可配置。当前属性的值只要可写就可以改变。密封一个对象会让这个对象变的不能添加新属性，且所有已有属性会变的不可配置。属性不可配置的效果就是属性变的不可删除，以及一个数据属性不能被重新定义成为访问器属性，或者反之。但属性的值仍然可以修改。
+`Object.getPrototypeOf()` 方法与 `Object.setPrototypeOf()` 方法配套，用于读取一个对象的原型对象。
 
-### Object.freeze()
+```js
+// ES6 之前需要抛弃默认的 Bar.prototype
+Bar.ptototype = Object.create( Foo.prototype );
+// ES6 开始可以直接修改现有的 Bar.prototype
+Object.setPrototypeOf( Bar.prototype, Foo.prototype );
+```
 
-冻结一个对象。一个被冻结的对象再也不能被修改；冻结了一个对象则不能向这个对象添加新的属性，不能删除已有属性，不能修改该对象已有属性的可枚举性、可配置性、可写性，以及不能修改已有属性的值。此外，冻结一个对象后该对象的原型也不能被修改。freeze() 返回和传入的参数相同的对象。
+### 属性相关：
+### Object.getOwnPropertyNames()
+`Object.getOwnPropertyNames()`方法返回一个由指定对象的所有自身属性的属性名（包括不可枚举属性但不包括 Symbol 值作为名称的属性）组成的数组。
 
-### Object.isFrozen()
+### Object.getOwnPropertyDescriptor() / Object.getOwnPropertyDescriptors()
 
-判断一个对象是否被冻结。一个对象是冻结的是指它不可扩展，所有属性都是不可配置的，且所有数据属性（即没有 getter 或 setter 组件的访问器的属性）都是不可写的。
+ES5 的 `Object.getOwnPropertyDescriptor()` 方法会返回**某个**对象属性的描述对象（descriptor）。
 
-### Object.isSealed()
+ES2017 引入了 `Object.getOwnPropertyDescriptors()` 方法，返回指定对象**所有**自身属性（非继承属性）的描述对象。
+```js
+const object1 = {
+  property1: 42,
+  property2: 'dfkk'
+};
+const descriptor1 = Object.getOwnPropertyDescriptor(object1, 'property1');
+const descriptors = Object.getOwnPropertyDescriptors(object1);
+console.log(descriptor1.configurable);
+// Expected output: true
+console.log(descriptor1.value);
+// Expected output: 42
+console.log(descriptors)
+// Expected output: {
+//     "property1": {
+//         "value": 42,
+//         "writable": true,
+//         "enumerable": true,
+//         "configurable": true
+//     },
+//     "property2": {
+//         "value": "dfkk",
+//         "writable": true,
+//         "enumerable": true,
+//         "configurable": true
+//     }
+// }
+```
 
-判断一个对象是否被密封。密封对象是指那些不可扩展的，且所有自身属性都不可配置且因此不可删除（但不一定是不可写）的对象。
+### Object.getOwnPropertySymbols()
 
-### Object.is()
+`Object.getOwnPropertySymbols()` 方法返回一个给定对象自身的所有 Symbol 属性的数组。
 
-Object.is 用来比较两个值是否严格相等，与严格比较运算符（===）的行为基本一致。
+### Object.preventExtensions() / Object.isExtensible()
 
+`Object.preventExtensions()`让一个对象变的不可扩展，也就是永远不能再添加新的属性。
+
+The Object.preventExtensions() static method prevents new properties from ever being added to an object. It also prevents the object's prototype from being re-assigned.
+- 不能添加新属性
+
+`Object.isExtensible()`判断一个对象是否是可扩展的（是否可以在它上面添加新的属性）。
+
+### Object.seal() / Object.isSealed()
+
+`Object.seal()`封闭一个对象，阻止添加新属性并将所有现有属性标记为不可配置。当前属性的值只要可写就可以改变。密封一个对象会让这个对象变的不能添加新属性，且所有已有属性会变的不可配置。属性不可配置的效果就是属性变的不可删除，以及一个数据属性不能被重新定义成为访问器属性，或者反之。但属性的值仍然可以修改。
+
+Sealing an object prevents extensions and makes existing properties non-configurable. 
+- 不能添加新属性
+- 不能删除已有属性
+- 不能配置现有属性 configurable=false
+  
+`Object.isSealed()`判断一个对象是否被密封。密封对象是指那些不可扩展的，且所有自身属性都不可配置且因此不可删除（但不一定是不可写）的对象。
+
+### Object.freeze() / Object.isFrozen()
+
+`Object.freeze()`冻结一个对象。一个被冻结的对象再也不能被修改；冻结了一个对象则不能向这个对象添加新的属性，不能删除已有属性，不能修改该对象已有属性的可枚举性、可配置性、可写性，以及不能修改已有属性的值。此外，冻结一个对象后该对象的原型也不能被修改。freeze() 返回和传入的参数相同的对象。
+
+Freezing an object prevents extensions and makes existing properties non-writable and non-configurable. 
+- 不能添加新属性
+- 不能删除已有属性
+- 不能配置现有属性 configurable=false
+- 不能修改现有属性现有值 configurable=false writable=false
+
+`Object.isFrozen()`判断一个对象是否被冻结。一个对象是冻结的是指它不可扩展，所有属性都是不可配置的，且所有数据属性（即没有 getter 或 setter 组件的访问器的属性）都是不可写的。
+
+### 属性遍历：
 ### Object.keys()
 
 object.keys 方法，返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键名。
@@ -153,7 +227,7 @@ console.log(Object.entries(anObj)); // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
 
 ### Object.fromEntries()
 
-Object.fromEntries()方法是 Object.entries()的逆操作，用于将一个键值对数组转为对象。
+`Object.fromEntries()`方法是 `Object.entries()` 的逆操作，用于将一个键值对数组转为对象。
 
 ```js
 const map = new Map([
@@ -164,11 +238,11 @@ const obj = Object.fromEntries(map);
 console.log(obj); // { foo: "bar", baz: 42 }
 ```
 
-### Object.getOwnPropertyDescriptors()
 
-ES5 的 Object.getOwnPropertyDescriptor()方法会返回某个对象属性的描述对象（descriptor）。ES2017 引入了 Object.getOwnPropertyDescriptors()方法，返回指定对象所有自身属性（非继承属性）的描述对象。
 
 ---
+
+
 ## Object 的实例方法
 
 ### Object.prototype.hasOwnProperty()
