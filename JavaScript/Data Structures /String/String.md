@@ -366,6 +366,7 @@ console.log(`Using an index of ${index} the character returned is ${sentence.at(
   - replace
   - match
   - search
+  - spilt
 
 
 
