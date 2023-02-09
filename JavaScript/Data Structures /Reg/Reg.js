@@ -22,15 +22,15 @@ console.log(reg5.test("1234567"));
 console.log(reg5.test("DXX1234567"));
 
 // 把 yyyy-mm-dd 格式，替换成 mm/dd/yyyy 
-var reg6 = /(\d{4})-(\d{2})-(\d{2})/;
+let reg6 = /(\d{4})-(\d{2})-(\d{2})/;
 console.log("2017-06-12".replace(reg6, "$2/$3/$1"));
 
 // 分组
-var reg7 = /\d{4}(-|\/|\.)\d{2}\1\d{2}/;
-var string5 = "2017-06-12";
-var string2 = "2017/06/12";
-var string3 = "2017.06.12";
-var string4 = "2016-06/12";
+let reg7 = /\d{4}(-|\/|\.)\d{2}\1\d{2}/;
+let string5 = "2017-06-12";
+let string2 = "2017/06/12";
+let string3 = "2017.06.12";
+let string4 = "2016-06/12";
 console.group('反向引用');
 console.log(reg7.test(string5)); // true
 console.log(reg7.test(string2)); // true
@@ -58,11 +58,9 @@ console.log(reg8.test(string8)); // false
 console.groupEnd();
 
 // 身份证校验
-var reg9 = /^(\d{15}|\d{17}[\dxX])$/;
+let reg9 = /^(\d{15}|\d{17}[\dxX])$/;
 
 
-
-// reg888.test("kdfj?ddd");
 
 
 
