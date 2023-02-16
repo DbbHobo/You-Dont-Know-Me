@@ -157,3 +157,34 @@ console.group('Object.prptotype.hasOwnProperty')
 console.log(obj10.hasOwnProperty('property3'))
 console.log(obj10.propertyIsEnumerable('property4'))
 console.groupEnd()
+
+Object.setPrototypeOf(obj10, obj11)
+console.group('for...in')
+for (let item in obj10) {
+  console.log(item)
+}
+console.groupEnd
+
+console.group('Object.keys')
+for (let item of Object.keys(obj10)) {
+  console.log(item)
+}
+console.groupEnd
+
+console.group('Object.getOwnPropertyNames')
+for (let item of Object.getOwnPropertyNames(obj10)) {
+  console.log(item)
+}
+console.groupEnd
+
+console.group('Object.getOwnPropertySymbols')
+for (let item of Object.getOwnPropertySymbols(obj10)) {
+  console.log(item)
+}
+console.groupEnd
+
+console.group('Reflect.ownKeys')
+for (let item of Reflect.ownKeys(obj10)) {
+  console.log(item)
+}
+console.groupEnd

@@ -37,7 +37,7 @@ person2.greeting(); // Hi! I'm 张三.
 
 用于将所有可枚举属性的值从一个或多个源对象复制到目标对象。它将返回目标对象。方法只会拷贝源对象自身的并且可枚举的属性到目标对象。如果目标对象中的属性具有相同的键，则属性将被源对象中的属性覆盖。后面的源对象的属性将类似地覆盖前面的源对象的属性。
 
-`Object.assign`方法用于对象的合并，将源对象（source）的所有可枚举属性，复制到目标对象（target）。`Object.assign(target, source1, source2);`
+`Object.assign`方法用于对象的合并，将源对象（source）的所有可枚举属性，复制到目标对象（target）。`Object.assign(target, source1, source2);`是浅拷贝。
 
 ```js
 const target = { a: 1, b: 2 };
@@ -69,29 +69,13 @@ console.log(returnedTarget);
 - [[Get]]：在读取属性时调用的函数。默认值为 undefined。
 - [[Set]]：在写入属性时调用的函数。默认值为 undefined。
 
-ES5 有三个操作会忽略 enumerable 为 false 的属性
-
+ES5 有三个操作会忽略 enumerable 为 false 的属性：
 - `for...in` 循环：只遍历对象自身的和继承的可枚举的属性
 - `Object.keys()`：返回对象自身的所有可枚举的属性的键名
 - `JSON.stringify()`：只串行化对象自身的可枚举的属性
+- ES6 新增了一个操作：`Object.assign()`，会忽略 enumerable 为 false 的属性，只拷贝对象自身的可枚举的属性。
 
-ES6 新增了一个操作
-
-- `Object.assign()`，会忽略 enumerable 为 false 的属性，只拷贝对象自身的可枚举的属性。
-```js
-let obj = {};
-Object.defineProperties(obj, {
-  'property1': {
-    value: true,
-    writable: true
-  },
-  'property2': {
-    value: 'Hello',
-    writable: false
-  }
-  // etc. etc.
-});
-```
+只有for...in会返回继承的属性，其他三个方法都会忽略继承的属性，引入“可枚举”（enumerable）这个概念的最初目的，就是让某些属性可以规避掉for...in操作，不然所有内部属性和方法都会被遍历到。
 
 ### Object.setPrototypeOf() / Object.getPrototypeOf()
 
@@ -280,4 +264,23 @@ console.log(object1.hasOwnProperty("toString"));
 
 返回指定对象的原始值。
 
+## Object总结
+
+### 对象属性遍历
+1. for...in
+    - for...in循环遍历对象自身的和继承的可枚举属性（不含 Symbol 属性）。
+2. Object.keys(obj)
+    - Object.keys返回一个数组，包括对象自身的（不含继承的）所有可枚举属性（不含 Symbol 属性）的键名。
+3. Object.getOwnPropertyNames(obj)
+    - Object.getOwnPropertyNames返回一个数组，包含对象自身的所有属性（不含 Symbol 属性，但是包括不可枚举属性）的键名。
+4. Object.getOwnPropertySymbols(obj)
+    - Object.getOwnPropertySymbols返回一个数组，包含对象自身的所有 Symbol 属性的键名。
+5. Reflect.ownKeys(obj)
+    - Reflect.ownKeys返回一个数组，包含对象自身的（不含继承的）所有键名，不管键名是 Symbol 或字符串，也不管是否可枚举。
+
+
+
+
+
 [Object-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object)
+
