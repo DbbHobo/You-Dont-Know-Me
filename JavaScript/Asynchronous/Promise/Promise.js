@@ -134,3 +134,45 @@ Promise.race([pro, pro1]).then((result) => {
 }, (reason) => {
   console.log('promise.race reject了啥？', reason);
 })
+
+
+
+const testPromise = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve(1)
+  }, 3000);
+})
+testPromise.then(res => {
+  console.log('test promise then',res)
+})
+
+
+/**  
+ *   Promise.all 
+**/
+const p1 = new Promise((resolve, reject) => {
+  throw new Error('报错了1');
+  // resolve('hello');
+}).then(result => result)
+
+const p2 = new Promise((resolve, reject) => {
+  throw new Error('报错了2');
+  // resolve('wrold');
+}).then(result => result)
+
+Promise.all([p1, p2]).then(result => console.log(result)).catch(e => console.log('all error', e));
+
+
+/**  
+ *   Promise.allSettled 
+**/
+const p3 = Promise.resolve(1);
+const p4 = Promise.reject(-1);
+const allSettledPromise = Promise.allSettled([p3, p4]);
+allSettledPromise.then(function (results) {
+  console.log(results);
+});
+// [
+//   { status: 'fulfilled', value: 1 },
+//   { status: 'rejected', reason: -1 }
+// ]
