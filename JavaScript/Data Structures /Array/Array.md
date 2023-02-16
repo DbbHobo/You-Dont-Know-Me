@@ -216,6 +216,43 @@ var filteredNumbers = numbers.map(function (num, index) {
 // numbers is still [1, 2, 3, 4]
 ```
 
+### Array.prototype.forEach()
+forEach() 方法对数组的每个元素执行一次给定的函数。
+```js
+const logArrayElements = (element, index /*, array */) => {
+  console.log(`a[${index}] = ${element}`);
+};
+
+// 注意，索引 2 被跳过，因为数组中这个位置没有内容
+[2, 5, , 9].forEach(logArrayElements);
+```
+
+### Array.prototype.entries() / Array.prototype.keys() / Array.prototype.values()
+
+keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
+
+- returns a new Array Iterator object that contains the key/value pairs for each index in the array.
+
+```js
+for (let [index, elem] of ['a', 'b'].entries()) {
+  console.log(index, elem);
+}
+// 0 "a"
+// 1 "b"
+
+for (let index of ['a', 'b'].keys()) {
+  console.log(index);
+}
+// 0
+// 1
+
+for (let elem of ['a', 'b'].values()) {
+  console.log(elem);
+}
+// 'a'
+// 'b'
+```
+
 ### Array.prototype.reduce()
 
 对数组中的每个元素执行一个由您提供的 reducer 函数（从左到右），将其结果汇总为**单个返回值**。
@@ -306,32 +343,6 @@ fill方法使用给定值，填充一个数组。
 let arr = new Array(3).fill({name: "Mike"});
 arr[0].name = "Ben";
 // [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
-```
-
-### Array.prototype.entries() / Array.prototype.keys() / Array.prototype.values()
-
-keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
-
-- returns a new Array Iterator object that contains the key/value pairs for each index in the array.
-
-```js
-for (let [index, elem] of ['a', 'b'].entries()) {
-  console.log(index, elem);
-}
-// 0 "a"
-// 1 "b"
-
-for (let index of ['a', 'b'].keys()) {
-  console.log(index);
-}
-// 0
-// 1
-
-for (let elem of ['a', 'b'].values()) {
-  console.log(elem);
-}
-// 'a'
-// 'b'
 ```
 
 ### Array.prototype.includes()

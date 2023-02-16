@@ -119,3 +119,16 @@ let arr20 = [857,899,888]
 console.group('Array.prototype.inclues & Array.prototype.indexOf')
 console.log(arr20.includes(857),arr20.indexOf(899))
 console.groupEnd()
+
+
+console.group('Array.prototype.forEach')
+const logArrayElements = (element, index ,array) => {
+  console.log(`arr[${index}] = ${element}`);
+};
+[2, 5, , 9].forEach(logArrayElements);
+let arr21 = [1, 2, 3]
+arr21.forEach((x, index, array) => {
+  arr21[index] = x*2
+})
+console.log(arr21)
+console.groupEnd()
