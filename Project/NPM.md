@@ -38,6 +38,7 @@
   }
 }
 ```
+
 ### npm基础配置
 
 Every project in JavaScript – whether it's `Node.js` or a browser application – can be scoped as an npm package with its own package information and its package.json job to describe the project.
@@ -173,6 +174,18 @@ npm unlink
 `npm link`主要操作如下：
 - 为目标`npm`模块创建软链接，将其链接到全局`node`模块安装路径`/usr/local/lib/node_modules/`。
 - 为目标`npm`模块的可执行`bin`文件创建软链接，将其链接到全局`node`命令安装路径`/usr/local/bin/`。
+
+### pnpm
+
+安装依赖包到 dependencies ：pnpm add <pkg>
+安装依赖包到devDependencies：pnpm add -D <pkg>
+安装依赖包到optionalDependencies：pnpm add -O <pkg>
+全局安装依赖包：pnpm add -g xxx
+安装项目全部依赖：pnpm install，别名pnpm i
+更新依赖包：pnpm update，别名pnpm up
+删除依赖包：pnpm remove，别名pnpm rm/uninstall/un
+
+硬连接就是同一个文件的不同引用，而软链接是新建一个文件，文件内容指向另一个路径。当然，这俩链接使用起来是差不多的。
 
 [What is npm? A Node Package Manager Tutorial for Beginners](https://www.freecodecamp.org/news/what-is-npm-a-node-package-manager-tutorial-for-beginners/)
 
