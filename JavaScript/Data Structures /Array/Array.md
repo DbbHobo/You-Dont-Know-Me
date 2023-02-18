@@ -386,6 +386,21 @@ console.log(beasts.indexOf('giraffe'));
 // Expected output: -1
 ```
 
+### Array.prototype.flat()
+`flat(depth)` 方法会按照一个可指定的深度递归遍历数组，并将所有元素与遍历到的子数组中的元素合并为一个新数组返回。`flat(depth)` 方法会移除数组中的空项。
+- depth 可选指定要提取嵌套数组的结构深度，默认值为 1。
+```js
+const arr1 = [0, 1, 2, [3, 4]];
+
+console.log(arr1.flat());
+// Expected output: Array [0, 1, 2, 3, 4]
+
+const arr2 = [0, 1, 2, [[[3, 4]]]];
+
+console.log(arr2.flat(2));
+// Expected output: Array [0, 1, 2, Array [3, 4]]
+```
+
 ## Array总结
 1. 会改变原数组的方法：
   - push
