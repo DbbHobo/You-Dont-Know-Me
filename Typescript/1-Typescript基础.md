@@ -1,8 +1,7 @@
 ## TypeScript
-
+静态类型系统描述了程序运行时值的结构和行为。像 TypeScript 这样的静态类型检查器会利用类型系统提供的信息，并在事态发展不对劲的时候告知我们。
 ### TypeScript定义
 TypeScript 是一种给 JavaScript 添加特性的语言扩展。增加的功能包括：
-
 - 类型批注和编译时类型检查
 - 类型推断
 - 类型擦除
@@ -14,7 +13,23 @@ TypeScript 是一种给 JavaScript 添加特性的语言扩展。增加的功能
 - 元组
 - Await
 
-### TypeScript基础类型
+### TypeScript基本数据类型
+- boolean：表示布尔值，可以是 true 或 false。
+- number：表示数字，包括整数和浮点数。
+- string：表示字符串。可以使用单引号或双引号来表示字符串。
+- void：表示没有任何返回值的函数的返回类型。
+- null 和 undefined：这两个类型是所有类型的子类型。
+- symbol：表示独特的值，类似于数字或字符串。
+
+除此之外，TypeScript 还支持以下复合类型：
+
+- array：表示一个元素类型为 T 的数组。例如，number[] 表示一个数字数组。
+- tuple：表示已知元素数量和类型的数组。例如，[string, number] 表示一个字符串和数字组成的元组。
+- enum：表示一个命名的常量枚举。
+- any：表示任意类型。
+- unknown：与 any 类似，但是在更严格的类型检查下使用。
+- object：表示非原始类型的对象。
+- 还有一些其他的类型，例如 never、union 和 intersection，它们可以用于描述更复杂的类型。
 
 #### 数字
 和`JavaScript`一样，`TypeScript`里的所有数字都是浮点数。 这些浮点数的类型是 `number`。 除了支持十进制和十六进制字面量，`TypeScript`还支持ECMAScript 2015中引入的二进制和八进制字面量。
@@ -43,6 +58,43 @@ I'll be ${ age + 1 } years old next month.`;
 let sentence: string = "Hello, my name is " + name + ".\n\n" +
     "I'll be " + (age + 1) + " years old next month.";
 ```
+
+#### Any
+有时候，我们会想要为那些在编程阶段还不清楚类型的变量指定一个类型。 这些值可能来自于动态的内容，比如来自用户输入或第三方代码库。 这种情况下，我们不希望类型检查器对这些值进行检查而是直接让它们通过编译阶段的检查。 那么我们可以使用 `any` 类型来标记这些变量：
+```js
+let notSure: any = 4;
+notSure = "maybe a string instead";
+notSure = false; // okay, definitely a boolean
+```
+在对现有代码进行改写的时候，`any`类型是十分有用的，它允许你在编译时可选择地包含或移除类型检查。 你可能认为 `Object` 有相似的作用，就像它在其它语言中那样。 但是 `Object` 类型的变量只是允许你给它赋任意值，但是却不能够在它上面调用任意的方法，即便它真的有这些方法：
+```js
+let notSure: any = 4;
+notSure.ifItExists(); // okay, ifItExists might exist at runtime
+notSure.toFixed(); // okay, toFixed exists (but the compiler doesn't check)
+
+let prettySure: Object = 4;
+prettySure.toFixed(); // Error: Property 'toFixed' doesn't exist on type 'Object'.
+```
+当你只知道一部分数据的类型时，`any`类型也是有用的。 比如，你有一个数组，它包含了不同的类型的数据：
+```js
+let list: any[] = [1, true, "free"];
+
+list[1] = 100;
+```
+
+#### Void
+某种程度上来说，`void`类型像是与`any`类型相反，它表示没有任何类型。 当一个**函数没有返回值时**，你通常会见到其返回值类型是 `void`：
+```js
+function warnUser(): void {
+    console.log("This is my warning message");
+}
+```
+声明一个`void`类型的变量没有什么大用，因为你只能为它赋予`undefined`和`null`：
+```js
+let unusable: void = undefined;
+```
+
+#### Null 和 Undefined
 
 #### 数组
 `TypeScript`像`JavaScript`一样可以操作数组元素。 有两种方式可以定义数组。 第一种，可以在元素类型后面接上[]，表示由此类型元素组成的一个数组：
@@ -119,42 +171,7 @@ function getTargetType(value: Target) {
 // value[ReactiveFlags.SKIP]其实就是访问value[__v_skip]
 ```
 
-#### Any
-有时候，我们会想要为那些在编程阶段还不清楚类型的变量指定一个类型。 这些值可能来自于动态的内容，比如来自用户输入或第三方代码库。 这种情况下，我们不希望类型检查器对这些值进行检查而是直接让它们通过编译阶段的检查。 那么我们可以使用 `any` 类型来标记这些变量：
-```js
-let notSure: any = 4;
-notSure = "maybe a string instead";
-notSure = false; // okay, definitely a boolean
-```
-在对现有代码进行改写的时候，`any`类型是十分有用的，它允许你在编译时可选择地包含或移除类型检查。 你可能认为 `Object` 有相似的作用，就像它在其它语言中那样。 但是 `Object` 类型的变量只是允许你给它赋任意值，但是却不能够在它上面调用任意的方法，即便它真的有这些方法：
-```js
-let notSure: any = 4;
-notSure.ifItExists(); // okay, ifItExists might exist at runtime
-notSure.toFixed(); // okay, toFixed exists (but the compiler doesn't check)
 
-let prettySure: Object = 4;
-prettySure.toFixed(); // Error: Property 'toFixed' doesn't exist on type 'Object'.
-```
-当你只知道一部分数据的类型时，`any`类型也是有用的。 比如，你有一个数组，它包含了不同的类型的数据：
-```js
-let list: any[] = [1, true, "free"];
-
-list[1] = 100;
-```
-
-#### Void
-某种程度上来说，`void`类型像是与`any`类型相反，它表示没有任何类型。 当一个**函数没有返回值时**，你通常会见到其返回值类型是 `void`：
-```js
-function warnUser(): void {
-    console.log("This is my warning message");
-}
-```
-声明一个`void`类型的变量没有什么大用，因为你只能为它赋予`undefined`和`null`：
-```js
-let unusable: void = undefined;
-```
-
-#### Null 和 Undefined
 `TypeScript`里，`undefined`和`null`两者各自有自己的类型分别叫做`undefined`和`null`。 和`void`相似，它们的本身的类型用处不是很大：
 ```js
 // Not much else we can assign to these variables!
@@ -224,5 +241,6 @@ let strLength: number = (someValue as string).length;
 ```
 两种形式是等价的。 至于使用哪个大多数情况下是凭个人喜好；然而，当你在`TypeScript`里使用JSX时，只有as语法断言是被允许的。
 
-
+### 参考资料
 [基础类型](https://www.tslang.cn/docs/handbook/basic-types.html )
+[Typescript基础](https://www.typescriptlang.org/zh/docs/handbook/2/basic-types.html)
