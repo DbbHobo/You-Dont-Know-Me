@@ -123,13 +123,13 @@ pro.then((result) => {
   console.log('promise reject了啥？', reason);
 })
 
-Promise.all([pro, pro1]).then((result) => {
+pro.all([pro, pro1]).then((result) => {
   console.log('promise.all resolve了啥？', result);
 }, (reason) => {
   console.log('promise.all reject了啥？', reason);
 })
 
-Promise.race([pro, pro1]).then((result) => {
+pro.race([pro, pro1]).then((result) => {
   console.log('promise.race resolve了啥？', result);
 }, (reason) => {
   console.log('promise.race reject了啥？', reason);
@@ -160,7 +160,11 @@ const p2 = new Promise((resolve, reject) => {
   // resolve('wrold');
 }).then(result => result)
 
-Promise.all([p1, p2]).then(result => console.log(result)).catch(e => console.log('all error', e));
+Promise.all([p1, p2]).then(result => console.log(result)).catch(e =>{
+  setTimeout(() => {
+    console.log('all error', e)
+  }, 5000);
+});
 
 
 /**  
@@ -170,7 +174,9 @@ const p3 = Promise.resolve(1);
 const p4 = Promise.reject(-1);
 const allSettledPromise = Promise.allSettled([p3, p4]);
 allSettledPromise.then(function (results) {
-  console.log(results);
+  setTimeout(() => {
+    console.log(results)
+  }, 5000);
 });
 // [
 //   { status: 'fulfilled', value: 1 },
