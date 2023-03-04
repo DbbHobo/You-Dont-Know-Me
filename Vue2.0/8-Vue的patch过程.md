@@ -95,7 +95,6 @@ patchVnode 的规则是这样的：
 
 ### 新旧节点相同，比较子节点，同层比较
 Vue2中采取的是**双端比较**的方式，核心代码如下：
-
 ```js
 function updateChildren(
     parentElm,
@@ -124,20 +123,26 @@ function updateChildren(
       checkDuplicateKeys(newCh);
     }
 
+    //【新旧节点序列都还没遍历完】
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
       if (isUndef(oldStartVnode)) {
+        //【头旧节点是undefined情况，说明前面的步骤此节点被复用已被置为undefined，看下一个节点】
         oldStartVnode = oldCh[++oldStartIdx]; // Vnode has been moved left
       } else if (isUndef(oldEndVnode)) {
+        //【尾旧节点是undefined情况，说明前面的步骤此节点被复用已被置为undefined，看前一个节点】
         oldEndVnode = oldCh[--oldEndIdx];
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
+        //【旧头和新头相同】
         patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue);
         oldStartVnode = oldCh[++oldStartIdx];
         newStartVnode = newCh[++newStartIdx];
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        //【旧尾和新尾相同】
         patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue);
         oldEndVnode = oldCh[--oldEndIdx];
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldStartVnode, newEndVnode)) {
+        //【旧头和新尾相同，将旧头挪到旧序列的尾部】
         // Vnode moved right
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
         canMove &&
@@ -149,6 +154,7 @@ function updateChildren(
         oldStartVnode = oldCh[++oldStartIdx];
         newEndVnode = newCh[--newEndIdx];
       } else if (sameVnode(oldEndVnode, newStartVnode)) {
+        //【旧尾和新头相同，将旧尾挪到旧序列头部】
         // Vnode moved left
         patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue);
         canMove &&
@@ -156,11 +162,15 @@ function updateChildren(
         oldEndVnode = oldCh[--oldEndIdx];
         newStartVnode = newCh[++newStartIdx];
       } else {
+        //【旧头尾和新头尾都不同，就从新节点序列的第一个开始寻找旧节点中是否存在可复用的旧节点】
         if (isUndef(oldKeyToIdx))
+        //【给旧节点构造一个对象，key是旧节点的key，value是旧节点的索引】
           oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
+        // 【如果key存在，寻找newStartVnode在旧节点的索引；否则，遍历旧节点序列通过sameVnode一一对比，寻找是否存在可复用的旧节点】
         idxInOld = isDef(newStartVnode.key)
           ? oldKeyToIdx[newStartVnode.key]
           : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx);
+        //【如果没找到可复用的旧节点，说明当前新节点需要重新创建】
         if (isUndef(idxInOld)) {
           // New element
           createElm(
@@ -173,8 +183,23 @@ function updateChildren(
             newStartIdx
           );
         } else {
+          //【如果通过key找到了可能可以复用的旧节点vnodeToMove】
           vnodeToMove = oldCh[idxInOld];
+          //【用sameVnode方法检查这个旧节点是否确实可以用】
+          // function sameVnode(a, b) {
+          //   return (
+          //     a.key === b.key &&
+          //     ((a.tag === b.tag &&
+          //       a.isComment === b.isComment &&
+          //       isDef(a.data) === isDef(b.data) &&
+          //       sameInputType(a, b)) ||
+          //       (isTrue(a.isAsyncPlaceholder) &&
+          //         a.asyncFactory === b.asyncFactory &&
+          //         isUndef(b.asyncFactory.error)))
+          //   );
+          // }
           if (sameVnode(vnodeToMove, newStartVnode)) {
+            //【该旧节点可复用，但是需要移动到旧节点头部，并且将当前旧节点位置所在节点设为undefined，后续遍历遇到这个undefined说明此节点已被复用，则直接挪动指针去下一个节点】
             patchVnode(vnodeToMove, newStartVnode, insertedVnodeQueue);
             oldCh[idxInOld] = undefined;
             canMove &&
@@ -184,6 +209,7 @@ function updateChildren(
                 oldStartVnode.elm
               );
           } else {
+            //【该旧节点不可复用，仅仅是key相同，那就创建新节点】
             // same key but different element. treat as new element
             createElm(
               newStartVnode,
@@ -214,6 +240,5 @@ function updateChildren(
     }
 }
 ```
-
 
 ## 组件更新过程
