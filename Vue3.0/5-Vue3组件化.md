@@ -1542,6 +1542,7 @@ export function finishComponentSetup(
 - `renderComponentRoot`方法生成虚拟VNode
 - `patch`方法进行挂载
 - 如果组件内还有子组件内容，就会继续循环上面的组件初始化加载过程
+- `new ReactiveEffect`生成render effect实例，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该render effect调用`run`方法继而调用`componentUpdateFn`方法，此时isMounted为true，走入更新分支
 ```ts
 // 【setupRenderEffect】
 setupRenderEffect(
@@ -1563,8 +1564,9 @@ const setupRenderEffect: SetupRenderEffectFn = (
   optimized
 ) => {
   // 【定义一个组件挂载or更新时调用的方法】
+  // 【挂载/更新 永远有两步，第一步生成vnode，第二步patch进行dom挂载/更新】
   const componentUpdateFn = () => {
-    // 【组件实例还未挂载 isMounted是false】
+    // 【首次挂载-组件实例还未挂载 isMounted是false】
     if (!instance.isMounted) {
       let vnodeHook: VNodeHook | null | undefined
       const { el, props } = initialVNode
@@ -1631,7 +1633,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        //【renderComponentRoot生成虚拟VNode】
+        //【1.renderComponentRoot生成根虚拟VNode】
         const subTree = (instance.subTree = renderComponentRoot(instance))
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1639,7 +1641,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
-        // 【patch进行虚拟VNode对比然后挂载】
+        //【2.patch进行虚拟VNode对比然后挂载】
         patch(
           null,
           subTree,
@@ -1708,7 +1710,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
       // #2458: deference mount-only object parameters to prevent memleaks
       initialVNode = container = anchor = null as any
     } else {
-      // 【组件实例已经挂载 isMounted是true 说明是更新】
+      // 【更新组件-组件实例已经挂载 isMounted是true 说明是更新】
       // updateComponent
       // This is triggered by mutation of component's own state (next: null)
       // OR parent calling processComponent (next: VNode)
@@ -1744,22 +1746,24 @@ const setupRenderEffect: SetupRenderEffectFn = (
       }
       toggleRecurse(instance, true)
 
-      // 【const nextTree = renderComponentRoot(instance)构造虚拟VNode】
-      // 【patch进行挂载更新DOM】
+      
+      
       // render
       if (__DEV__) {
         startMeasure(instance, `render`)
       }
+      //【1.const nextTree = renderComponentRoot(instance)构造VNode】
       const nextTree = renderComponentRoot(instance)
       if (__DEV__) {
         endMeasure(instance, `render`)
       }
-      const prevTree = instance.subTree
-      instance.subTree = nextTree
+      const prevTree = instance.subTree//旧VNode
+      instance.subTree = nextTree//新VNode
 
       if (__DEV__) {
         startMeasure(instance, `patch`)
       }
+      //【2.patch进行挂载更新DOM】
       patch(
         prevTree,
         nextTree,
@@ -1874,6 +1878,7 @@ const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
       // double updating the same child component in the same flush.
       invalidateJob(instance.update)
       // instance.update is the reactive effect.
+      // 【这一步在首次挂载的时候已经把update定义成当前effect的run方法，run方法执行后会回调componentUpdateFn，然后进入更新分支】
       instance.update()
     }
   } else {

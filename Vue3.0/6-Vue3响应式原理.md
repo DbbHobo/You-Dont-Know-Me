@@ -387,7 +387,9 @@ function ownKeys(target: object): (string | symbol)[] {
 ```ts
 export const createDep = (effects?: ReactiveEffect[]): Dep => {
   const dep = new Set<ReactiveEffect>(effects) as Dep
+  //【effect.run执行前收集过-was】
   dep.w = 0
+  //【effect.run执行后收集过-new】
   dep.n = 0
   return dep
 }
@@ -400,6 +402,23 @@ export const createDep = (effects?: ReactiveEffect[]): Dep => {
 export let activeEffect: ReactiveEffect | undefined
 // 【默认需要收集】
 export let shouldTrack = true
+/**
+JavaScript 将数字存储为 64 位浮点数，但所有按位运算都以 32 位二进制数执行。
+在执行位运算之前，JavaScript 将数字转换为 32 位有符号整数。
+执行按位操作后，结果将转换回 64 位 JavaScript 数。 
+**/
+// 【深度最大为30，超过30，则需要降级方案，使用全部清除再全部重新收集依赖的方案】
+/**
+ * The bitwise track markers support at most 30 levels of recursion.
+ * This value is chosen to enable modern JS engines to use a SMI on all platforms.
+ * When recursion depth is greater, fall back to using a full cleanup.
+ */
+const maxMarkerBits = 30
+// The number of effects currently being tracked recursively.
+// 【依赖收集深度】
+let effectTrackDepth = 0
+
+export let trackOpBit = 1
 
 export class ReactiveEffect<T = any> {
   active = true
@@ -451,20 +470,23 @@ export class ReactiveEffect<T = any> {
       activeEffect = this
       shouldTrack = true
 
+      //【trackOpBit 是代表当前操作的位，它是由 effect 嵌套深度effectTrackDepth决定】
+      //【初始值...000010】
       trackOpBit = 1 << ++effectTrackDepth
 
-      //【如果依赖收集嵌套深度比最大限制30还大，就清除所有effect】
+      //【如果依赖收集嵌套深度比最大限制30还大，就用兜底方案也就是清除所有effect，否则给当前effect的所有deps标记w已经收集过】
       if (effectTrackDepth <= maxMarkerBits) {
         initDepMarkers(this)
       } else {
         cleanupEffect(this)
       }
+      //【this.fn()调用会进行新的依赖收集过程】
       return this.fn()
     } finally {
       if (effectTrackDepth <= maxMarkerBits) {
         finalizeDepMarkers(this)
       }
-
+      
       trackOpBit = 1 << --effectTrackDepth
 
       activeEffect = this.parent
@@ -490,7 +512,7 @@ export class ReactiveEffect<T = any> {
     }
   }
 }
-// 【遍历当前ReactiveEffect实例的deps的w属性进行计算，表示是否收集过】
+// 【遍历当前ReactiveEffect实例的deps的w属性进行标记收集过】
 export const initDepMarkers = ({ deps }: ReactiveEffect) => {
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
@@ -498,18 +520,20 @@ export const initDepMarkers = ({ deps }: ReactiveEffect) => {
     }
   }
 }
-// 【遍历当前ReactiveEffect实例的deps根据是否收集过以及是否重新收集的，如果收集过或者不是重新收集的则从dep中删除本ReactiveEffect实例，否则当前ReactiveEffect实例的deps推入此dep】
+// 【遍历当前ReactiveEffect实例的deps根据是否收集过以及是否重新收集的，否则当前ReactiveEffect实例的deps推入此dep】
 export const finalizeDepMarkers = (effect: ReactiveEffect) => {
   const { deps } = effect
   if (deps.length) {
     let ptr = 0
     for (let i = 0; i < deps.length; i++) {
       const dep = deps[i]
+      // 【遍历deps，如果收集过但最新收集的却没有则从dep中删除当前effect，这是对依赖收集的优化，因为当派发更新之后依赖的内容可能有变化】
       if (wasTracked(dep) && !newTracked(dep)) {
         dep.delete(effect)
       } else {
         deps[ptr++] = dep
       }
+      // 【~反转所有位】
       // clear bits
       dep.w &= ~trackOpBit
       dep.n &= ~trackOpBit
@@ -826,8 +850,8 @@ function triggerEffect(
   }
 }
 
+// 【按位&大于0说明是wasTracked或newTracked】
 export const wasTracked = (dep: Dep): boolean => (dep.w & trackOpBit) > 0
-
 export const newTracked = (dep: Dep): boolean => (dep.n & trackOpBit) > 0
 ```
 

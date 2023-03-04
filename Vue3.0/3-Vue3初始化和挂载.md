@@ -492,9 +492,7 @@ function _createVNode(
 }
 ```
 
-可以看到最后返回的是`createBaseVNode`如下，`Vue3`构造虚拟VNode和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag`等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个VNode在后续的update过程中是否需要`patch`或者如何去patch，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag`使用的是默认值0，`shapeFlag`是`ShapeFlags.ELEMENT`：
-
-`createBaseVNode`方法如下，这一步创建VNode：
+可以看到最后返回的是`createBaseVNode`如下，`Vue3`构造虚拟VNode和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag`等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个VNode在后续的update过程中是否需要`patch`或者如何去`patch`，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag`使用的是默认值0，`shapeFlag`是`ShapeFlags.ELEMENT`：
 ```js
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
