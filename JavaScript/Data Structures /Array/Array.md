@@ -255,7 +255,7 @@ for (let elem of ['a', 'b'].values()) {
 
 ### Array.prototype.reduce()
 
-对数组中的每个元素执行一个由您提供的 reducer 函数（从左到右），将其结果汇总为**单个返回值**。
+对数组中的每个元素执行一个由您提供的 `reducer` 函数（从左到右），将其结果汇总为**单个返回值**。
 
 - executes a reducer function (that you provide) on each element of the array, resulting in a single output value.
 
