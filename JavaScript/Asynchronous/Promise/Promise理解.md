@@ -21,19 +21,31 @@ new Promise( function(resolve, reject) {...} /* executor */  );
 ## Promise的实例方法
 ### Promise.prototype.then
 
-`Promise.prototype.then()`方法：Promise 实例具有 then 方法，也就是说，then 方法是定义在原型对象 `Promise.prototype` 上的。它的作用是为 Promise 实例添加状态改变时的回调函数。then 方法可以接受两个回调函数作为参数。第一个回调函数是 Promise 对象的状态变为 resolved 时调用，第二个回调函数是 Promise 对象的状态变为 rejected 时调用。其中，第二个函数是可选的，不一定要提供。
+`Promise.prototype.then()`方法：`Promise` 实例具有 `then` 方法，也就是说，`then` 方法是定义在原型对象 `Promise.prototype` 上的。它的作用是为 `Promise` `实例添加状态改变时的回调函数。then` 方法可以接受两个回调函数作为参数。第一个回调函数是 `Promise` 对象的状态变为 `resolved` 时调用，第二个回调函数是 `Promise` 对象的状态变为 `rejected` 时调用。其中，第二个函数是可选的，不一定要提供。
 
-then 方法返回的是一个**新的 Promise 实例**（注意，不是原来那个 Promise 实例）。因此可以采用**链式写法**，即 then 方法后面再调用另一个 then 方法。
+`then` 方法返回的是一个**新的 Promise 实例**（注意，不是原来那个 `Promise` 实例）。因此可以采用**链式写法**，即 `then` 方法后面再调用另一个 `then` 方法。
+
+- 返回了一个值，那么 `then` 返回的 `Promise` 将会成为`resolved`状态，并且将**返回的值**作为接受状态的回调函数的参数值。
+- 没有返回任何值，那么 `then` 返回的 `Promise` 将会成为`resolved`状态，并且该接受状态的回调函数的参数值为 **`undefined`**。
+```js
+getJSON("/post/1.json").then(function(post) {
+  return getJSON(post.commentURL);
+}).then(function (comments) {
+  console.log("resolved: ", comments);
+}, function (err){
+  console.log("rejected: ", err);
+});
+```
 
 ### Promise.prototype.catch
 
 `Promise.prototype.catch()`方法：是`.then(null, rejection)`或`.then(undefined, rejection)`的别名，用于指定发生错误时的回调函数。
 
-一般来说，不要在 then()方法里面定义 Reject 状态的回调函数（即 then 的第二个参数），总是使用 catch 方法。如果没有使用 catch()方法指定错误处理的回调函数，Promise 对象抛出的错误不会传递到外层代码，即不会有任何反应。
+一般来说，不要在 `then()` 方法里面定义 `Reject` 状态的回调函数（即 `then` 的第二个参数），总是使用 `catch` 方法。如果没有使用 `catch()` 方法指定错误处理的回调函数，`Promise` 对象抛出的错误不会传递到外层代码，即不会有任何反应。
 
 ### Promise.prototype.finally
 
-`Promise.prototype.finally()`方法：用于指定不管 Promise 对象最后状态如何，都会执行的操作，与状态无关。
+`Promise.prototype.finally()`方法：用于指定不管 `Promise` 对象最后状态如何，都会执行的操作，与状态无关。
 
 ```js
 Promise.prototype.finally = function (callback) {
@@ -51,7 +63,11 @@ Promise.prototype.finally = function (callback) {
 ## Promise的静态方法
 
 ### Promise.all()
-`Promise.all(iterable)`方法：`Promise.all()`方法接受一个数组作为参数，都是 `Promise` 实例，如果不是，就会先调用 `Promise.resolve()` 方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 `Promise` 实例。
+`Promise.all(iterable)`方法：`Promise.all()`方法接受一个数组作为参数，都是 `Promise` 实例，如果不是，就会先调用 `Promise.resolve()` 方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 `Promise` 实例，然后并行执行异步任务，并且在所有异步操作执行完后才执行回调。
+
+`Promise.all().then()`结果中数组的顺序和`Promise.all()`接收到的数组顺序一致。
+
+`all`和`race`传入的数组中如果有会抛出异常的异步任务，那么只有最先抛出的错误会被捕获，并且是被`then`的第二个参数或者后面的`catch`捕获；但并不会影响数组中其它的异步任务的执行。
 
 `Promise.all()`方法接受一个**数组**作为参数，p1、p2、p3都是 Promise 实例，如果不是，就会先调用下面讲到的`Promise.resolve`方法，将参数转为 Promise 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 Promise 实例。如果作为参数的 Promise 实例，自己定义了catch方法，那么它一旦被rejected，并不会触发`Promise.all()`的catch方法。
 
