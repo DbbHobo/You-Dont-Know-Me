@@ -1,13 +1,13 @@
-## Vue 概览
-该系列文章都基于Vue的3.2.41版本。
-### Vue项目结构
+## Vue3 概览
+该系列内容都基于Vue的3.2.41版本。
+### Vue3 项目结构
 ```
 core-main
 ├──packages
     ├── compiler-core          # 平台无关的编译核心
-    ├── compiler-dom           # 浏览器环境编译dom相关
-    ├── compiler-sfc           # 编译单文件Vue相关
-    ├── compiler-ssr           # 服务器端编译ssr相关
+    ├── compiler-dom           # 编译-浏览器环境dom相关
+    ├── compiler-sfc           # 编译-单文件Vue相关
+    ├── compiler-ssr           # 编译-服务器端ssr相关
     ├── reactivity             # 响应式核心
     ├── reactivity-transform   # 实验模块
     ├── runtime-core           # 平台无关的运行时render相关核心
@@ -30,7 +30,127 @@ core-main
 
 另外从语法方面，`Vue3`支持了Typescript还有ES6中很多重要的API等。
 
-### Vue API一览
+### Vue3 浏览器端入口runtime+compile
+```ts
+//【依赖两个核心模块@vue/compiler-dom和@vue/runtime-dom】
+// This entry is the "full-build" that includes both the runtime
+// and the compiler, and supports on-the-fly compilation of the template option.
+import { initDev } from './dev'
+import { compile, CompilerOptions, CompilerError } from '@vue/compiler-dom'
+import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/runtime-dom'
+import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
+import { InternalRenderFunction } from 'packages/runtime-core/src/component'
+
+if (__DEV__) {
+  initDev()
+}
+//【注册浏览器端编译方法compile】
+const compileCache: Record<string, RenderFunction> = Object.create(null)
+
+function compileToFunction(
+  template: string | HTMLElement,
+  options?: CompilerOptions
+): RenderFunction {
+  if (!isString(template)) {
+    if (template.nodeType) {
+      template = template.innerHTML
+    } else {
+      __DEV__ && warn(`invalid template option: `, template)
+      return NOOP
+    }
+  }
+
+  const key = template
+  const cached = compileCache[key]
+  if (cached) {
+    return cached
+  }
+
+  if (template[0] === '#') {
+    const el = document.querySelector(template)
+    if (__DEV__ && !el) {
+      warn(`Template element not found or is empty: ${template}`)
+    }
+    // __UNSAFE__
+    // Reason: potential execution of JS expressions in in-DOM template.
+    // The user must make sure the in-DOM template is trusted. If it's rendered
+    // by the server, the template should not contain any user data.
+    template = el ? el.innerHTML : ``
+  }
+
+  const opts = extend(
+    {
+      hoistStatic: true,
+      onError: __DEV__ ? onError : undefined,
+      onWarn: __DEV__ ? e => onError(e, true) : NOOP
+    } as CompilerOptions,
+    options
+  )
+
+  if (!opts.isCustomElement && typeof customElements !== 'undefined') {
+    opts.isCustomElement = tag => !!customElements.get(tag)
+  }
+
+  const { code } = compile(template, opts)
+
+  function onError(err: CompilerError, asWarning = false) {
+    const message = asWarning
+      ? err.message
+      : `Template compilation error: ${err.message}`
+    const codeFrame =
+      err.loc &&
+      generateCodeFrame(
+        template as string,
+        err.loc.start.offset,
+        err.loc.end.offset
+      )
+    warn(codeFrame ? `${message}\n${codeFrame}` : message)
+  }
+
+  // The wildcard import results in a huge object with every export
+  // with keys that cannot be mangled, and can be quite heavy size-wise.
+  // In the global build we know `Vue` is available globally so we can avoid
+  // the wildcard object.
+  const render = (
+    __GLOBAL__ ? new Function(code)() : new Function('Vue', code)(runtimeDom)
+  ) as RenderFunction
+
+  // mark the function as runtime compiled
+  ;(render as InternalRenderFunction)._rc = true
+
+  return (compileCache[key] = render)
+}
+
+registerRuntimeCompiler(compileToFunction)
+
+export { compileToFunction as compile }
+export * from '@vue/runtime-dom'
+
+```
+
+### Vue3 全局变量
+```ts
+// Global compile-time constants
+declare var __DEV__: boolean    // 开发环境
+declare var __TEST__: boolean
+declare var __BROWSER__: boolean
+declare var __GLOBAL__: boolean
+declare var __ESM_BUNDLER__: boolean
+declare var __ESM_BROWSER__: boolean
+declare var __NODE_JS__: boolean
+declare var __SSR__: boolean
+declare var __COMMIT__: string
+declare var __VERSION__: string
+declare var __COMPAT__: boolean  // 兼容Vue2
+
+// Feature flags
+declare var __FEATURE_OPTIONS_API__: boolean
+declare var __FEATURE_PROD_DEVTOOLS__: boolean
+declare var __FEATURE_SUSPENSE__: boolean
+```
+
+### Vue3 API一览
 
 ![api](./assets/api.png)
 

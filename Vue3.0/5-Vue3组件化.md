@@ -1257,6 +1257,7 @@ export function createComponentInstance(
 - 调用`setup`如果`setup`存在
 - 返回`setup`的内容，可以是响应式对象或渲染函数
 - 最后如果当前实例没有`render`方法通过将`template`编译`compile`成`render`方法并返回
+- 如果`setup`返回的是函数，就是render函数
 ```ts
 // 【setupComponent】
 // resolve props and slots for setup context
