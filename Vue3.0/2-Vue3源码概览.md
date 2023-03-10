@@ -1,6 +1,6 @@
-## Vue3 概览
+# Vue3 概览
 该系列内容都基于Vue的3.2.41版本。
-### Vue3 项目结构
+## Vue3 项目结构
 ```
 core-main
 ├──packages
@@ -30,7 +30,7 @@ core-main
 
 另外从语法方面，`Vue3`支持了Typescript还有ES6中很多重要的API等。
 
-### Vue3 浏览器端入口runtime+compile
+## Vue3 浏览器端入口runtime+compile
 ```ts
 //【依赖两个核心模块@vue/compiler-dom和@vue/runtime-dom】
 // This entry is the "full-build" that includes both the runtime
@@ -129,7 +129,7 @@ export * from '@vue/runtime-dom'
 
 ```
 
-### Vue3 全局变量
+## Vue3 全局变量
 ```ts
 // Global compile-time constants
 declare var __DEV__: boolean    // 开发环境
@@ -150,7 +150,7 @@ declare var __FEATURE_PROD_DEVTOOLS__: boolean
 declare var __FEATURE_SUSPENSE__: boolean
 ```
 
-### Vue3 API一览
+## Vue3 API一览
 
 ![api](./assets/api.png)
 

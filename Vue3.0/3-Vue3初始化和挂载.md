@@ -1,7 +1,7 @@
-## `Vue3` 的初始化过程和挂载过程
+# `Vue3` 的初始化过程和挂载过程
 
-### Vue 初始化
-我们来分析一下首次渲染的过程，首先，在`Vue3`中，我们初始化Vue实例通常是调用 `Vue.createApp` 方法写出如下的代码：
+## Vue 初始化
+我们来分析一下首次渲染的过程，首先，在`Vue3`中，我们初始化`Vue`实例通常是调用 `Vue.createApp` 方法写出如下的代码：
 ```js
 const API_URL = `https://api.github.com/repos/vuejs/core/commits?per_page=3&sha=`
 
@@ -39,9 +39,9 @@ Vue.createApp({
 }).mount('#demo')
 ```
 
-### 生成App实例过程
+## 生成App实例过程
 
-首先来看 `createApp` 方法，传入options会创建一个APP实例并调用`mount`方法，APP实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount`方法的第一个参数作为根元素，`createApp` 方法在 `runtime-dom/index.ts` 中查看：
+首先来看 `createApp` 方法，传入`options`会创建一个APP实例并调用`mount`方法，APP实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount`方法的第一个参数作为根元素，`createApp` 方法在 `runtime-dom/index.ts` 中查看：
 ```js
 export const createApp = ((...args) => {
   const app = ensureRenderer().createApp(...args)//ensureRenderer返回render和createApp方法
@@ -329,8 +329,8 @@ export function createAppAPI<HostElement>(
 ```
 
 
-### 挂载过程 生成VNode调用render去操作DOM挂载
-然后我们接着去看 `mount` 方法，在`mount` 方法会调用`createVNode`创建虚拟VNode，虚拟VNode传入`render`方法进行渲染：
+## 挂载过程 生成VNode调用render去操作DOM挂载
+然后我们接着去看 `mount` 方法，在`mount` 方法会调用`createVNode`创建虚拟`VNode`，虚拟`VNode`传入`render`方法进行渲染：
 ```js
 mount(
     rootContainer: HostElement,
@@ -389,7 +389,7 @@ mount(
 },
 ```
 
-#### 生成虚拟VNode过程
+### 生成虚拟VNode过程
 `createVNode`方法具体实现，在`runtime-core/src/vnode.ts`中，实际是调用`_createVNode`方法，这一步确定`shapeFlag`等，如果有children则normailize：
 ```js
 function _createVNode(
@@ -579,7 +579,7 @@ function createBaseVNode(
 }
 ```
 
-#### 挂载到根元素过程
+### 挂载到根元素过程
 
 然后我们接着去看 `render` 方法，在 `runtime-core/src/renderer.ts`中，可以看到入参有3个参数，分别是虚拟VNode、根元素、isSvg，可以看到其中还有一个判断条件VNode是否为null，是的话调用`unmount`方法卸载掉内容，否则就执行 `patch` 方法：
 
@@ -599,12 +599,12 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 ```
 
 下一步我们走进 `patch` 方法，
-1. 首先`isSameVNodeType`判断两个VNode节点是否相同，不同直接把`old VNode`的内容给unmount；
+1. 首先`isSameVNodeType`判断两个`VNode`节点是否相同，不同直接把`old VNode`的内容给unmount；
 2. `n2.patchFlag === PatchFlags.BAIL`判断`new VNode`的`patchFlag`是否为`BAIL`类型，是则optimize设为false，后续要进行full patch
 3. 可以看到根据`new VNode`的type不同Switch语句走了不同的分支，调用了不同的方法；
   - 可以看一下其中一个比较简单的例子，在`case 'Static'`，再根据`old VNode`是否存在，如果不存在，直接调用`mountStaticNode`插入`new Vnode`的静态内容，如果存在则调用`patchStaticNode`对比新旧静态节点。
 
-可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造虚拟VNode时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的VNode有不同的对比方法。patch方法如下：
+可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造虚拟VNode时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的`VNode`有不同的对比方法。`patch`方法如下：
 ```js
 const patch: PatchFn = (
     n1,

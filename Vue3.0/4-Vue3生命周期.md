@@ -1,7 +1,6 @@
-## Vue3 生命周期
+# Vue3 生命周期
 
-### 生命周期概览
-
+## 生命周期概览
 Vue3对生命周期的命名进行了改变，并且增加了错误处理和渲染完成等生命周期，生命周期一览如下：
 ```js
 export const enum LifecycleHooks {
@@ -23,8 +22,7 @@ export const enum LifecycleHooks {
 ```
 ![lifecycle](./assets/lifecycle.png)
 
-### 生命周期创建
-
+## 生命周期创建
 生命周期由 `createHook` 方法生成，`createHook`入参传入不同的的生命周期名称，并返回另一个函数，这个函数的第一个参数 `hook` 要求类型是一个函数，就是用户定义在当前生命周期要执行的代码，最终会执行注入钩子函数 `injectHook`。这里用到一个函数柯理化技巧，`createHook`将入参锁定为生命周期名字，返回了用户调用的生命周期函数 ，`createHook` 方法位于`runtime-core/src/apiLifecycle.ts`：
 ```ts
 // 
@@ -65,8 +63,7 @@ export function onErrorCaptured<TError = Error>(
 }
 ```
 
-### 生命周期调用
-
+## 生命周期调用
 再来看 `injectHook` 方法，`injectHook` 接受的三个参数分别是
 - `type` 就是生命周期名字
 - `hook`就是用户传入的回调函数
