@@ -45,3 +45,6 @@ function curry(func) {
 高阶函数是对其他函数进行操作的函数，操作可以是将它们作为参数，或者是返回它们。 简单来说，高阶函数是一个接收**函数作为参数**或将**函数作为输出**返回的函数。
 
 例如，`Array.prototype.map`，`Array.prototype.filter` 和 `Array.prototype.reduce` 是语言中内置的一些高阶函数。
+
+
+[学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
