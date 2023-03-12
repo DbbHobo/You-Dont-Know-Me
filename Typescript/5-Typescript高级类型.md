@@ -1,8 +1,8 @@
-## Typescript高级类型
+# Typescript高级类型
 
 ## 常见的高级类型有如下：
 
-### 交叉类型
+## 交叉类型
 交叉类型是将**多个类型合并为一个类型**。 通过 `&` 将多个类型合并为一个类型，包含了所需的所有类型的特性，本质上是一种**并**的操作。 例如 `Person` & `Serializable` & `Loggable` 同时是 `Person` 和 `Serializable` 和 `Loggable`。 就是说这个类型的对象同时拥有了这三种类型的成员。适用于对象合并场景，如下将声明一个函数，将两个对象合并成一个对象并返回：
 ```js
 export function cloneVNode<T, U>(
@@ -75,7 +75,7 @@ export function cloneVNode<T, U>(
 }
 ```
 
-### 联合类型
+## 联合类型
 联合类型的语法规则和逻辑 `|` 的符号一致，表示其类型为连接的多个类型中的任意一个，本质上是一个**交**的关系。联合类型表示一个值可以是几种类型之一。 我们用竖线（`|`）分隔每个类型，所以 `number | string | boolean` 表示一个值可以是 `number`， `string`，或 `boolean`。
 ```js
 type Primitive = string | number | boolean | bigint | symbol | undefined | null
@@ -88,7 +88,7 @@ function padLeft(value: string, padding: string | number) {
 let indentedString = padLeft("Hello world", true); // errors during compilation
 ```
 
-### 类型断言
+## 类型断言
 TypeScript会把 `null和` `undefined` 区别对待。 `string | null`， `string | undefined` 和 `string | undefined | null` 是不同的类型。由于可以为`null`的类型是通过联合类型实现，那么你需要使用类型保护来去除 `null`。可选参数会被自动地加上 `| undefined`。所以类型断言可以去除`null`或 `undefined`。
 下面看一个Vue中的例子，这里的`activeEffect!`其实就是类型断言：
 ```js
@@ -120,7 +120,7 @@ export function trackEffects(
 }
 ```
 
-### 类型别名
+## 类型别名
 类型别名会给一个类型起个新名字，类型别名有时和接口很像，但是可以作用于原始值、联合类型、元组以及其它任何你需要手写的类型。起别名不会新建一个类型 - 它创建了一个新名字来引用那个类型。
 类型别名不能被 `extends` 和 `implements`。如果你无法通过接口来描述一个类型并且需要使用联合类型或元组类型，这时通常会使用类型别名。
 字符串字面量类型允许你指定字符串必须的固定值。
@@ -152,7 +152,7 @@ button.animate(0, 0, "ease-in");
 button.animate(0, 0, "uneasy"); // error: "uneasy" is not allowed here
 ```
 
-### 类型索引
+## 类型索引
 `keyof` 类似于 `Object.keys` ，用于获取一个接口中 `Key` 的联合类型。对于任何类型 `T`， `keyof T`的结果为 `T` 上已知的公共属性名的联合。
 ```js
 interface Button {
@@ -178,7 +178,7 @@ export function toRef<T extends object, K extends keyof T>(
 }
 ```
 
-### 类型约束
+## 类型约束
 通过关键字 `extend` 进行约束，不同于在 `class` 后使用 `extends` 的继承作用，泛型内使用的主要作用是对泛型加以约束。
 ```js
 type BaseType = string | number | boolean
@@ -200,7 +200,7 @@ export interface Ref<T = any> {
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 ```
 
-### 映射类型
+## 映射类型
 `TypeScript`提供了从旧类型中创建新类型的一种方式 — 映射类型。通过 `in` 关键字做类型的映射，遍历已有接口的 `key` 或者是遍历联合类型，如下例子：
 ```js
 type Readonly<T> = {
@@ -212,9 +212,7 @@ type Partial<T> = {
 
 type PersonPartial = Partial<Person>;//Person类型里属性是可选的
 type ReadonlyPerson = Readonly<Person>;//Person类型里属性是只读的
-```
 
-```js
 export type ToRefs<T = any> = {
   [K in keyof T]: ToRef<T[K]>
 }
@@ -230,7 +228,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
 }
 ```
 
-### 条件类型
+## 条件类型
 条件类型的语法规则和三元表达式一致，经常用于一些类型不确定的情况。
 ```ts
 T extends U ? X : Y

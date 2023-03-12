@@ -1,4 +1,5 @@
-## TypeScript接口-interface
+# interface 和 type
+## interface
 
 一个接口所描述的是一个对象相关的属性和方法，但并不提供具体创建此对象实例的方法。
 
@@ -6,7 +7,6 @@
 
 ### 接口描述对象
 接口能够描述`JavaScript`中对象拥有的各种各样的外形。 
-
 ```js
 export interface VNode<
   HostNode = RendererNode,
@@ -110,7 +110,6 @@ interface SquareConfig {
 ```
 
 ### 接口描述函数
-
 除了描述带有属性的普通对象外，接口也可以描述函数类型。
 ```js
 interface SearchFunc {
@@ -178,7 +177,7 @@ c.reset();
 c.interval = 5.0;
 ```
 
-### 类型别名-type
+## 类型别名-type
 类型别名 `type`，其作用就是给类型起一个新名字，可以作用于原始值（基本类型）、联合类型、元组以及其它任何你需要手写的类型
 
 二者均可被用来声明对象和方法的签名，但语法不同。类型别名和接口非常相似，在大多数情况下你可以在它们之间自由选择。 几乎所有的 `interface` 功能都可以在 `type` 中使用，关键区别在于不能重新开放类型以添加新的属性，而接口始终是可扩展的。

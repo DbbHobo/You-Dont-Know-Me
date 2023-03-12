@@ -1,6 +1,6 @@
-## TypeScript
+# TypeScript
 静态类型系统描述了程序运行时值的结构和行为。像 TypeScript 这样的静态类型检查器会利用类型系统提供的信息，并在事态发展不对劲的时候告知我们。
-### TypeScript定义
+## TypeScript定义
 TypeScript 是一种给 JavaScript 添加特性的语言扩展。增加的功能包括：
 - 类型批注和编译时类型检查
 - 类型推断
@@ -13,25 +13,25 @@ TypeScript 是一种给 JavaScript 添加特性的语言扩展。增加的功能
 - 元组
 - Await
 
-### TypeScript基本数据类型
-- boolean：表示布尔值，可以是 true 或 false。
-- number：表示数字，包括整数和浮点数。
-- string：表示字符串。可以使用单引号或双引号来表示字符串。
-- void：表示没有任何返回值的函数的返回类型。
-- null 和 undefined：这两个类型是所有类型的子类型。
-- symbol：表示独特的值，类似于数字或字符串。
+## TypeScript基本数据类型
+- `boolean`：表示布尔值，可以是 true 或 false。
+- `number`：表示数字，包括整数和浮点数。
+- `string`：表示字符串。可以使用单引号或双引号来表示字符串。
+- `void`：表示没有任何返回值的函数的返回类型。
+- `null` 和 `undefined`：这两个类型是所有类型的子类型。
+- `symbol`：表示独特的值，类似于数字或字符串。
 
 除此之外，TypeScript 还支持以下复合类型：
 
-- array：表示一个元素类型为 T 的数组。例如，number[] 表示一个数字数组。
-- tuple：表示已知元素数量和类型的数组。例如，[string, number] 表示一个字符串和数字组成的元组。
-- enum：表示一个命名的常量枚举。
-- any：表示任意类型。
-- unknown：与 any 类似，但是在更严格的类型检查下使用。
-- object：表示非原始类型的对象。
-- 还有一些其他的类型，例如 never、union 和 intersection，它们可以用于描述更复杂的类型。
+- `array`：表示一个元素类型为 T 的数组。例如，number[] 表示一个数字数组。
+- `tuple`：表示已知元素数量和类型的数组。例如，[string, number] 表示一个字符串和数字组成的元组。
+- `enum`：表示一个命名的常量枚举。
+- `any`：表示任意类型。
+- `unknown`：与 any 类似，但是在更严格的类型检查下使用。
+- `object`：表示非原始类型的对象。
+- 还有一些其他的类型，例如 `never`、`union` 和 `intersection`，它们可以用于描述更复杂的类型。
 
-#### 数字
+### 数字
 和`JavaScript`一样，`TypeScript`里的所有数字都是浮点数。 这些浮点数的类型是 `number`。 除了支持十进制和十六进制字面量，`TypeScript`还支持ECMAScript 2015中引入的二进制和八进制字面量。
 ```js
 let decLiteral: number = 6;
@@ -40,7 +40,7 @@ let binaryLiteral: number = 0b1010;
 let octalLiteral: number = 0o744;
 ```
 
-#### 字符串
+### 字符串
 `JavaScript`程序的另一项基本操作是处理网页或服务器端的文本数据。 像其它语言里一样，我们使用 `string` 表示文本数据类型。 和`JavaScript`一样，可以使用双引号（"）或单引号（'）表示字符串。
 ```js
 let name: string = "bob";
@@ -59,7 +59,7 @@ let sentence: string = "Hello, my name is " + name + ".\n\n" +
     "I'll be " + (age + 1) + " years old next month.";
 ```
 
-#### Any
+### Any
 有时候，我们会想要为那些在编程阶段还不清楚类型的变量指定一个类型。 这些值可能来自于动态的内容，比如来自用户输入或第三方代码库。 这种情况下，我们不希望类型检查器对这些值进行检查而是直接让它们通过编译阶段的检查。 那么我们可以使用 `any` 类型来标记这些变量：
 ```js
 let notSure: any = 4;
@@ -82,7 +82,7 @@ let list: any[] = [1, true, "free"];
 list[1] = 100;
 ```
 
-#### Void
+### Void
 某种程度上来说，`void`类型像是与`any`类型相反，它表示没有任何类型。 当一个**函数没有返回值时**，你通常会见到其返回值类型是 `void`：
 ```js
 function warnUser(): void {
@@ -94,9 +94,13 @@ function warnUser(): void {
 let unusable: void = undefined;
 ```
 
-#### Null 和 Undefined
+### Null 和 Undefined
+```ts
+let u: undefined = undefined;
+let n: null = null;
+```
 
-#### 数组
+### 数组
 `TypeScript`像`JavaScript`一样可以操作数组元素。 有两种方式可以定义数组。 第一种，可以在元素类型后面接上[]，表示由此类型元素组成的一个数组：
 ```js
 let list: number[] = [1, 2, 3];
@@ -106,7 +110,7 @@ let list: number[] = [1, 2, 3];
 let list: Array<number> = [1, 2, 3];
 ```
 
-#### 元组 Tuple
+### 元组 Tuple
 元组类型允许表示一个已知元素数量和类型的**数组**，各元素的类型不必相同。 比如，你可以定义一对值分别为 `string` 和 `number` 类型的元组。
 ```js
 // Declare a tuple type
@@ -130,7 +134,7 @@ console.log(x[5].toString()); // OK, 'string' 和 'number' 都有 toString
 x[6] = true; // Error, 布尔不是(string | number)类型
 ```
 
-#### 枚举
+### 枚举
 `enum`类型是对JavaScript标准数据类型的一个补充。 像C#等其它语言一样，使用枚举类型可以为一组数值赋予友好的名字。
 ```js
 enum Color {Red, Green, Blue}
@@ -182,9 +186,7 @@ let n: null = null;
 
 然而，当你指定了--strictNullChecks标记，`null`和`undefined`只能赋值给void和它们各自。 这能避免 很多常见的问题。 也许在某处你想传入一个`string`或`null`或`undefined`，你可以使用联合类型string | `null` | `undefined`。 再次说明，稍后我们会介绍联合类型。
 
-注意：我们鼓励尽可能地使用--strictNullChecks，但在本手册里我们假设这个标记是关闭的。
-
-#### Never
+### Never
 `never`类型表示的是那些永不存在的值的类型。 例如， `never`类型是那些总是会抛出异常或根本就不会有返回值的函数表达式或箭头函数表达式的返回值类型； 变量也可能是 `never`类型，当它们被永不为真的类型保护所约束时。
 
 `never`类型是任何类型的子类型，也可以赋值给任何类型；然而，没有类型是`never`的子类型或可以赋值给`never`类型（除了`never`本身之外）。 即使 any也不可以赋值给`never`。
@@ -208,7 +210,7 @@ function infiniteLoop(): never {
 }
 ```
 
-#### Object
+### Object
 `object`表示非原始类型，也就是除`number`，`string`，`boolean`，`symbol`，`null`或`undefined`之外的类型。
 
 使用`object`类型，就可以更好的表示像Object.create这样的API。例如：
@@ -224,16 +226,16 @@ create(false); // Error
 create(undefined); // Error
 ```
 
-#### 类型断言
+### 类型断言
 有时候你会遇到这样的情况，你会比`TypeScript`更了解某个值的详细信息。 通常这会发生在你清楚地知道一个实体具有比它现有类型更确切的类型。通过类型断言这种方式可以告诉编译器，“相信我，我知道自己在干什么”。 类型断言好比其它语言里的类型转换，但是不进行特殊的数据检查和解构。 它没有运行时的影响，只是在编译阶段起作用。 `TypeScript`会假设你，程序员，已经进行了必须的检查。
 
-类型断言有两种形式。 其一是“尖括号”语法：
+类型断言有两种形式。 其一是**尖括号**语法：
 ```js
 let someValue: any = "this is a string";
 
 let strLength: number = (<string>someValue).length;
 ```
-另一个为as语法：
+另一个为**as**语法：
 ```js
 let someValue: any = "this is a string";
 
