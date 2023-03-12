@@ -1,51 +1,364 @@
 ## Vue3中的patch方法
 
 ### VNode
-```js
-const vnode = {
-    __v_isVNode: true,
-    __v_skip: true,
-    type,
-    props,
-    key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
-    scopeId: currentScopeId,
-    slotScopeIds: null,
-    children,
-    component: null,
-    suspense: null,
-    ssContent: null,
-    ssFallback: null,
-    dirs: null,
-    transition: null,
-    el: null,
-    anchor: null,
-    target: null,
-    targetAnchor: null,
-    staticCount: 0,
-    shapeFlag,
-    patchFlag,
-    dynamicProps,
-    dynamicChildren: null,
-    appContext: null
-} as VNode
+```ts
+export interface VNode<
+  HostNode = RendererNode,
+  HostElement = RendererElement,
+  ExtraProps = { [key: string]: any }
+> {
+  /**
+   * @internal
+   */
+  __v_isVNode: true
+
+  /**
+   * @internal
+   */
+  [ReactiveFlags.SKIP]: true
+
+  type: VNodeTypes
+  props: (VNodeProps & ExtraProps) | null
+  key: string | number | symbol | null
+  ref: VNodeNormalizedRef | null
+  /**
+   * SFC only. This is assigned on vnode creation using currentScopeId
+   * which is set alongside currentRenderingInstance.
+   */
+  scopeId: string | null
+  /**
+   * SFC only. This is assigned to:
+   * - Slot fragment vnodes with :slotted SFC styles.
+   * - Component vnodes (during patch/hydration) so that its root node can
+   *   inherit the component's slotScopeIds
+   * @internal
+   */
+  slotScopeIds: string[] | null
+  children: VNodeNormalizedChildren
+  component: ComponentInternalInstance | null
+  dirs: DirectiveBinding[] | null
+  transition: TransitionHooks<HostElement> | null
+
+  // DOM
+  el: HostNode | null
+  anchor: HostNode | null // fragment anchor
+  target: HostElement | null // teleport target
+  targetAnchor: HostNode | null // teleport target anchor
+  /**
+   * number of elements contained in a static vnode
+   * @internal
+   */
+  staticCount: number
+
+  // suspense
+  suspense: SuspenseBoundary | null
+  /**
+   * @internal
+   */
+  ssContent: VNode | null
+  /**
+   * @internal
+   */
+  ssFallback: VNode | null
+
+  // optimization only
+  shapeFlag: number
+  patchFlag: number
+  /**
+   * @internal
+   */
+  dynamicProps: string[] | null
+  /**
+   * @internal
+   */
+  dynamicChildren: VNode[] | null
+
+  // application root node only
+  appContext: AppContext | null
+
+  /**
+   * @internal attached by v-memo
+   */
+  memo?: any[]
+  /**
+   * @internal __COMPAT__ only
+   */
+  isCompatRoot?: true
+  /**
+   * @internal custom element interception hook
+   */
+  ce?: (instance: ComponentInternalInstance) => void
+}
+```
+
+### 组件实例
+```ts
+export interface ComponentInternalInstance {
+  uid: number
+  type: ConcreteComponent
+  parent: ComponentInternalInstance | null
+  root: ComponentInternalInstance
+  appContext: AppContext
+  /**
+   * Vnode representing this component in its parent's vdom tree
+   */
+  vnode: VNode
+  /**
+   * The pending new vnode from parent updates
+   * @internal
+   */
+  next: VNode | null
+  /**
+   * Root vnode of this component's own vdom tree
+   */
+  subTree: VNode
+  /**
+   * Render effect instance
+   */
+  effect: ReactiveEffect
+  /**
+   * Bound effect runner to be passed to schedulers
+   */
+  update: SchedulerJob
+  /**
+   * The render function that returns vdom tree.
+   * @internal
+   */
+  render: InternalRenderFunction | null
+  /**
+   * SSR render function
+   * @internal
+   */
+  ssrRender?: Function | null
+  /**
+   * Object containing values this component provides for its descendents
+   * @internal
+   */
+  provides: Data
+  /**
+   * Tracking reactive effects (e.g. watchers) associated with this component
+   * so that they can be automatically stopped on component unmount
+   * @internal
+   */
+  scope: EffectScope
+  /**
+   * cache for proxy access type to avoid hasOwnProperty calls
+   * @internal
+   */
+  accessCache: Data | null
+  /**
+   * cache for render function values that rely on _ctx but won't need updates
+   * after initialized (e.g. inline handlers)
+   * @internal
+   */
+  renderCache: (Function | VNode)[]
+
+  /**
+   * Resolved component registry, only for components with mixins or extends
+   * @internal
+   */
+  components: Record<string, ConcreteComponent> | null
+  /**
+   * Resolved directive registry, only for components with mixins or extends
+   * @internal
+   */
+  directives: Record<string, Directive> | null
+  /**
+   * Resolved filters registry, v2 compat only
+   * @internal
+   */
+  filters?: Record<string, Function>
+  /**
+   * resolved props options
+   * @internal
+   */
+  propsOptions: NormalizedPropsOptions
+  /**
+   * resolved emits options
+   * @internal
+   */
+  emitsOptions: ObjectEmitsOptions | null
+  /**
+   * resolved inheritAttrs options
+   * @internal
+   */
+  inheritAttrs?: boolean
+  /**
+   * is custom element?
+   */
+  isCE?: boolean
+  /**
+   * custom element specific HMR method
+   */
+  ceReload?: (newStyles?: string[]) => void
+
+  // the rest are only for stateful components ---------------------------------
+
+  // main proxy that serves as the public instance (`this`)
+  proxy: ComponentPublicInstance | null
+
+  // exposed properties via expose()
+  exposed: Record<string, any> | null
+  exposeProxy: Record<string, any> | null
+
+  /**
+   * alternative proxy used only for runtime-compiled render functions using
+   * `with` block
+   * @internal
+   */
+  withProxy: ComponentPublicInstance | null
+  /**
+   * This is the target for the public instance proxy. It also holds properties
+   * injected by user options (computed, methods etc.) and user-attached
+   * custom properties (via `this.x = ...`)
+   * @internal
+   */
+  ctx: Data
+
+  // state
+  data: Data
+  props: Data
+  attrs: Data
+  slots: InternalSlots
+  refs: Data
+  emit: EmitFn
+  /**
+   * used for keeping track of .once event handlers on components
+   * @internal
+   */
+  emitted: Record<string, boolean> | null
+  /**
+   * used for caching the value returned from props default factory functions to
+   * avoid unnecessary watcher trigger
+   * @internal
+   */
+  propsDefaults: Data
+  /**
+   * setup related
+   * @internal
+   */
+  setupState: Data
+  /**
+   * devtools access to additional info
+   * @internal
+   */
+  devtoolsRawSetupState?: any
+  /**
+   * @internal
+   */
+  setupContext: SetupContext | null
+
+  /**
+   * suspense related
+   * @internal
+   */
+  suspense: SuspenseBoundary | null
+  /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
+   * @internal
+   */
+  asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
+  asyncResolved: boolean
+
+  // lifecycle
+  isMounted: boolean
+  isUnmounted: boolean
+  isDeactivated: boolean
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.CREATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.MOUNTED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UPDATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.UNMOUNTED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.DEACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
+
+  /**
+   * For caching bound $forceUpdate on public proxy access
+   */
+  f?: () => void
+  /**
+   * For caching bound $nextTick on public proxy access
+   */
+  n?: () => Promise<void>
+}
 ```
 
 ### DOM操作
 `DOM`操作相关的两个文件分别在`runtime-dom/src/nodeOps`、`runtime-dom/src/patchProps`，前者进行具体的`DOM`增删操作等，后者为`DOM`元素上的属性进行增删等。
 ```ts
+const doc = (typeof document !== 'undefined' ? document : null) as Document
+
+const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
+
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
+  //【插入节点】
   insert: (child, parent, anchor) => {
     parent.insertBefore(child, anchor || null)
   },
-
+  //【移除节点】
   remove: child => {
     const parent = child.parentNode
     if (parent) {
       parent.removeChild(child)
     }
   },
-
+  //【创建DOM节点】
   createElement: (tag, isSVG, is, props): Element => {
     const el = isSVG
       ? doc.createElementNS(svgNS, tag)
@@ -57,23 +370,25 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 
     return el
   },
-
+  //【创建文本节点】
   createText: text => doc.createTextNode(text),
-
+  //【创建注释节点】
   createComment: text => doc.createComment(text),
-
+  //【插入节点值】
+  // 【对于文档节点来说，nodeValue返回null. 对于 text, comment，和 CDATA 节点来说，nodeValue 返回该节点的文本内容. 对于 attribute 节点来说，返回该属性的属性值。】
   setText: (node, text) => {
     node.nodeValue = text
   },
-
+  //【插入文本】
+  //【Node 接口的 textContent 属性表示一个节点及其后代的文本内容。】
   setElementText: (el, text) => {
     el.textContent = text
   },
-
+  //【返回指定的节点在 DOM 树中的父节点。】
   parentNode: node => node.parentNode as Element | null,
-
+  //【Node.nextSibling 是一个只读属性，返回其父节点的 childNodes 列表中紧跟在其后面的节点，如果指定的节点为最后一个节点，则返回 null。】
   nextSibling: node => node.nextSibling,
-
+  //【文档对象模型Document引用的 querySelector() 方法返回文档中与指定选择器或选择器组匹配的第一个 Element对象。如果找不到匹配项，则返回null。】
   querySelector: selector => doc.querySelector(selector),
 
   setScopeId(el, id) {
@@ -120,6 +435,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 }
 ```
 
+属性相关操作：
 ```ts
 const nativeOnRE = /^on[a-z]/
 
@@ -694,7 +1010,7 @@ const processFragment = (
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    // 【找到Fragment的起始节点】
+    // 【找到Fragment的起始节点，创建空文本节点】
     const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
     const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
 
@@ -1425,6 +1741,7 @@ function getSequence(arr: number[]): number[] {
   return result
 }
 ```
+
 
 ### Vue3 diff的优化点和总结
 
