@@ -1,4 +1,4 @@
-## Vue3 组件化
+# Vue3 组件化
 
 编写一个组件实际上是编写一个 `JavaScript` 对象，对象的描述就是各种配置。
 ```js
@@ -11,7 +11,7 @@ app.component('my-component', {
 const MyComponent = app.component('my-component')
 ```
 
-### Vue3 组件的构建过程
+## Vue3 组件的构建过程
 前文我们讲到，`const app = ensureRenderer().createApp(...args)`会创建根APP实例，根APP实例再调用`mount`方法，其中关键的两步为：
 ```ts
 // 【生成虚拟VNode】
@@ -27,7 +27,7 @@ if (isHydrate && hydrate) {
 }
 ```
 
-#### 创建组件VNode
+### 创建组件VNode
 ```ts
 export type VNodeTypes =
   | string
@@ -340,8 +340,9 @@ function createBaseVNode(
 }
 ```
 
-#### 组件挂载
+### 组件挂载
 首先来看`render`方法如下，然后会走到`patch`方法，然后我们去看`patch`方法里，根据`type`不同，进行不同处理，我们要看的是如何处理组件，也就是`processComponent`方法，下一步根据是首次挂载或者是更新调用`mountComponent`或者`updateComponent`方法：
+
 **createVNode -> render(vnode) -> patch -> processComponent -> mountComponent/updateComponent**
 ```ts
 const render: RootRenderFunction = (vnode, container, isSVG) => {
@@ -1540,7 +1541,7 @@ export function finishComponentSetup(
 
 3. 调用`setupRenderEffect`设置组件渲染逻辑
 - 定义`componentUpdateFn`方法供`effect.run()`方法调用
-- `renderComponentRoot`方法生成虚拟VNode
+- `renderComponentRoot`方法生成虚拟VNode赋值给`subtree`属性
 - `patch`方法进行挂载
 - 如果组件内还有子组件内容，就会继续循环上面的组件初始化加载过程
 - `new ReactiveEffect`生成render effect实例，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该render effect调用`run`方法继而调用`componentUpdateFn`方法，此时isMounted为true，走入更新分支
@@ -1634,7 +1635,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        //【1.renderComponentRoot生成根虚拟VNode】
+        //【1.renderComponentRoot生成根虚拟VNode赋值给subTree】
         const subTree = (instance.subTree = renderComponentRoot(instance))
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1848,7 +1849,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
 }
 ```
 
-#### 组件更新
+### 组件更新
 **createVNode -> render(vnode) -> patch -> processComponent -> updateComponent**
 组件更新显然就走向`updateComponent`方法，如果是需要更新的情况，最终调用的其实就是`instance.update()`：
 ```ts
@@ -1891,10 +1892,10 @@ const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
 }
 ```
 
-### 组件注册
+## 组件注册
 - 全局注册
 `createAppAPI`方法生成的App实例有`component`方法用于注册全局组件如下：
-```js
+```ts
 component(name: string, component?: Component): any {
     if (__DEV__) {
         validateComponentName(name, context.config)
@@ -1912,7 +1913,7 @@ component(name: string, component?: Component): any {
 
 - 局部注册
 局部组件通过`components`属性选项来进行注册如下：
-```js
+```ts
 Vue.createApp({
   components: {
     TreeItem
