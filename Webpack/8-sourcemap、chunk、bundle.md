@@ -1,8 +1,9 @@
 # webpack中的一些其他常见概念
 
-### sourcemap
+## sourcemap
+Webpack 支持为转换生成的代码输出对应的 Source Map 文件，以方便在浏览器中能通过源码调试。 控制 Source Map 输出的 Webpack 配置项是 devtool，它有很多选项
 
-### chunk
+## chunk
 
 `Chunk`不同于`entry`、 `output`、`module`这样的概念，它们对应着`Webpack`配置对象中的一个字段，`Chunk`没有单独的配置字段。
 
@@ -12,7 +13,7 @@
 
 `Chunk`是`Webpack`打包过程中，一堆`module`的集合。我们知道`Webpack`的打包是从一个入口文件开始，也可以说是入口模块，入口模块引用这其他模块，模块再引用模块。Webpack通过引用关系逐个打包模块，这些`module`就形成了一个`Chunk`。
 
-如果我们有多个入口文件，可能会产出多条打包路径，一条路径就会形成一个`Chunk`。出了入口`entry`会产生`Chunk`，还有两种途径。
+如果我们有多个入口文件，可能会产出多条打包路径，一条路径就会形成一个`Chunk`。除了入口`entry`会产生`Chunk`，还有两种途径分别是：异步引入的组件和使用SplitChunksPlugin。
 
 - Chunk VS Bundle
 
@@ -85,4 +86,4 @@ module.exports = {
 ```
 答案是5个，两个入口分别产生一个， `runtimeChunk: "single"`会将`Webpack`在浏览器端运行时需要的代码单独抽离到一个文件，`commons`下的配置会产生一个`Chunk`，`vendor`下的配置会产生一个`Chunk`。
 
-### hash
+## bundle
