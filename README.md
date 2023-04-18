@@ -1,5 +1,13 @@
 # You-Dont-Know-Me
 
+Algorithm
+
+- [ ] 数组
+- [ ] 字符串
+- [ ] 链表
+- [ ] 树
+- [ ] 复杂
+
 Browser
 
 - [ ] 跨域
@@ -39,6 +47,11 @@ Network
 - [ ] Nginx
 - [ ] WebSocket
 
+Node
+
+Playground
+- [ ] 调试代码
+
 Project
 
 - [ ] 前端调试工具
@@ -48,12 +61,28 @@ Project
 - [ ] Linux常用命令
 - [ ] Npm
 
+Questions
+
+React
+
+- [ ] 源码概览
+- [ ] 初始化和挂载
+- [ ] 更新流程
+- [ ] diff
+- [ ] Scheduler
+- [ ] Hooks
+- [ ] useEffect
+- [ ] useMemo & useCallback
+- [ ] useState & useReducer & useRef
+
 Typescript
 
 - [ ] 接口
 - [ ] 泛型
 - [ ] 枚举
 - [ ] 高级类型
+
+Vite
 
 Vue2 & Vue3
 
@@ -73,6 +102,7 @@ Webpack
 - [ ] hot reload 原理
 - [ ] webpack 优化
 
+---
 
 **Do not stand at my grave and weep**
 
