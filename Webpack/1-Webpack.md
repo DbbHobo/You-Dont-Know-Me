@@ -34,7 +34,7 @@
 - 想自定义解析和转换文件的策略，配置 `module`，通常是配置 `module.rules` 里的 `Loader`。
 - 其它的大部分需求可能要通过 `Plugin` 去实现，配置 `plugin`。
 
-### webpack 构建过程
+## webpack 构建过程
 
 `Webpack` 的运行流程是一个串行的过程，从启动到结束会依次执行以下流程：
 
@@ -54,7 +54,7 @@
 
 在以上过程中，`Webpack` 会在特定的时间点广播出特定的事件，插件在监听到感兴趣的事件后会执行特定的逻辑，并且插件可以调用 `Webpack` 提供的 API 改变 `Webpack` 的运行结果。
 
-### webpack 配置示例
+## webpack 配置示例
 ```js
 const path = require("path");
 
