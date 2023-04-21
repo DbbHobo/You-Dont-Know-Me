@@ -24,7 +24,7 @@ module.exports = {
 ## Plugin 原理
 `Webpack` 通过 `Plugin` 机制让其更加灵活，以适应各种应用场景。 在 `Webpack` 运行的生命周期中会广播出许多事件，`Plugin` 可以监听这些事件，在合适的时机通过 `Webpack` 提供的 `API` 改变输出结果。
 
-一个最基础的 `Plugin`类 的代码是这样的，它包含了构造函数，还有一个apply方法，：
+一个最基础的 `Plugin` 类的代码是这样的，它包含了构造函数，还有一个 `apply` 方法：
 
 ```js
 class BasicPlugin {
@@ -54,10 +54,10 @@ module.export = {
 
 `Webpack` 启动后，在读取配置的过程中会先执行 `new BasicPlugin(options)` 初始化一个 `BasicPlugin` 实例。 在初始化 `compiler` 对象后，再调用 `basicPlugin.apply(compiler) `给插件实例传入 `compiler` 对象。 插件实例在获取到 `compiler` 对象后，就可以通过 `compiler.plugin(事件名称, 回调函数)` 监听到 `Webpack` 广播出来的事件。 并且可以通过 `compiler` 对象去操作 `Webpack`。
 
-`Webpack` 通过 `Tapable` 来组织这条复杂的生产线。 `Webpack` 在运行过程中会广播事件，插件只需要监听它所关心的事件，就能加入到这条生产线中，去改变生产线的运作。 `Webpack` 的事件流机制保证了插件的有序性，使得整个系统扩展性很好。`Webpack` 的事件流机制应用了**观察者模式**，和 `Node.js` 中的 `EventEmitter` 非常相似。 `Compiler` 和 `Compilation` 都继承自 `Tapable`，可以直接在 `Compiler` 和 `Compilation` 对象上**广播**和**监听**事件，方法如下：
+`Webpack` 通过 `Tapable` 来组织这条复杂的生产线。 `Webpack` 在运行过程中会广播事件，插件只需要监听它所关心的事件，就能加入到这条生产线中，去改变生产线的运作。 `Webpack` 的事件流机制保证了插件的有序性，使得整个系统扩展性很好。`Webpack` 的事件流机制应用了**观察者模式**，和 `Node.js` 中的 `EventEmitter` 非常相似。 `Compiler` 和 `Compilation` 都继承自 `Tapable`，可以直接在 `Compiler` 和 `Compilation` 对象上**广播**和**监听**事件。
 
 在开发 `Plugin` 时最常用的两个对象就是 `Compiler` 和 `Compilation`，它们是 `Plugin` 和 `Webpack` 之间的桥梁。 `Compiler` 和 `Compilation` 的含义如下：
-- `Compiler` 对象包含了 `Webpack` 环境所有的的配置信息，包含`options`，`loaders`，`plugins`这些信息，这个对象在 `Webpack` 启动时候被实例化，它是全局唯一的，可以简单地把它理解为 Webpack 实例；
+- `Compiler` 对象包含了 `Webpack` 环境所有的的配置信息，包含 `options`，`loaders`，`plugins` 这些信息，这个对象在 `Webpack` 启动时候被实例化，它是**全局唯一**的，可以简单地把它理解为 `Webpack` 实例；
 - `Compilation` 对象包含了当前的**模块资源、编译生成资源、变化的文件**等。当 `Webpack` 以开发模式运行时，每当检测到一个文件变化，一次新的 `Compilation` 将被创建。`Compilation` 对象也提供了很多事件回调供插件做扩展。通过 `Compilation` 也能读取到 `Compiler` 对象。
 - `Compiler` 和 `Compilation` 的区别在于：**`Compiler` 代表了整个 `Webpack` 从启动到关闭的生命周期，而 `Compilation` 只是代表了一次新的编译**。
 
@@ -80,7 +80,7 @@ compiler.plugin('event-name',function(params) {
 同理，`compilation.apply` 和 `compilation.plugin` 使用方法和上面一致。
 
 ## Plugin 开发和调试
-在项目的开发过程中，为了方便资源的共享，创建了 npm 私有包。在开发私有包的时候，频繁的发版上线很繁琐，如何在本地项目直接访问 npm 私有包。进入 `npmPackage`, 执行下面代码：
+在项目的开发过程中，为了方便资源的共享，创建了 `npm` 私有包。在开发私有包的时候，频繁的发版上线很繁琐，如何在本地项目直接访问 `npm` 私有包。进入 `npmPackage`, 执行下面代码：
 
 ```shell
 npm link <packageName>
@@ -99,9 +99,9 @@ npm unlink <packageName>
 ```
 
 ## 常用广播事件钩子
-插件可以用来修改输出文件、增加输出文件、甚至可以提升 Webpack 性能等等，总之插件通过调用 Webpack 提供的钩子能完成很多事情。除了 compiler 和 compilation 对象会提供钩子以外，还有ContextModuleFactory Hooks、JavascriptParser Hooks、NormalModuleFactory Hooks等等。 由于 Webpack 提供的钩子非常多，有很多钩子很少用的上，下面来介绍一些常用的广播事件钩子，这些广播事件钩子也代表了 Webpack 的工作流程：
+插件可以用来修改输出文件、增加输出文件、甚至可以提升 `Webpack` 性能等等，总之插件通过调用 `Webpack` 提供的钩子能完成很多事情。除了 `compiler` 和 `compilation` 对象会提供钩子以外，还有`ContextModuleFactory Hooks`、`JavascriptParser Hooks`、`NormalModuleFactory Hooks`等等。 由于 `Webpack` 提供的钩子非常多，有很多钩子很少用的上，下面来介绍一些常用的广播事件钩子，这些广播事件钩子也代表了 `Webpack` 的工作流程：
 
-### compiler 的钩子
+### compiler 钩子
 ```js
 compiler.hooks.someHook.tap('MyPlugin', (params) => {
   /* ... */
@@ -132,15 +132,15 @@ compiler.hooks.entryOption.tap('MyPlugin', (context, entry) => {
   在开始执行一次构建之前调用，`compiler.run` 方法开始执行后立刻进行调用。回调参数：`compiler`。
 
 - `run`
-  在开始读取 records 之前调用。回调参数：`compiler`。
+  在开始读取 `records` 之前调用。回调参数：`compiler`。
 
 - `watchRun`
   
-  在监听模式下，一个新的 compilation 触发之后，但在 compilation 实际开始之前执行。回调参数：`compiler`。
+  在监听模式下，一个新的 `compilation` 触发之后，但在 `compilation` 实际开始之前执行。回调参数：`compiler`。
 
 - `beforeCompile`
   
-  在创建 `compilation parameter` 之后执行。回调参数：`compilationParams`。
+  在创建 `compilation parameter` 之后 `compilation` 创建之前执行。回调参数：`compilationParams`。
 
   初始化 `compilationParams` 变量的示例如下：
 ```json
@@ -161,7 +161,7 @@ compiler.hooks.beforeCompile.tapAsync('MyPlugin', (params, callback) => {
   `beforeCompile` 之后立即调用，但在一个新的 `compilation` 创建之前。这个钩子不会被复制到子编译器。回调参数：`compilationParams`。
 
 - `thisCompilation`
-  初始化 `compilation` 时调用，在触发 `compilation` 事件之前调用。这个钩子 不会 被复制到子编译器。回调参数：`compilation`, `compilationParams`。
+  初始化 `compilation` 时调用，在触发 `compilation` 事件之前调用。这个钩子不会被复制到子编译器。回调参数：`compilation`, `compilationParams`。
 
 - `compilation`
   
@@ -186,20 +186,20 @@ compiler.hooks.shouldEmit.tap('MyPlugin', (compilation) => {
 
 - `emit`
 
-输出 `asset` 到 `output` 目录**之前**执行。这个钩子不会被复制到子编译器。回调参数：compilation。
+输出 `asset` 到 `output` 目录**之前**执行。这个钩子不会被复制到子编译器。回调参数：`compilation`。
 
 - `afterEmit`
 
 输出 `asset` 到 `output` 目录**之后**执行。这个钩子不会被复制到子编译器。回调参数：`compilation`。
 
-### compilation 的钩子
+### compilation 钩子
 ```js
 compilation.hooks.someHook.tap(/* ... */);
 ```
 
-- buildModule
+- `buildModule`
   
-  在模块构建开始之前触发，可以用来修改模块。回调参数：module。
+  在模块构建开始之前触发，可以用来修改模块。回调参数：`module`。
 ```js
 compilation.hooks.buildModule.tap(
   'SourceMapDevToolModuleOptionsPlugin',
@@ -208,6 +208,7 @@ compilation.hooks.buildModule.tap(
   }
 );
 ```
+
 其余常用钩子可查询[官方文档](https://webpack.docschina.org/api/compilation-hooks/)
 
 ## Plugin常见开发示例
@@ -266,6 +267,7 @@ compiler.plugin('watch-run', (watching, callback) => {
     callback();
 });
 ```
+
 默认情况下 `Webpack` 只会监视入口和其依赖的模块是否发生变化，在有些情况下项目可能需要引入新的文件，例如引入一个 `HTML` 文件。 由于 `JavaScript` 文件不会去导入 `HTML` 文件，`Webpack` 就不会监听 `HTML` 文件的变化，编辑 `HTML` 文件时就不会重新触发新的 `Compilation`。 为了监听 `HTML` 文件的变化，我们需要把 `HTML` 文件加入到依赖列表中，为此可以使用如下代码：
 ```js
 compiler.plugin('after-compile', (compilation, callback) => {
@@ -279,9 +281,7 @@ compiler.plugin('after-compile', (compilation, callback) => {
 
 有些场景下插件需要修改、增加、删除输出的资源，要做到这点需要监听 `emit` 事件，因为发生 `emit` 事件时所有模块的转换和代码块对应的文件已经生成好， 需要输出的资源即将输出，因此 `emit` 事件是修改 `Webpack` 输出资源的最后时机。
 
-所有需要输出的资源会存放在 `compilation.assets` 中，`compilation.assets` 是一个键值对，键为需要输出的文件名称，值为文件对应的内容。
-
-设置 `compilation.assets` 的代码如下：
+所有需要输出的资源会存放在 `compilation.assets` 中，`compilation.assets` 是一个键值对，键为需要输出的文件名称，值为文件对应的内容。设置 `compilation.assets` 的代码如下：
 
 ```js
 compiler.plugin('emit', (compilation, callback) => {
@@ -315,7 +315,7 @@ compiler.plugin('emit', (compilation, callback) => {
 });
 ```
 
-- 判断 Webpack 使用了哪些插件
+- 判断 `Webpack` 使用了哪些插件
 
 在开发一个插件时可能需要根据当前配置是否使用了其它某个插件而做下一步决定，因此需要读取 `Webpack` 当前的插件配置情况。 以判断当前是否使用了 `ExtractTextPlugin` 为例，可以使用如下代码：
 
