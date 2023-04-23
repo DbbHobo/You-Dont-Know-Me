@@ -99,7 +99,7 @@ class PrimitiveString {
 - 转换为数字
 - 转换为字符串
 
-1. 条件判断时，除了 undefined， null， false， NaN， ''， 0， -0，其他所有值都转为 true，包括所有对象。
+1. 条件判断时，除了 `undefined`，`null`，`false`，`NaN`，`''`，`0`，`-0`，其他所有值都转为 `true` 包括所有对象。
 
 2. 对象在转换类型的时候，会调用内置的 [[ToPrimitive]] 函数，对于该函数来说，算法逻辑一般来说如下：
 
@@ -110,7 +110,7 @@ class PrimitiveString {
 
 3. 四则运算
 
-我们在对各种非Number类型运用数学运算符(- * /)时，会先将非Number类型转换为Number类型，加法运算符不同于其他几个运算符，执行+操作符时：
+我们在对各种非 `Number` 类型运用数学运算符(- * /)时，会先将非 `Number` 类型转换为 `Number` 类型，加法运算符不同于其他几个运算符，执行+操作符时：
 
 - 当一侧为String类型，被识别为字符串拼接，并会优先将另一侧转换为字符串类型。
 - 当一侧为Number类型，另一侧为原始类型，则将原始类型转换为Number类型。
@@ -125,32 +125,32 @@ true + true; // 2
 4. 比较运算符
 使用`==`时，若两侧类型相同，则比较结果和`===`相同，否则会发生隐式转换，使用`==`时发生的转换可以分为几种不同的情况，只考虑两侧类型不同：
 
-- NaN
-NaN和其他任何类型比较永远返回false(包括和他自己)。
+- `NaN`
+`NaN` 和其他任何类型比较永远返回 `false` (包括和他自己)。
 
-- Boolean
-Boolean和其他任何类型比较，Boolean首先被转换为Number类型。
+- `Boolean`
+`Boolean` 和其他任何类型比较，`Boolean` 首先被转换为 `Number` 类型。
 ```js
 true == 1  // true 
 true == '2'  // false
 true == ['1']  // true
 true == ['2']  // false
 ```
-这里注意一个可能会弄混的点：undefined、null和Boolean比较，虽然undefined、null和false都很容易被想象成假值，但是他们比较结果是false，原因是false首先被转换成0：
+这里注意一个可能会弄混的点：`undefined`、`null` 和 `Boolean`  比较，虽然 `undefined`、`null` 和 `false` 都很容易被想象成假值，但是他们比较结果是 `false`，原因是 `false` 首先被转换成 0：
 ```js
 undefined == false // false
 null == false // false
 ```
 
-- String和Number
-String和Number比较，先将String转换为Number类型。
+- `String` 和 `Number`
+`String` 和 `Number` 比较，先将 `String` 转换为 `Number` 类型。
 ```js
 123 == '123' // true
 '' == 0 // true
 ```
 
-- null和undefined
-null == undefined比较结果是true，除此之外，null、undefined和其他任何结果的比较值都为false。
+- `null` 和 `undefined`
+`null` == `undefined` 比较结果是true，除此之外，`null`、`undefined` 和其他任何结果的比较值都为 `false`。
 ```js
 null == undefined // true
 null == '' // false

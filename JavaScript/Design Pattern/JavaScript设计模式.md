@@ -1,6 +1,6 @@
 # JavaScript 设计模式
 
-# 常见的设计模式
+## 常见的设计模式
 
 设计模式就是一种理念，通过一些设计思维来解决平时编写底层或业务代码时遇到的场景问题。
 
@@ -22,10 +22,10 @@
 
 ## 工厂模式
 
-工厂模式有三种形式：简单工厂模式（Simple Factory）、工厂方法模式（Factory Method）和抽象工厂模式（Abstract Factory）。在 js 中我们最常见的当属简单工厂模式。工厂模式的设计思想即：
+工厂模式有三种形式：简单工厂模式（`Simple Factory`）、工厂方法模式（`Factory Method`）和抽象工厂模式（`Abstract Factory`）。在 `Js` 中我们最常见的当属简单工厂模式。工厂模式的设计思想即：
 
-- 将 new 操作单独封装，只对外提供相应接口；
-- 遇到 new 时，就要考虑是否应该使用工厂模式；
+- 将 `new` 操作单独封装，只对外提供相应接口；
+- 遇到 `new` 时，就要考虑是否应该使用工厂模式；
 
 ```js
 class User {
@@ -64,7 +64,7 @@ let admin = userFactory.create("admin");
 let user = userFactory.create("user");
 ```
 
-使用场景：jQuery 的选择器$(selector)、Vue 异步组件、React.createElement()
+使用场景：`jQuery` 的选择器`$(selector)`、`Vue` 虚拟`Node`、`React.createElement()`
 
 ## 单例模式
 
@@ -94,6 +94,8 @@ let m1 = Modal.create();
 let m2 = Modal.create();
 console.log(m1 === m2); // true
 ```
+
+使用场景：`Vuex` 的`store`实例
 
 ## 观察者模式
 
@@ -128,9 +130,13 @@ Observer.prototype.notifyAll = function (element) {
 };
 ```
 
+使用场景： `Vue` 中的数据流动操作方法 `EventBus`
+
 ## 适配器模式
 
 适配器模式（Adapter）是将一个类（对象）的接口（方法或属性）转化成适应当前场景的另一个接口（方法或属性），适配器模式使得原本由于接口不兼容而不能一起工作的那些类（对象）可以一些工作。所以，适配器模式必须包含目标（Target）、源（Adaptee）和适配器（Adapter）三个角色。
+
+使用场景： `Vue` 中的计算属性 `computed`
 
 ## 装饰器模式
 
@@ -171,6 +177,15 @@ decorator.draw(); //画一个圆形，画一个红色边框
 - 使用者无权访问目标对象；
 - 中间加代理，通过代理做授权和控制。
 
+使用场景： `Form` 表单的验证功能、`Vue2` 中 `Object.defineProperty` 来劫持各个属性的 `setter`/`getter`、`Vue3` 中 `Proxy` 来劫持各个属性的 `setter`/`getter`
+
+## 策略模式
+
+策略模式 （Strategy Pattern）又称政策模式，其定义一系列的算法，把它们一个个封装起来，并且使它们可以互相替换。封装的策略算法一般是独立的，策略模式根据输入来调整采用哪个算法。关键是策略的实现和使用分离。
+
+使用场景： `Axios` 使用拦截器 `interceptor` 可以提前对 `request` 请求和 `response` 返回进行一些预处理
+  
+## 参考资料
 [深入 JavaScript 设计模式，从此有了优化代码的理论依据](https://juejin.cn/post/6844903918330347533)
 [设计模式之美-前端](https://zhuanlan.zhihu.com/p/111553641)
 [7 JavaScript Design Patterns Every developer should know](https://codesource.io/javascript-design-patterns/)
