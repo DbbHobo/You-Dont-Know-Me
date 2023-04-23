@@ -118,16 +118,49 @@ export default function FocusButton() {
 
 ## useMemo
 ```js
+function memoExample() {
+  const [btn, setBtn] = React.useState(1)
+  const changeBtn = React.useMemo(() => {
+    return <button>btn</button>
+  },[btn]);
+
+  return (
+    <>
+      <div onClick={()=>setBtn(0)}>memoExample</div>
+      { changeBtn }
+    </>
+  );
+}
 const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
 ```
 - 返回一个 `memoized` 值；
-- 把“创建”函数和依赖项数组作为参数传入 `useMemo`，它仅会在某个依赖项改变时才重新计算 `memoized` 值。这种优化有助于避免在每次渲染时都进行高开销的计算；
+- 把“创建”函数和依赖项数组作为参数传入 `useMemo`，它仅会在某个依赖项改变时才调用用户传入的函数重新计算 `memoized` 值。这种优化有助于避免在每次渲染时都进行高开销的计算；
 - 如果没有提供依赖项数组，`useMemo` 在每次渲染时都会计算新的值；
 - 第一个传入的函数必须要有返回值
-- `useMemo`只能声明在函数式组件内部
+- `useMemo` 只能声明在函数式组件内部
+- `useMemo` 可以减少不必要的循环，减少不必要的渲染，减少子组件的渲染次数
 
 ## useCallback
 ```js
+const CallbackChildren = React.memo((props)=>{
+  console.log('子组件更新')
+  React.useEffect(()=>{
+      props.getInfo('子组件')
+  },[])
+  return <div>子组件</div>
+})
+
+function CallbackParent ({ id }){
+  const [number, setNumber] = React.useState(1)
+  const getInfo  = React.useCallback((sonName)=>{
+        console.log(sonName)
+  },[id])
+  return <div>
+      <button onClick={ () => setNumber(number+1) } >增加</button>
+      <CallbackChildren getInfo={getInfo} />
+  </div>
+}
+
 const memoizedCallback = useCallback(
   () => {
     doSomething(a, b);
@@ -137,7 +170,154 @@ const memoizedCallback = useCallback(
 ```
 - 返回一个 `memoized` 回调函数；
 - 把内联回调函数及依赖项数组作为参数传入 `useCallback`，它将返回该回调函数的 `memoized` 版本，该回调函数仅在某个依赖项改变时才会更新；
-- 在函数式组件中，定义在组件内的函数会随着状态值的更新而重新渲染，内部定义的函数会被频繁定义，如果传给子组件还会引起子组件的更新，使用useCallback结合memo可以有效减少子组件更新频率；
+- 在函数式组件中，定义在组件内的函数会随着状态值的更新而重新渲染，内部定义的函数会被频繁定义，如果传给子组件还会引起子组件的更新，使用 `useCallback` 结合 `react.memo` 可以有效减少子组件更新频率；
+- `useCallback` 必须配合 `react.memo` 使用
+
+---
+
+## hook 调用时机
+在 `updateFunctionComponent` 方法中会调用 `renderWithHooks`，`renderWithHooks`会调用该 `Fuction Component` 组件的 `function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
+```ts
+export function renderWithHooks<Props, SecondArg>(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  Component: (p: Props, arg: SecondArg) => any,
+  props: Props,
+  secondArg: SecondArg,
+  nextRenderLanes: Lanes,
+): any {
+  renderLanes = nextRenderLanes;
+  currentlyRenderingFiber = workInProgress;
+
+  // 【省略代码...】
+
+  workInProgress.memoizedState = null;
+  workInProgress.updateQueue = null;
+  workInProgress.lanes = NoLanes;
+
+  // 【可以看到最终有几种不同情况的dispatcher例如HooksDispatcherOnMount、HooksDispatcherOnUpdate、HooksDispatcherOnMountWithHookTypesInDEV、HooksDispatcherOnMountInDEV】
+  // 【current.memoizedState是否存在判断是首次调用hook还是非首次】
+  // Using memoizedState to differentiate between mount/update only works if at least one stateful hook is used.
+  // Non-stateful hooks (e.g. context) don't get added to memoizedState,
+  // so memoizedState would be null during updates and mounts.
+  if (__DEV__) {
+    if (current !== null && current.memoizedState !== null) {
+      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV;
+    } else if (hookTypesDev !== null) {
+      // This dispatcher handles an edge case where a component is updating,
+      // but no stateful hooks have been used.
+      // We want to match the production code behavior (which will use HooksDispatcherOnMount),
+      // but with the extra DEV validation to ensure hooks ordering hasn't changed.
+      // This dispatcher does that.
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV;
+    } else {
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
+    }
+  } else {
+    ReactCurrentDispatcher.current =
+      current === null || current.memoizedState === null
+        ? HooksDispatcherOnMount
+        : HooksDispatcherOnUpdate;
+  }
+
+  // 【调用当前Component的function】
+  let children = Component(props, secondArg);
+
+  // 【省略代码...】
+
+  finishRenderingHooks(current, workInProgress);
+
+  return children;
+}
+```
+
+举例如 `useEffect` 方法，最终其实调用了 `ReactCurrentDispatcher.current` 也就是 `HooksDispatcherOnMount.useEffect` 方法：
+```ts
+// 【ReactCurrentDispatcher.current在renderWithHooks方法中确定，然后根据具体不同的hook调用不同的方法】
+export function useEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useEffect(create, deps);
+}
+function resolveDispatcher() {
+  const dispatcher = ReactCurrentDispatcher.current;
+  // 【省略代码...】
+  // Will result in a null access error if accessed outside render phase. We
+  // intentionally don't throw our own error because this is in a hot path.
+  // Also helps ensure this is inlined.
+  return ((dispatcher: any): Dispatcher);
+}
+```
+
+然后对于不同的情况比如不同环境、初始化还是更新等分为好几个模块的方法去调用：
+```ts
+const HooksDispatcherOnMount = {
+  readContext,
+
+  useCallback: mountCallback,
+  useContext: readContext,
+  useEffect: mountEffect,
+  useImperativeHandle: mountImperativeHandle,
+  useLayoutEffect: mountLayoutEffect,
+  useInsertionEffect: mountInsertionEffect,
+  useMemo: mountMemo,
+  useReducer: mountReducer,
+  useRef: mountRef,
+  useState: mountState,
+  useDebugValue: mountDebugValue,
+  useDeferredValue: mountDeferredValue,
+  useTransition: mountTransition,
+  useMutableSource: mountMutableSource,
+  useSyncExternalStore: mountSyncExternalStore,
+  useId: mountId,
+};
+
+const HooksDispatcherOnUpdate = {
+  readContext,
+
+  useCallback: updateCallback,
+  useContext: readContext,
+  useEffect: updateEffect,
+  useImperativeHandle: updateImperativeHandle,
+  useInsertionEffect: updateInsertionEffect,
+  useLayoutEffect: updateLayoutEffect,
+  useMemo: updateMemo,
+  useReducer: updateReducer,
+  useRef: updateRef,
+  useState: updateState,
+  useDebugValue: updateDebugValue,
+  useDeferredValue: updateDeferredValue,
+  useTransition: updateTransition,
+  useMutableSource: updateMutableSource,
+  useSyncExternalStore: updateSyncExternalStore,
+  useId: updateId,
+};
+
+const HooksDispatcherOnRerender: Dispatcher = {
+  readContext,
+
+  useCallback: updateCallback,
+  useContext: readContext,
+  useEffect: updateEffect,
+  useImperativeHandle: updateImperativeHandle,
+  useInsertionEffect: updateInsertionEffect,
+  useLayoutEffect: updateLayoutEffect,
+  useMemo: updateMemo,
+  useReducer: rerenderReducer,
+  useRef: updateRef,
+  useState: rerenderState,
+  useDebugValue: updateDebugValue,
+  useDeferredValue: rerenderDeferredValue,
+  useTransition: rerenderTransition,
+  useMutableSource: updateMutableSource,
+  useSyncExternalStore: updateSyncExternalStore,
+  useId: updateId,
+};
+```
+
+---
 
 ## Hook 相关的数据结构
 ```ts
@@ -321,6 +501,8 @@ export type Fiber = {
 - `useMemo`：对于 `useMemo(callback, [depA])`，`memoizedState` 保存 `[callback(), depA]`。
 - `useCallback`：对于 `useCallback(callback, [depA])`，`memoizedState` 保存 `[callback, depA]`。与 `useMemo` 的区别是，`useCallback` 保存的是`callback` 函数本身，而 `useMemo` 保存的是 `callback` 函数的执行结果。
 
+---
+
 ## Hook 通用方法
 ### mountWorkInProgressHook
 ```ts
@@ -444,101 +626,6 @@ function updateWorkInProgressHook(): Hook {
   return workInProgressHook;
 }
 ```
-
-## hook 调用时机
-在 `updateFunctionComponent` 方法中会调用 `renderWithHooks`，`renderWithHooks`会调用该 `Fuction Component` 组件的 `function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
-```ts
-export function renderWithHooks<Props, SecondArg>(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  Component: (p: Props, arg: SecondArg) => any,
-  props: Props,
-  secondArg: SecondArg,
-  nextRenderLanes: Lanes,
-): any {
-  renderLanes = nextRenderLanes;
-  currentlyRenderingFiber = workInProgress;
-
-  // 【省略代码...】
-
-  workInProgress.memoizedState = null;
-  workInProgress.updateQueue = null;
-  workInProgress.lanes = NoLanes;
-
-  // 【可以看到最终有几种不同情况的dispatcher例如HooksDispatcherOnMount、HooksDispatcherOnUpdate、HooksDispatcherOnMountWithHookTypesInDEV、HooksDispatcherOnMountInDEV】
-  // 【current.memoizedState是否存在判断是首次调用hook还是非首次】
-  // Using memoizedState to differentiate between mount/update only works if at least one stateful hook is used.
-  // Non-stateful hooks (e.g. context) don't get added to memoizedState,
-  // so memoizedState would be null during updates and mounts.
-  if (__DEV__) {
-    if (current !== null && current.memoizedState !== null) {
-      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV;
-    } else if (hookTypesDev !== null) {
-      // This dispatcher handles an edge case where a component is updating,
-      // but no stateful hooks have been used.
-      // We want to match the production code behavior (which will use HooksDispatcherOnMount),
-      // but with the extra DEV validation to ensure hooks ordering hasn't changed.
-      // This dispatcher does that.
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV;
-    } else {
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
-    }
-  } else {
-    ReactCurrentDispatcher.current =
-      current === null || current.memoizedState === null
-        ? HooksDispatcherOnMount
-        : HooksDispatcherOnUpdate;
-  }
-
-  // 【调用当前Component的function】
-  let children = Component(props, secondArg);
-
-  // 【省略代码...】
-
-  finishRenderingHooks(current, workInProgress);
-
-  return children;
-}
-
-// 【ReactCurrentDispatcher.current在renderWithHooks方法中确定，然后根据具体不同的hook调用不同的方法】
-export function useEffect(
-  create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
-): void {
-  const dispatcher = resolveDispatcher();
-  return dispatcher.useEffect(create, deps);
-}
-function resolveDispatcher() {
-  const dispatcher = ReactCurrentDispatcher.current;
-  // 【省略代码...】
-  // Will result in a null access error if accessed outside render phase. We
-  // intentionally don't throw our own error because this is in a hot path.
-  // Also helps ensure this is inlined.
-  return ((dispatcher: any): Dispatcher);
-}
-```
-```ts
-const HooksDispatcherOnMount = {
-  useCallback: mountCallback,
-  useEffect: mountEffect,
-  useLayoutEffect: mountLayoutEffect,
-  useMemo: mountMemo,
-  useReducer: mountReducer,
-  useRef: mountRef,
-  useState: mountState
-  // ...
-};
-const HooksDispatcherOnUpdate = {
-  useCallback: updateCallback,
-  useEffect: updateEffect,
-  useLayoutEffect: updateLayoutEffect,
-  useMemo: updateMemo,
-  useReducer: updateReducer,
-  useRef: updateRef,
-  useState: updateState
-};
-```
-
 
 
 

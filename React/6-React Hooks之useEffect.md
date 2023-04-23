@@ -139,7 +139,7 @@ function mountWorkInProgressHook(): Hook {
 }
 ```
 
-`pushEffect`构造一个 `effect` 对象，并把它加入当前 `fiber`（只能在 `function component` 中定义 `useEffect`，所以会挂在 `function component` 的`updateQueue` 上） 上已有的 `updateQueue`（一个单向循环链表），然后把这个 `effect` 对象返回：
+`pushEffect`构造一个 `effect` 对象，并把它加入当前 `fiber`（只能在 `function component` 中定义 `useEffect`，所以会挂在 `function component` 的`updateQueue` 上） 上已有的 `updateQueue`（一个单向循环链表），`updateQueue` 指向它的最后一个 `update`，`updateQueue.next` 指向它的第一个 `update`，然后把这个 `effect` 对象返回：
 ```ts
 let createFunctionComponentUpdateQueue: () => FunctionComponentUpdateQueue;
 
@@ -391,3 +391,8 @@ function App() {
     }
 }
 ```
+
+## uselayoutEffect
+
+- `useEffect` 是异步调度，等页面渲染完成后再去执行，不会阻塞页面渲染。
+- `uselayoutEffect` 是在 `commit` 阶段新的 `DOM` 准备完成，但还未渲染到屏幕前，同步执行。
