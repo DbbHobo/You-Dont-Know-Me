@@ -1,12 +1,15 @@
-## 任务队列和nextTick
+# 任务队列和nextTick
 
-### nextTick 定义
+## nextTick 定义
+
 等待下一次 `DOM` 更新刷新的工具方法。
 
-当你在 `Vue` 中更改响应式状态时，最终的 `DOM` 更新并不是同步生效的，而是由 `Vue` 将它们缓存在一个队列中，直到下一个`tick`才一起执行。这样是为了确保每个组件无论发生多少状态改变，都仅执行一次更新。`nextTick()` 可以在状态改变后立即使用，以等待 `DOM` 更新完成。你可以传递一个回调函数作为参数，或者 `await` 返回的 `Promise`。
+当你在 `Vue` 中更改响应式状态时，最终的 `DOM` 更新并不是同步生效的，而是由 `Vue` 将任务缓存在一个队列中，直到下一个`tick`才一起执行。这样是为了确保每个组件无论发生多少状态改变，都仅执行一次更新。`nextTick()` 可以在状态改变后立即使用，以等待 `DOM` 更新完成。你可以传递一个回调函数作为参数，或者 `await` 返回的 `Promise`。
 
-### nextTick 实现
-`nextTick()`实现在`runtime-core/scheduler.ts`，可以看到Vue3中使用的是Promise方法微任务回调用户的内容，Vue2中则是判断当前环境是否能使用几种方法，最差就降级到setTimeout方法：
+## nextTick 实现
+
+`nextTick()`实现在`runtime-core/scheduler.ts`，可以看到Vue3中使用的是`Promise`方法微任务回调用户的内容，Vue2中则是判断当前环境是否能使用几种方法，最差就降级到`setTimeout`方法：
+
 ```js
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
@@ -21,16 +24,24 @@ export function nextTick<T = void>(
 }
 ```
 
-### Vue3中的任务队列执行机制
-Vue3中有三个任务队列：
-- Pre队列：组件更新前置任务队列
-- queue队列：组件更新时的任务队列，允许插队，按任务id从小大排列执行	
-- Post队列：组件更新后置任务队列，按任务id从小大排列执行
+## Vue3中的任务队列执行机制
 
-从加入job队列到执行整个过程如下：**queueJob -> queueFlush -> flushJobs -> nextTick的fn回调**
+Vue3中有三个任务队列：
+
+- `Pre`队列：组件更新前置任务队列（但没有单独的数据结构，而是把按序执行`queue`任务队列当作执行前置任务队列）
+- `Queue`队列：组件更新时的任务队列`queue[]`，允许插队，按任务id从小大排列执行
+- `Post`队列：组件更新后置任务队列`pendingPostFlushCbs[]`，允许插队，按任务id从小大排列执行
+
+从加入job队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs/flushPostFlushCbs -> nextTick的fn回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
+
+- `queueJob()`/`queuePostFlushCb()`方法把任务加进任务队列
+- `queueFlush`是任务队列开始执行前的准备工作会把任务队列的执行放入`promise.then()`中
+- `flushJobs()`/`flushPostFlushCbs()`则是遍历执行`queue`/`pendingPostFlushCbs`任务队列
 
 基础数据定义如下，可以看到定义了一个主任务队列和后置任务队列，前置任务也用了主任务队列，只不过放在最前面：
+
 ```ts
+// 【一个任务】
 export interface SchedulerJob extends Function {
   id?: number
   pre?: boolean
@@ -59,7 +70,7 @@ export interface SchedulerJob extends Function {
    */
   ownerInstance?: ComponentInternalInstance
 }
-
+// 【一些任务】
 export type SchedulerJobs = SchedulerJob | SchedulerJob[]
 
 let isFlushing = false
@@ -74,7 +85,7 @@ const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
 let postFlushIndex = 0
 
-// 【执行任务队列的Promise实例】
+// 【用于执行任务队列的Promise实例】
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
@@ -82,12 +93,46 @@ const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 ```
 
-对`SchedulerJob`的使用有如下场景：
-1. 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段：
+### 任务 `EffectScheduler`
+
+在实例化`ReactiveEffect`的构造函数中我们可以看到，第一个参数是用于`effect.run()`里回调用的`fn`，第二个`scheduler`是在派发更新的时候如果有`scheduler`函数会调用`scheduler`函数否则调用`run`函数。
+
+```js
+export type EffectScheduler = (...args: any[]) => any
+
+constructor(
+  public fn: () => T,
+  public scheduler: EffectScheduler | null = null,
+  scope?: EffectScope
+) {
+  recordEffectScope(this, scope)
+}
+
+function triggerEffect(
+  effect: ReactiveEffect,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
+  if (effect !== activeEffect || effect.allowRecurse) {
+    if (__DEV__ && effect.onTrigger) {
+      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+    }
+    if (effect.scheduler) {
+      effect.scheduler()
+    } else {
+      effect.run()
+    }
+  }
+}
+```
+
+对`EffectScheduler`实例的使用有如下场景：
+
+- 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段实例化了一个`EffectScheduler`实例，调用`queueJob`把当前任务加入任务队列：
+
 ```ts
 // 【定义一个名叫update的SchedulerJob类型job】
 const update: SchedulerJob = (instance.update = () => effect.run())
-update.id = instance.uid
+update.id = instance.uid //组件实例的uid作为job的id，用于后序排序，按先父后子顺序执行（父先建uid更小）
 
 // create reactive effect for rendering
 const effect = (instance.effect = new ReactiveEffect(
@@ -95,29 +140,79 @@ const effect = (instance.effect = new ReactiveEffect(
   () => queueJob(update),
   instance.scope // track it in component's effect scope
 ))
-
-const update: SchedulerJob = (instance.update = () => effect.run())
-update.id = instance.uid //组件实例的uid作为job的id，用于后序排序，按先父后子顺序执行（父先建uid更小）
 ```
 
-2. 在`render`中调用`flushPreFlushCbs()`、`flushPostFlushCbs()`方法：
+- 在`watch`中也实例化了一个`EffectScheduler`实例，根据用户传入的参数是`post`/`pre`(默认`pre`)调用`queuePostRenderEffect`/`queueJob`把当前任务加入任务队列，若是`sync`则`scheduler`直接为当前`EffectScheduler`实例直接同步执行：
+
 ```ts
-const render: RootRenderFunction = (vnode, container, isSVG) => {
-  if (vnode == null) {
-    if (container._vnode) {
-      unmount(container._vnode, null, null, true)
+const job: SchedulerJob = () => {
+  if (!effect.active) {
+    return
+  }
+  // 有回调函数
+  if (cb) {
+    // watch(source, cb)
+    const newValue = effect.run()
+    //【deep为true，监听的是reactive对象，新旧值有变化等情况下，执行callback回调】
+    //【将oldValue,newValue,onCleanup都作为callback的入参】
+    if (
+      deep ||
+      forceTrigger ||
+      (isMultiSource
+        ? (newValue as any[]).some((v, i) =>
+            hasChanged(v, (oldValue as any[])[i])
+          )
+        : hasChanged(newValue, oldValue)) ||
+      (__COMPAT__ &&
+        isArray(newValue) &&
+        isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+    ) {
+      // cleanup before running cb again
+      if (cleanup) {
+        cleanup()
+      }
+      //【执行回调函数，并传入新旧值】
+      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+        newValue,
+        // pass undefined as the old value when it's changed for the first time
+        oldValue === INITIAL_WATCHER_VALUE ||
+        (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
+          ? undefined
+          : oldValue,
+        onCleanup
+      ])
+      // 用新值将旧值覆盖
+      oldValue = newValue
     }
   } else {
-    patch(container._vnode || null, vnode, container, null, null, null, isSVG)
+    //【没有cb回调函数，直接执行对应副作用的run()方法】
+    // watchEffect
+    effect.run()
   }
-  flushPreFlushCbs()
-  flushPostFlushCbs()
-  container._vnode = vnode
 }
+// important: mark the job as a watcher callback so that scheduler knows
+// it is allowed to self-trigger (#1727)
+job.allowRecurse = !!cb
+
+let scheduler: EffectScheduler
+if (flush === 'sync') {
+  scheduler = job as any // the scheduler function gets called directly
+} else if (flush === 'post') {
+  scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
+} else {
+  // default: 'pre'
+  job.pre = true
+  if (instance) job.id = instance.uid
+  scheduler = () => queueJob(job)
+}
+
+const effect = new ReactiveEffect(getter, scheduler)
 ```
 
-#### `queueJob()`
-该方法负责维护主任务队列，接受一个函数作为参数，为待入队任务，会将参数 push 到 queue 队列中，会判断是否唯一。会在当前宏任务执行结束后，清空队列。
+### 入队 `queueJob()` => `queueFlush()`
+
+该方法负责维护主任务队列，接受一个函数作为参数，为待入队任务，会将任务 `push` 到 `queue` 队列中，会判断是否唯一。会在当前宏任务执行结束后，清空队列。
+
 ```ts
 // 【加入主任务队列-queue】
 const queue: SchedulerJob[] = []//任务队列
@@ -130,7 +225,7 @@ export function queueJob(job: SchedulerJob) {
   // if the job is a watch() callback, the search will start with a +1 index to
   // allow it recursively trigger itself - it is the user's responsibility to
   // ensure it doesn't end up in an infinite loop.
-  // 【当queue队列中没有job时或者queue队列中不包含当前job时】
+  // 【当queue队列中没有job时（队长为0）或者queue队列中不包含当前job时】
   // 【当前job没有id直接加入队列，当前job有id则用splice方法替换相同id的job(更新这个job)】
   if (
     !queue.length ||
@@ -150,8 +245,10 @@ export function queueJob(job: SchedulerJob) {
 
 ```
 
-#### `queuePostFlushCb`
-该方法负责维护后置任务队列，接受一个函数作为参数，为待入队任务，会将参数 push 到 pendingPostFlushCbs 队列中。会在主任务队列执行结束后，清空队列。
+### 入队 `queuePostFlushCb()` => `queueFlush()`
+
+该方法负责维护后置任务队列，会将任务 `push` 到 `pendingPostFlushCbs` 队列中。会紧接着主任务队列执行结束后，清空队列。
+
 ```ts
 const pendingPostFlushCbs: SchedulerJob[] = []
 let activePostFlushCbs: SchedulerJob[] | null = null
@@ -159,6 +256,7 @@ let postFlushIndex = 0
 
 //【加入后置任务队列-pendingPostFlushCbs】
 export function queuePostFlushCb(cb: SchedulerJobs) {
+  // 【不是数组的情况】
   if (!isArray(cb)) {
     if (
       !activePostFlushCbs ||
@@ -170,6 +268,8 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
       pendingPostFlushCbs.push(cb)
     }
   } else {
+    // 【TODO】
+    // 【是数组】
     // if cb is an array, it is a component lifecycle hook which can only be
     // triggered by a job, which is already deduped in the main queue, so
     // we can skip duplicate check here to improve perf
@@ -179,11 +279,13 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
 }
 ```
 
-#### `queueFlush()`
-该方法负责进行准备工作，尝试创建`Promise`微任务，将`flushJobs`用`Promise`包装，等待主、后置两个任务队列的执行。
+### 执行准备阶段 `queueFlush()` => `flushJobs()`
+
+该方法负责进行准备工作，尝试创建`Promise`微任务，将`flushJobs`作为`promise.then()`的微任务包装，等待主、后置两个任务队列的执行。
+
 ```ts
-let isFlushing = false //【】
-let isFlushPending = false //【】
+let isFlushing = false //【是否正在执行任务队列】
+let isFlushPending = false //【任务队列执行准备阶段ing】
 
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
@@ -191,13 +293,16 @@ let currentFlushPromise: Promise<void> | null = null
 function queueFlush() {
   if (!isFlushing && !isFlushPending) {
     isFlushPending = true
+    // 【flushJobs作为微任务加入事件循环队列】
     currentFlushPromise = resolvedPromise.then(flushJobs)
   }
 }
 ```
 
-#### `flushPreFlushCbs()`
-该方法负责处理执行前置队列任务。
+### 执行前置任务队列 `flushPreFlushCbs()`
+
+该方法负责处理执行前置队列任务，因为它按入`queue`任务队列的顺序进行遍历执行的，可以看到该方法在`render`/`updateComponentPreRender`中有调用。
+
 ```ts
 // 【执行前置任务队列-queue】
 export function flushPreFlushCbs(
@@ -223,56 +328,16 @@ export function flushPreFlushCbs(
 }
 ```
 
-#### `flushPostFlushCbs`
-该方法负责处理执行后置队列任务。
-```ts
-// 【执行后置任务队列-pendingPostFlushCbs】
-export function flushPostFlushCbs(seen?: CountMap) {
-  if (pendingPostFlushCbs.length) {
-    const deduped = [...new Set(pendingPostFlushCbs)]
-    pendingPostFlushCbs.length = 0
+### 执行当前任务队列 `flushJobs()` => `flushPostFlushCbs`
 
-    //【获取当前需要执行的后置任务队列并赋值给activePostFlushCbs，这一步是因为pendingPostFlushCbs可能还会动态增加】
-    // #1947 already has active queue, nested flushPostFlushCbs call
-    if (activePostFlushCbs) {
-      activePostFlushCbs.push(...deduped)
-      return
-    }
-
-    activePostFlushCbs = deduped
-    if (__DEV__) {
-      seen = seen || new Map()
-    }
-    //【当前正在执行的job队列进行排序】
-    activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
-
-    //【遍历执行job】
-    for (
-      postFlushIndex = 0;
-      postFlushIndex < activePostFlushCbs.length;
-      postFlushIndex++
-    ) {
-      if (
-        __DEV__ &&
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      ) {
-        continue
-      }
-      activePostFlushCbs[postFlushIndex]()
-    }
-    //【执行完毕后回复初始状态】
-    activePostFlushCbs = null
-    postFlushIndex = 0
-  }
-}
-```
-
-#### `flushJobs()`
 该方法负责处理执行队列任务，主要逻辑如下：
+
 1. 根据id给主队列中的任务进行排序
 2. 遍历执行主队列任务
 3. 执行完毕后清空并重置队列
 4. 执行后置队列任务
+5. 检查是否有在执行过程中加入主任务队列的任务，继续全部执行掉
+
 ```ts
 let isFlushing = false //flushJobs中
 let isFlushPending = false //queueFlush中
@@ -291,7 +356,7 @@ function flushJobs(seen?: CountMap) {
   //    priority number)
   // 2. If a component is unmounted during a parent component's update,
   //    its update can be skipped.
-  //【排序保证了：组件更新先父后子(父组件的id小于子组件因为父组件先创建)，如果子组件unmount了话就无需执行update】
+  //【任务队列进行排序保证了：1.组件更新先父后子(父组件的id小于子组件因为父组件先创建)；2.如果子组件在父组件的更新过程中unmount了话就无需执行这个子组件的update任务】
   queue.sort(comparator)
 
   // conditional usage of checkRecursiveUpdate must be determined out of
@@ -311,7 +376,6 @@ function flushJobs(seen?: CountMap) {
         if (__DEV__ && check(job)) {
           continue
         }
-        // console.log(`running:`, job.id)
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
       }
     }
@@ -331,6 +395,54 @@ function flushJobs(seen?: CountMap) {
     if (queue.length || pendingPostFlushCbs.length) {
       flushJobs(seen)
     }
+  }
+}
+```
+
+### 执行后置任务队列 `flushPostFlushCbs()`
+
+该方法负责处理执行后置队列任务。
+
+```ts
+// 【执行后置任务队列-pendingPostFlushCbs】
+export function flushPostFlushCbs(seen?: CountMap) {
+  if (pendingPostFlushCbs.length) {
+    // 【给pendingPostFlushCbs去重】
+    const deduped = [...new Set(pendingPostFlushCbs)]
+    pendingPostFlushCbs.length = 0
+
+    //【获取当前需要执行的后置任务队列并赋值给activePostFlushCbs，这一步是因为pendingPostFlushCbs可能还会动态增加】
+    // #1947 already has active queue, nested flushPostFlushCbs call
+    if (activePostFlushCbs) {
+      activePostFlushCbs.push(...deduped)
+      return
+    }
+
+    activePostFlushCbs = deduped
+    if (__DEV__) {
+      seen = seen || new Map()
+    }
+
+    //【对后置任务队列进行排序】
+    activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
+
+    //【遍历执行job】
+    for (
+      postFlushIndex = 0;
+      postFlushIndex < activePostFlushCbs.length;
+      postFlushIndex++
+    ) {
+      if (
+        __DEV__ &&
+        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
+      ) {
+        continue
+      }
+      activePostFlushCbs[postFlushIndex]()
+    }
+    //【执行完毕后回复初始状态】
+    activePostFlushCbs = null
+    postFlushIndex = 0
   }
 }
 ```

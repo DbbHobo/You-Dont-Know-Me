@@ -1,6 +1,7 @@
 # Vue3 组件化
 
 编写一个组件实际上是编写一个 `JavaScript` 对象，对象的描述就是各种配置。
+
 ```js
 // 注册一个选项对象
 app.component('my-component', {
@@ -12,22 +13,26 @@ const MyComponent = app.component('my-component')
 ```
 
 ## Vue3 组件的构建过程
-前文我们讲到，`const app = ensureRenderer().createApp(...args)`会创建根APP实例，根APP实例再调用`mount`方法，其中关键的两步为：
+
+前文我们讲到，`const app = ensureRenderer().createApp(...args)`会创建根APP实例，根APP实例再调用`mount`方法，其中关键的步骤如下：
+
 ```ts
-// 【生成虚拟VNode】
+// 【1.生成VNode】
 const vnode = createVNode(
     rootComponent as ConcreteComponent,
     rootProps
 )
-// 【调用render挂载】
+// 【2.调用render挂载】
 if (isHydrate && hydrate) {
     hydrate(vnode as VNode<Node, Element>, rootContainer as any)
 } else {
     render(vnode, rootContainer, isSVG)
 }
+isMounted = true
 ```
 
 ### 创建组件VNode
+
 ```ts
 export type VNodeTypes =
   | string
@@ -224,7 +229,9 @@ function createBaseVNode(
   return vnode
 }
 ```
-官方示例tree.html中我们可以看到构造的组件VNode如下：
+
+官方示例tree.html中我们可以看到生成的组件VNode如下：
+
 ```ts
 {
   __v_isVNode: true,
@@ -340,10 +347,12 @@ function createBaseVNode(
 }
 ```
 
-### 组件挂载
+### 组件挂载(首次)
+
 首先来看`render`方法如下，然后会走到`patch`方法，然后我们去看`patch`方法里，根据`type`不同，进行不同处理，我们要看的是如何处理组件，也就是`processComponent`方法，下一步根据是首次挂载或者是更新调用`mountComponent`或者`updateComponent`方法：
 
 **createVNode -> render(vnode) -> patch -> processComponent -> mountComponent/updateComponent**
+
 ```ts
 const render: RootRenderFunction = (vnode, container, isSVG) => {
     if (vnode == null) {
@@ -351,12 +360,14 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 【实际上是调用patch】
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPreFlushCbs()
     flushPostFlushCbs()
     container._vnode = vnode
 }
+// 【patch根据type有很多处理分支】
 const patch: PatchFn = (
     n1,
     n2,
@@ -473,9 +484,47 @@ const patch: PatchFn = (
     setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
   }
 }
+// 【根据是否存在旧节点走mountComponent或updateComponent】
+const processComponent = (
+  n1: VNode | null,
+  n2: VNode,
+  container: RendererElement,
+  anchor: RendererNode | null,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  isSVG: boolean,
+  slotScopeIds: string[] | null,
+  optimized: boolean
+) => {
+  n2.slotScopeIds = slotScopeIds
+  if (n1 == null) {
+    if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      ;(parentComponent!.ctx as KeepAliveContext).activate(
+        n2,
+        container,
+        anchor,
+        isSVG,
+        optimized
+      )
+    } else {
+      mountComponent(
+        n2,
+        container,
+        anchor,
+        parentComponent,
+        parentSuspense,
+        isSVG,
+        optimized
+      )
+    }
+  } else {
+    updateComponent(n1, n2, optimized)
+  }
+}
 ```
 
 组件的挂载`mountComponent`又分为几个步骤：
+
 ```ts
 const mountComponent: MountComponentFn = (
     initialVNode,
@@ -490,6 +539,7 @@ const mountComponent: MountComponentFn = (
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // 【1.创建组件实例】
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -517,6 +567,7 @@ const mountComponent: MountComponentFn = (
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 【2.初始化props、slots】
       setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
@@ -537,6 +588,7 @@ const mountComponent: MountComponentFn = (
       return
     }
 
+    // 【3.构建render effect】
     setupRenderEffect(
       instance,
       initialVNode,
@@ -554,9 +606,10 @@ const mountComponent: MountComponentFn = (
 }
 ```
 
-1. 创建组件实例`createComponentInstance`
-- 创建组件实例包含各类属性
-- 缕清父子组件上下文关系
+1. 第一步：调用 **`createComponentInstance`** 创建组件实例
+   - 创建组件实例包含各类属性
+   - 缕清父子组件上下文关系
+
 ```ts
 // 【createComponentInstance】
 const compatMountInstance =
@@ -672,7 +725,9 @@ export function createComponentInstance(
   return instance
 }
 ```
+
 官方示例tree.html中我们可以看到构造的组件实例如下：
+
 ```json
 {
   uid: 0,
@@ -1253,12 +1308,12 @@ export function createComponentInstance(
 }
 ```
 
-2. 调用`setupComponent`初始化组件
-- 初始化`props`、`slots`
-- 调用`setup`如果`setup`存在
-- 返回`setup`的内容，可以是响应式对象或渲染函数
-- 最后如果当前实例没有`render`方法通过将`template`编译`compile`成`render`方法并返回
-- 如果`setup`返回的是函数，就是render函数
+2. 第二步：调用 **`setupComponent`** 初始化组件
+   - 初始化`props`、`slots`
+   - 调用`setup`如果`setup`存在
+   - 返回`setup`的内容，可以是响应式对象或渲染函数
+   - 最后如果当前实例没有`render`方法通过将`template`编译`compile`成`render`方法并返回；如果`setup`返回的是函数，会被当做`render`函数使用。然后将`render`函数赋值给组件实例的`render`属性
+
 ```ts
 // 【setupComponent】
 // resolve props and slots for setup context
@@ -1539,12 +1594,13 @@ export function finishComponentSetup(
 }
 ```
 
-3. 调用`setupRenderEffect`设置组件渲染逻辑
-- 定义`componentUpdateFn`方法供`effect.run()`方法调用
-- `renderComponentRoot`方法生成虚拟VNode赋值给`subtree`属性
-- `patch`方法进行挂载
-- 如果组件内还有子组件内容，就会继续循环上面的组件初始化加载过程
-- `new ReactiveEffect`生成render effect实例，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该render effect调用`run`方法继而调用`componentUpdateFn`方法，此时isMounted为true，走入更新分支
+3. 第三步：调用 **`setupRenderEffect`** 设置组件渲染逻辑
+   - 定义`componentUpdateFn`方法供`effect.run()`方法调用，`componentUpdateFn`方法根据实例上的`isMounted`是否为true，走入首次挂载或更新分支逻辑
+     - `renderComponentRoot`方法生成`VNode`，其实调用的是第二步中得到的`render`方法（由用户自定义或者经过编译得到的`render`方法），然后`VNode`赋值给`subtree`属性
+     - `patch`方法进行`DOM`挂载
+     - 如果组件内还有子组件内容，就会继续循环递归调用上面的组件初始化加载过程
+   - `new ReactiveEffect`生成`render effect`实例，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该`render effect`调用`run`方法继而调用`componentUpdateFn`方法，如果是首次调用进入首次挂载分支，否则进入更新分支
+
 ```ts
 // 【setupRenderEffect】
 setupRenderEffect(
@@ -1576,6 +1632,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
       const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
       toggleRecurse(instance, false)
+      // 【调用beforeMount生命周期回调】
       // beforeMount hook
       if (bm) {
         invokeArrayFns(bm)
@@ -1594,6 +1651,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         instance.emit('hook:beforeMount')
       }
       toggleRecurse(instance, true)
+
 
       if (el && hydrateNode) {
         // vnode has adopted host node - perform hydration instead of mount.
@@ -1643,7 +1701,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
-        //【2.patch进行虚拟VNode对比然后挂载】
+        //【2.递归调用patch进行VNode对比然后挂载】
         patch(
           null,
           subTree,
@@ -1658,6 +1716,8 @@ const setupRenderEffect: SetupRenderEffectFn = (
         }
         initialVNode.el = subTree.el
       }
+
+      //【执行onMounted生命周期回调】
       // mounted hook
       if (m) {
         queuePostRenderEffect(m, parentSuspense)
@@ -1683,6 +1743,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         )
       }
 
+      // 【如果是keep-alive组件执行activated生命周期回调】
       // activated hook for keep-alive roots.
       // #1742 activated hook must be accessed after first render
       // since the hook may be injected by a child keep-alive
@@ -1703,6 +1764,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
           )
         }
       }
+      // 【实例上的isMounted标志设为true，代表挂载完成】
       instance.isMounted = true
 
       if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -1731,7 +1793,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
       } else {
         next = vnode
       }
-      //【执行beforeUpdate钩子的回调】
+      //【执行beforeUpdate生命周期的回调】
       // beforeUpdate hook
       if (bu) {
         invokeArrayFns(bu)
@@ -1759,13 +1821,13 @@ const setupRenderEffect: SetupRenderEffectFn = (
       if (__DEV__) {
         endMeasure(instance, `render`)
       }
-      const prevTree = instance.subTree//旧VNode
-      instance.subTree = nextTree//新VNode
+      const prevTree = instance.subTree//【旧VNode】
+      instance.subTree = nextTree//【新VNode】
 
       if (__DEV__) {
         startMeasure(instance, `patch`)
       }
-      //【2.patch进行挂载更新DOM】
+      //【2.递归执行patch进行挂载更新DOM】
       patch(
         prevTree,
         nextTree,
@@ -1787,7 +1849,8 @@ const setupRenderEffect: SetupRenderEffectFn = (
         // to child component's vnode
         updateHOCHostEl(instance, nextTree.el)
       }
-      //【执行update钩子的回调】
+
+      //【执行update生命周期的回调】
       // updated hook
       if (u) {
         queuePostRenderEffect(u, parentSuspense)
@@ -1829,6 +1892,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
   ))
 
   // 【创建一个组件挂载/更新的任务函数挂在在实例的update属性上并调用】
+  // 【effect.run()方法里会执行componentUpdateFn】
   const update: SchedulerJob = (instance.update = () => effect.run())
   update.id = instance.uid
   // allowRecurse
@@ -1844,14 +1908,21 @@ const setupRenderEffect: SetupRenderEffectFn = (
       : void 0
     update.ownerInstance = instance
   }
+  
   //【update实际调用的是当前实例对应的render effect的run方法，最终会调用componentUpdateFn】
   update()
 }
 ```
 
 ### 组件更新
+
 **createVNode -> render(vnode) -> patch -> processComponent -> updateComponent**
+
 组件更新显然就走向`updateComponent`方法，如果是需要更新的情况，最终调用的其实就是`instance.update()`：
+
+- `shouldUpdateComponent`方法根据`patchFlag`等判断是否需要更新组件
+- 核心是执行`instance.update()`方法也就是对应`render effect`的`run`方法继而调用`componentUpdateFn`方法，进入更新分支
+
 ```ts
 const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
   const instance = (n2.component = n1.component)!
@@ -1893,8 +1964,10 @@ const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
 ```
 
 ## 组件注册
+
 - 全局注册
 `createAppAPI`方法生成的App实例有`component`方法用于注册全局组件如下：
+
 ```ts
 component(name: string, component?: Component): any {
     if (__DEV__) {
@@ -1912,7 +1985,9 @@ component(name: string, component?: Component): any {
 ```
 
 - 局部注册
+
 局部组件通过`components`属性选项来进行注册如下：
+
 ```ts
 Vue.createApp({
   components: {

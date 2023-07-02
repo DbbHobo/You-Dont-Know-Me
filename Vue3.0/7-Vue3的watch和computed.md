@@ -1,19 +1,26 @@
-## Vue3 中的 computed 和 watch
-除了模板渲染的时候会实例化`<ReactiveEffect>`，用户声明的 computed 和 watch 方法也一样会实例化`<ReactiveEffect>`，用于依赖收集、派发更新。
+# Vue3 中的 computed 和 watch
 
-### computed
-#### computed API
+除了模板渲染的时候会实例化`<ReactiveEffect>`，用户声明的 `computed()` 和 `watch()` 方法也一样会实例化`<ReactiveEffect>`，用于依赖收集、派发更新，这些也是响应式中的重要内容。
+
+## computed()
+
+### computed API
+
 接受一个 `getter` 函数，返回一个只读的响应式 `ref` 对象。该 `ref` 通过 `.value` 暴露 `getter` 函数的返回值。它也可以接受一个带有 `get` 和 `set` 函数的对象来创建一个可写的 `ref` 对象。
 
-#### computed 实现
+### computed 实现
+
 - 关键词`<getter>`、`<ComputedRefImpl>`
+
 `computed` API入口在`reactivity/src/computed.ts`：
+
 ```ts
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
   isSSR = false
 ) {
+  // 【第一步获取getter/setter】
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
   //【如果是函数，说明是单一的getter】
@@ -30,9 +37,11 @@ export function computed<T>(
     getter = getterOrOptions.get
     setter = getterOrOptions.set
   }
-  //【生成一个ComputedRefImpl实例】
+
+  //【第二步生成一个ComputedRefImpl实例】
   const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
 
+  // 【onTrack、onTrigger用于调试】
   if (__DEV__ && debugOptions && !isSSR) {
     cRef.effect.onTrack = debugOptions.onTrack
     cRef.effect.onTrigger = debugOptions.onTrigger
@@ -41,7 +50,9 @@ export function computed<T>(
   return cRef as any
 }
 ```
-可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`为true且不缓存时才执行`effect.run()`，`ComputedRefImpl`类如下：
+
+可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的1.依赖值改变2.引起派发更新3.调用effect.scheduler()4.`_dirty`改变。`ComputedRefImpl`类如下：
+
 ```ts
 export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
@@ -61,7 +72,9 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    //【实例化一个computed effect】
+    // 【实例化一个computed effect，并把用户传入的getter作为回调传入】
+    // 【_dirty控制着是否需要重新计算也就是执行effect.run()】
+    // 【triggerEffect中会根据是否存在scheduler函数调用scheduler或者run方法】
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
         this._dirty = true
@@ -78,7 +91,7 @@ export class ComputedRefImpl<T> {
     //【依赖收集】
     const self = toRaw(this)
     trackRefValue(self)
-    //【_dirty为true的情况，调用computed effect的run()方法，继而回调getter】
+    //【非ssr的情况下_cacheable始终为true，此时，若_dirty为true的情况，调用computed effect的run()方法，继而回调getter。】
     if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
@@ -93,8 +106,14 @@ export class ComputedRefImpl<T> {
 }
 ```
 
-### watch
-#### watch API
+可以看到`computed`实际上就是创建了一个只读的`ref`对象，因此我们推荐使用计算属性来描述依赖响应式状态的复杂逻辑，计算属性值会基于其响应式依赖被缓存，一个计算属性仅会在其响应式依赖更新时才重新计算。计算属性的 `getter` 应只做计算而没有任何其他的副作用，这一点非常重要，请务必牢记。举例来说，不要在 `getter` 中做异步请求或者更改 `DOM`！一个计算属性的声明中描述的是如何根据其他值派生一个值。因此 `getter` 的职责应该仅为计算和返回该值。
+
+为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 list，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 list。没有缓存的话，我们会重复执行非常多次 list 的 getter，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。从计算属性返回的值是派生状态。可以把它看作是一个“临时快照”，每当源状态发生变化时，就会创建一个新的快照。更改快照是没有意义的，因此计算属性的返回值应该被视为只读的，并且永远不应该被更改——应该更新它所依赖的源状态以触发新的计算。
+
+## watch()
+
+### watch API
+
 1. **watch()**
 `watch()` 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
    1. 第一个参数是侦听器的源。这个来源可以是以下几种：
@@ -125,11 +144,17 @@ export class ComputedRefImpl<T> {
 4. **watchSyncEffect()**
 `watchEffect()` 使用 `flush: 'sync'` 选项时的别名。在某些特殊情况下 (例如要使缓存失效)，可能有必要在响应式依赖发生改变时立即触发侦听器。这可以通过设置 flush: 'sync' 来实现。然而，该设置应谨慎使用，因为如果有多个属性同时更新，这将导致一些性能和数据一致性的问题。
 
-#### watch 实现
-`watch` API入口在`runtime-core/src/apiWatch.ts`，调用`watch`方法传入`source`、`cb`回调、`options`，然后创建一个`watch effect`副作用，有`cb`回调执行回调，否则执行`effect.run()`。
-`watch()`/`watchEffect()`/`watchPostEffect()`/`watchPostEffect()`的区别在于调用`doWatch()`方法时入参
-- `doWatch(source as any, cb, options)`
-- `doWatch(effect, null, options)`
+### watch 实现
+
+`watch` API入口在`runtime-core/src/apiWatch.ts`，调用`watch`方法可以传入`source`、`cb`回调、`options`，然后创建一个对应的`watch effect`副作用，有`cb`回调执行回调，否则执行`effect.run()`。
+
+`watch()`/`watchEffect()`/`watchPostEffect()`/`watchSyncEffect()`四个API的区别在于调用`doWatch()`方法时入参：
+
+- `watch()`: `doWatch(source as any, cb, options)`
+- `watchEffect()`: `doWatch(effect, null, options)`
+- `watchPostEffect()`: `doWatch(effect,null,(__DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }) as WatchOptionsBase)`
+- `watchSyncEffect()`: `doWatch(effect,null,(__DEV__? { ...options, flush: 'sync' } : { flush: 'sync' }) as WatchOptionsBase)`
+
 ```ts
 // overload: array of multiple sources + cb
 export function watch<
@@ -169,18 +194,8 @@ export function watch<
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
 ): WatchStopHandle
-```
-接下来看doWatch的实现分为以下几个步骤：
-- 确定`getter()`方法，监听响应式数据，进行依赖收集
-- 实例化一个`SchedulerJob`，用于执行回调函数，根据options确定执行时机
-- 实例化一个`ReactiveEffect`，用于依赖收集、派发更新
-- 初始操作，根据`immediate`参数判断是否立即执行
-```ts
-// initial value for watchers to trigger on undefined initial values
-const INITIAL_WATCHER_VALUE = {}
 
-type MultiWatchSources = (WatchSource<unknown> | object)[]
-
+// implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
@@ -196,6 +211,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
+// Simple effect.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase
@@ -228,6 +244,31 @@ export function watchSyncEffect(
       : { flush: 'sync' }) as WatchOptionsBase
   )
 }
+```
+
+接下来看`doWatch`的实现分为以下几个步骤：
+
+- 根据用户传入的不同类型数据，构造`getter()`方法用于后续实例化`watch effect`，监听响应式数据，进行依赖收集
+- 实例化一个`SchedulerJob`，如果有`cb`回调函数，除了执行对应`watch effect`的`run()`方法得到`newValue`之外还要执行`cb`回调函数，然后根据`options`里的`flush`参数确定执行时机，这个`scheduler`也用于后续实例化`watch effect`
+- 实例化一个`ReactiveEffect`，用于依赖收集、派发更新
+- 初始操作，根据`immediate`等参数判断是否立即执行一次回调
+
+```ts
+// initial value for watchers to trigger on undefined initial values
+const INITIAL_WATCHER_VALUE = {}
+
+export type WatchEffect = (onCleanup: OnCleanup) => void
+
+export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
+
+export type WatchCallback<V = any, OV = any> = (
+  value: V,
+  oldValue: OV,
+  onCleanup: OnCleanup
+) => any
+
+type MultiWatchSources = (WatchSource<unknown> | object)[]
+
 // 【source观察对象，cb回调，{ immediate, deep, flush, onTrack, onTrigger }可选参数】
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
@@ -257,7 +298,8 @@ function doWatch(
         `a reactive object, or an array of these types.`
     )
   }
-  //【根据用户传入的source包装getter函数】
+
+  //【根据用户传入的source包装getter函数，本质就是根据用户传递的内容确定到底监听什么内容】
   const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
@@ -268,7 +310,7 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    // 【source是reactive】
+    // 【source是reactive，deep选项默认true，进行深层级监听】
     getter = () => source
     deep = true
   } else if (isArray(source)) {
@@ -367,6 +409,7 @@ function doWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
+
   // 【新建一个SchedulerJob类型的job】
   const job: SchedulerJob = () => {
     if (!effect.active) {
@@ -408,7 +451,7 @@ function doWatch(
         oldValue = newValue
       }
     } else {
-      //【没有回调函数，直接执行副作用的run()方法】
+      //【没有cb回调函数，直接执行对应副作用的run()方法】
       // watchEffect
       effect.run()
     }

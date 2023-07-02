@@ -1,11 +1,15 @@
 # diff算法
-研究一下两大框架的核心diff算法，同层比较的部分，看看分别用了什么样的方式，有什么样的特点。diff算法的核心点在于判断是否有节点可复用需要移动，以及应该如何移动和寻找出那些需要被添加或移除的节点。
+
+研究一下两大框架的核心`diff`算法，同层比较的部分，看看分别用了什么样的方式，有什么样的特点。`diff`算法的核心点在于判断是否有节点可复用需要移动，以及应该如何移动和寻找出那些需要被添加或移除的节点。
 
 ## Vue2的diff算法
+
 关键词：**双端比较**
 
-### VNode
+### Vue2的VNode
+
 `Vue2`中的VNode类：
+
 ```js
 export default class VNode {
   tag: string | void;
@@ -77,15 +81,18 @@ export default class VNode {
   }
 }
 ```
+
 `Vue2` 中区分 `VNode` 是 `html` 元素还是组件亦或是普通文本，是这样做的：
-1、拿到 `VNode` 后先尝试把它当作组件去处理，如果成功地创建了组件，那说明该 `VNode` 就是组件的 `VNode`
-2、如果没能成功地创建组件，则检查 `vnode.tag` 是否有定义，如果有定义则当作普通标签处理
-3、如果 `vnode.tag` 没有定义则检查是否是注释节点
-4、如果不是注释节点，则会把它当作文本节点对待
+
+1. 拿到 `VNode` 后先尝试把它当作组件去处理，如果成功地创建了组件，那说明该 `VNode` 就是组件的 `VNode`
+2. 如果没能成功地创建组件，则检查 `vnode.tag` 是否有定义，如果有定义则当作普通标签处理
+3. 如果 `vnode.tag` 没有定义则检查是否是注释节点
+4. 如果不是注释节点，则会把它当作文本节点对待
 
 以上这些判断都是在 `mount` 或 `patch` 阶段进行的，换句话说，一个 `VNode` 到底描述的是什么是在 `mount` 或 `patch` 的时候才知道的。这就带来了两个难题：无法从 AOT 的层面优化、开发者无法手动优化。
 
-### 判断是否相同节点
+### Vue2中判断是否相同节点
+
 ```js
 function sameVnode(a, b) {
   return (
@@ -101,8 +108,10 @@ function sameVnode(a, b) {
 }
 ```
 
-### diff核心算法
-`Vue2`中采用的是**双端比较**的方式，diff算法核心代码如下：
+### Vue2的diff核心算法
+
+`Vue2`中采用的是**双端比较**的方式，`diff`算法核心代码如下：
+
 ```js
 function updateChildren(
     parentElm,
@@ -252,11 +261,14 @@ function updateChildren(
 ---
 
 ## Vue3的diff算法
+
 关键词：**最长递增子序列**
 
-### VNode
+### Vue3的VNode
+
 `Vue3`中的VNode类：
-```js
+
+```ts
 const vnode = {
     __v_isVNode: true,
     __v_skip: true,
@@ -285,8 +297,10 @@ const vnode = {
     appContext: null
 } as VNode
 ```
+
 **`patchFlags`**：
-```js
+
+```ts
 export const enum PatchFlags {
   /**
    * Indicates an element with dynamic textContent (children fast path)
@@ -412,8 +426,10 @@ export const PatchFlagNames = {
   [PatchFlags.BAIL]: `BAIL`
 }
 ```
+
 **`shapeFlags`**：
-```js
+
+```ts
 export const enum ShapeFlags {
   ELEMENT = 1,  // html 和 svg 都是标签元素，可以用 ELEMENT 表示
   FUNCTIONAL_COMPONENT = 1 << 1,  // 函数式组件
@@ -429,7 +445,9 @@ export const enum ShapeFlags {
   // “有状态组件”，统一用 COMPONENT_STATEFUL 表示
 }
 ```
-一个VNode实例：
+
+一个`VNode`实例：
+
 ```json
 {
     "__v_isVNode": true,
@@ -463,8 +481,9 @@ export const enum ShapeFlags {
 }
 ```
 
-### 判断是否相同节点的方法如下：
-```js
+### Vue3中判断是否相同节点
+
+```ts
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
@@ -478,9 +497,11 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
 }
 ```
 
-### diff核心算法
+### Vue3的diff核心算法
+
 `Vue3`中diff算法核心代码如下：
-```js
+
+```ts
 const patchKeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
@@ -722,15 +743,15 @@ const patchKeyedChildren = (
 }
 ```
 
-1. 预处理头部所有相同的节点，直接patch，无需进入diff流程
-2. 预处理尾部所有相同的节点，直接patch，无需进入diff流程
+1. 预处理头部所有相同的节点，直接`patch`，无需进入`diff`流程
+2. 预处理尾部所有相同的节点，直接`patch`，无需进入`diff`流程
 3. 需要增加节点的情况，遍历完旧节点，新节点还剩下内容，也就是需要插入的节点
 4. 需要删除节点的情况，遍历完新节点，旧节点还剩下内容，也就是需要删除的节点
 5. 包含新增、删除、移动等多种情况的序列
   
   5-1. 首先为新节点建一个`keyToNewIndexMap`的Map用于存储【新节点key，新节点的索引】这样的一个结构
   
-  5-2. 新建`newIndexToOldIndexMap`数组长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，存储的是【旧节点（在新节点能找到复用的）在新节点序列中的索引】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
+  5-2. 新建一个`newIndexToOldIndexMap`的Array长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，存储的是【旧节点（在新节点能找到复用的）在新节点序列中的索引】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
   
   5-3. 找出`newIndexToOldIndexMap`中的最长递增子序列，这个序列是所有不需要移动的节点，剩下的节点就是需要移动的或者新增的，然后进行移动和新增操作
 
@@ -738,10 +759,11 @@ const patchKeyedChildren = (
 ---
 
 ## React的diff算法
+
 关键词：**与最大索引比较**
 【TODO：看一下react的diff算法】
 
 ## diff算法的比较和分析
 
 - Vue3 对于 Vue2 的改进点在于，在 `VNode` 创建的时候就把该 `VNode` 的类型通过 `flags` 标明，这样在挂载或 `patch` 阶段通过 `flags` 可以直接避免掉很多消耗性能的判断。
-- Vue3 采用了**最长递增子序列**算法，规划了最多的可复用且无需挪动的节点，从而减少了节点挪动次数，增强了算法的效率
+- Vue3 采用了**最长递增子序列**算法，规划了最多的可复用且无需挪动的节点，从而减少了节点挪动次数，增强了算法的效率。

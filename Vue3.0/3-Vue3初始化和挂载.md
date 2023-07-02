@@ -1,7 +1,9 @@
 # `Vue3` 的初始化过程和挂载过程
 
 ## Vue 初始化
+
 我们来分析一下首次渲染的过程，首先，在`Vue3`中，我们初始化`Vue`实例通常是调用 `Vue.createApp` 方法写出如下的代码：
+
 ```js
 const API_URL = `https://api.github.com/repos/vuejs/core/commits?per_page=3&sha=`
 
@@ -41,16 +43,19 @@ Vue.createApp({
 
 ## 生成App实例过程
 
-首先来看 `createApp` 方法，传入`options`会创建一个APP实例并调用`mount`方法，APP实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount`方法的第一个参数作为根元素，`createApp` 方法在 `runtime-dom/index.ts` 中查看：
+首先来看 `createApp` 方法，传入 `options` 会创建一个APP实例并调用 `mount` 方法，`APP` 实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount` 方法的第一个参数作为根元素，`createApp` 方法在 `runtime-dom/index.ts` 中查看：
+
 ```js
 export const createApp = ((...args) => {
-  const app = ensureRenderer().createApp(...args)//ensureRenderer返回render和createApp方法
+  //【ensureRenderer返回render和createApp方法】
+  const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
     injectNativeTagCheck(app)
     injectCompilerOptionsCheck(app)
   }
-  const { mount } = app //先把mount方法缓存下来，同vue2.0
+  //【先把mount方法缓存下来，同vue2.0】
+  const { mount } = app 
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
@@ -91,12 +96,13 @@ export const createApp = ((...args) => {
 }) as CreateAppFunction<Element>
 ```
 
-`mount`方法中传入的`container`经过`normalizeContainer`方法处理如下：
+`mount` 方法中传入的 `container` 经过 `normalizeContainer` 方法处理如下：
+
 ```js
 function normalizeContainer(
   container: Element | ShadowRoot | string
 ): Element | null {
-  // 如果是字符串，作为选择器获取到dom元素
+  //【如果是字符串，作为选择器获取到dom元素】
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
@@ -120,8 +126,22 @@ function normalizeContainer(
 }
 ```
 
-`ensureRenderer`其实最终调用的是`baseCreateRenderer`方法返回`render`和`createAppAPI`，`createApp`由`createAppAPI`传入`render`方法然后返回，所以能调用`ensureRenderer().createApp(...args)`并返回APP实例：
+`ensureRenderer` 其实最终调用的是 `baseCreateRenderer` 方法返回的 `render` 和 `createAppAPI`，`createApp` 由 `createAppAPI` 传入 `render` 方法然后返回，所以能调用 `ensureRenderer().createApp(...args)` 并返回`APP`实例：
+
 ```js
+const render: RootRenderFunction = (vnode, container, isSVG) => {
+  if (vnode == null) {
+    if (container._vnode) {
+      unmount(container._vnode, null, null, true)
+    }
+  } else {
+    patch(container._vnode || null, vnode, container, null, null, null, isSVG)
+  }
+  flushPreFlushCbs()
+  flushPostFlushCbs()
+  container._vnode = vnode
+}
+
 return {
     render,
     hydrate,
@@ -129,7 +149,8 @@ return {
 }
 ```
 
-这样我们继续来看一下`createAppAPI`方法定义如下，生成APP实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法：
+这样我们继续来看一下 `createAppAPI` 方法定义如下，生成 `APP` 实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，传入的 `render` 方法会在 `mount` / `unmount` 方法中调用：
+
 ```js
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
@@ -149,7 +170,7 @@ export function createAppAPI<HostElement>(
     const installedPlugins = new Set()
 
     let isMounted = false
-
+    //【生成根app实例，包含_uid_component等属性还有use、mixin、component、directive、mount、unmount、provide方法】
     const app: App = (context.app = {
       _uid: uid++,//uid递增，由父到子
       _component: rootComponent as ConcreteComponent,
@@ -160,6 +181,7 @@ export function createAppAPI<HostElement>(
 
       version,
 
+      //【应用实例获取config属性其实是获取context.config】
       get config() {
         return context.config
       },
@@ -249,7 +271,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          // 创建虚拟VNode
+          //【创建虚拟VNode】
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -268,7 +290,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            // 挂载DOM
+            //【挂载DOM】
             render(vnode, rootContainer, isSVG)
           }
           isMounted = true
@@ -294,6 +316,7 @@ export function createAppAPI<HostElement>(
 
       unmount() {
         if (isMounted) {
+          //【卸载DOM】
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
@@ -326,11 +349,34 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+export function createAppContext(): AppContext {
+  return {
+    app: null as any,
+    config: {
+      isNativeTag: NO,
+      performance: false,
+      globalProperties: {},
+      optionMergeStrategies: {},
+      errorHandler: undefined,
+      warnHandler: undefined,
+      compilerOptions: {}
+    },
+    mixins: [],
+    components: {},
+    directives: {},
+    provides: Object.create(null),
+    optionsCache: new WeakMap(),
+    propsCache: new WeakMap(),
+    emitsCache: new WeakMap()
+  }
+}
 ```
 
-
 ## 挂载过程 生成VNode调用render去操作DOM挂载
-然后我们接着去看 `mount` 方法，在`mount` 方法会调用`createVNode`创建虚拟`VNode`，虚拟`VNode`传入`render`方法进行渲染：
+
+然后我们接着去看 `mount` 方法，在 `mount` 方法会调用 `createVNode` 创建虚拟 `VNode`，虚拟 `VNode` 传入 `render` 方法进行渲染：
+
 ```js
 mount(
     rootContainer: HostElement,
@@ -346,7 +392,7 @@ mount(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
         }
-        //生成虚拟VNode
+        //【生成虚拟VNode】
         const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -390,7 +436,9 @@ mount(
 ```
 
 ### 生成虚拟VNode过程
-`createVNode`方法具体实现，在`runtime-core/src/vnode.ts`中，实际是调用`_createVNode`方法，这一步确定`shapeFlag`等，如果有children则normailize：
+
+`createVNode` 方法具体实现，在`runtime-core/src/vnode.ts`中，实际是调用 `_createVNode` 方法，这一步确定 `shapeFlag`、`patchFlag` 等，如果有 `children` 则`normailize`：
+
 ```js
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
@@ -406,7 +454,7 @@ function _createVNode(
     }
     type = Comment
   }
-
+  // 【type分情况】
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
@@ -492,7 +540,8 @@ function _createVNode(
 }
 ```
 
-可以看到最后返回的是`createBaseVNode`如下，`Vue3`构造虚拟VNode和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag`等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个VNode在后续的update过程中是否需要`patch`或者如何去`patch`，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag`使用的是默认值0，`shapeFlag`是`ShapeFlags.ELEMENT`：
+可以看到最后返回的是 `createBaseVNode` 如下，`Vue3`构造虚拟`VNode` 和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag` 等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个 `VNode` 在后续的 `update` 过程中是否需要 `patch` 或者如何去 `patch`，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag` 使用的是默认值0，`shapeFlag` 是 `ShapeFlags.ELEMENT`：
+
 ```js
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
@@ -581,20 +630,20 @@ function createBaseVNode(
 
 ### 挂载到根元素过程
 
-然后我们接着去看 `render` 方法，在 `runtime-core/src/renderer.ts`中，可以看到入参有3个参数，分别是虚拟VNode、根元素、isSvg，可以看到其中还有一个判断条件VNode是否为null，是的话调用`unmount`方法卸载掉内容，否则就执行 `patch` 方法：
+然后我们接着去看 `render` 方法，在 `runtime-core/src/renderer.ts`中，可以看到入参有3个参数，分别是虚拟VNode、根元素、isSvg，可以看到其中还有一个判断条件VNode是否为null，是的话调用 `unmount` 方法卸载掉内容，否则就执行 `patch` 方法：
 
 ```js
 const render: RootRenderFunction = (vnode, container, isSVG) => {
-    if (vnode == null) {
-      if (container._vnode) {
-        unmount(container._vnode, null, null, true)
-      }
-    } else {
-      patch(container._vnode || null, vnode, container, null, null, null, isSVG)
+  if (vnode == null) {
+    if (container._vnode) {
+      unmount(container._vnode, null, null, true)
     }
-    flushPreFlushCbs()
-    flushPostFlushCbs()
-    container._vnode = vnode
+  } else {
+    patch(container._vnode || null, vnode, container, null, null, null, isSVG)
+  }
+  flushPreFlushCbs()
+  flushPostFlushCbs()
+  container._vnode = vnode
 }
 ```
 
@@ -604,7 +653,8 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 3. 可以看到根据`new VNode`的type不同Switch语句走了不同的分支，调用了不同的方法；
   - 可以看一下其中一个比较简单的例子，在`case 'Static'`，再根据`old VNode`是否存在，如果不存在，直接调用`mountStaticNode`插入`new Vnode`的静态内容，如果存在则调用`patchStaticNode`对比新旧静态节点。
 
-可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造虚拟VNode时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的`VNode`有不同的对比方法。`patch`方法如下：
+可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造虚拟VNode时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的`VNode`有不同的对比方法。`patch` 方法如下：
+
 ```js
 const patch: PatchFn = (
     n1,
@@ -742,6 +792,7 @@ const patch: PatchFn = (
 ```
 
 然后挂载根组件我们走进的是`processComponent`方法，这个分支，由于没有`old VNode`，所以直接进入`mountComponent`方法，最终会生成DOM并渲染：
+
 ```js
 // 组件首次挂载or更新走mountComponent or updateComponent
 const processComponent = (
@@ -861,8 +912,3 @@ const mountComponent: MountComponentFn = (
     }
   }
 ```
-
-
-
-
-

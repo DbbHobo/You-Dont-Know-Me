@@ -1,6 +1,7 @@
-## Vue3中的patch方法
+# Vue3中的patch方法
 
-### VNode
+## VNode
+
 ```ts
 export interface VNode<
   HostNode = RendererNode,
@@ -91,7 +92,8 @@ export interface VNode<
 }
 ```
 
-### 组件实例
+## 组件实例
+
 ```ts
 export interface ComponentInternalInstance {
   uid: number
@@ -339,8 +341,12 @@ export interface ComponentInternalInstance {
 }
 ```
 
-### DOM操作
+## DOM操作
+
 `DOM`操作相关的两个文件分别在`runtime-dom/src/nodeOps`、`runtime-dom/src/patchProps`，前者进行具体的`DOM`增删操作等，后者为`DOM`元素上的属性进行增删等。
+
+DOM增删相关操作：
+
 ```ts
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
@@ -436,6 +442,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 ```
 
 属性相关操作：
+
 ```ts
 const nativeOnRE = /^on[a-z]/
 
@@ -545,12 +552,16 @@ function shouldSetAsProp(
 }
 ```
 
-### 挂载过程，由mount到render方法再到Patch方法
+## 挂载过程，由mount到render方法再到patch方法
+
 之前分析到，用户调用`createApp`生成App实例：
+
 ```ts
 const app = ensureRenderer().createApp(...args)
 ```
+
 `createApp`由`createAppAPI`传入根`render`方法（平台相关）生成，根`render`由`createRenderer`生成：
+
 ```ts
 return {
     render,
@@ -558,7 +569,9 @@ return {
     createApp: createAppAPI(render, hydrate)
 }
 ```
+
 接着就可以调用App实例的`mount`方法：
+
 ```ts
 mount(
     rootContainer: HostElement,
@@ -574,7 +587,9 @@ mount(
   //【...省略】
 }
 ```
-`createVNode`生成VNode，`render(vnode, rootContainer, isSVG)`将VNode渲染成真实DOM：
+
+`createVNode`生成VNode，`render(vnode, rootContainer, isSVG)`将`VNode`渲染成真实`DOM`：
+
 ```ts
 const render: RootRenderFunction = (vnode, container, isSVG) => {
     if (vnode == null) {
@@ -589,11 +604,15 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
     container._vnode = vnode
 }
 ```
-当`vnode`存在时，就会进入`patch`方法。
 
-### Patch关键参数 
-虚拟VNode节点中，有几个用于`patch`方法的关键字段如下：
+当`VNode`存在时，就会进入`patch`方法。
+
+## Patch关键参数
+
+虚拟`VNode`节点中，有几个用于`patch`方法的关键字段如下：
+
 - type
+
 ```ts
 export type VNodeTypes =
   | string
@@ -610,7 +629,9 @@ export type VNodeTypes =
 ```
 
 - patchFlags
-`patchFlags` 用于标识虚拟节点应该如何patch的类型，在编译的tansform优化阶段生成，用于运行时优化。通过进行 `｜` 或运算进行标记的组合，如果当前节点是一个动态文本节点(0000 0001)，它同时又具有动态 style (0000 0100)，二者进行 `｜` 或运算后值为 (0000 0101)。
+
+`patchFlags` 用于标识虚拟节点应该如何`patch`的类型，在编译的`tansform`优化阶段生成，用于运行时优化。通过进行 `｜` 或运算进行标记的组合，如果当前节点是一个动态文本节点(0000 0001)，它同时又具有动态 style (0000 0100)，二者进行 `｜` 或运算后值为 (0000 0101)。
+
 ```ts
 export const enum PatchFlags {
   TEXT = 1, // 动态文本节点
@@ -631,7 +652,9 @@ export const enum PatchFlags {
 ```
 
 - shapeFlags
-`shapeFlags` 针对组件进行了更详细的分类，在生成VNode阶段生成，便于在`patch`阶段，根据不同的组件类型执行相应的逻辑。
+
+`shapeFlags` 针对组件进行了更详细的分类，在生成`VNode`阶段生成，便于在`patch`阶段，根据不同的组件类型执行相应的逻辑。
+
 ```ts
 export const enum ShapeFlags {
   ELEMENT = 1, // HTML 或 SVG 标签 普通 DOM 元素
@@ -648,7 +671,20 @@ export const enum ShapeFlags {
 }
 ```
 
-### Patch方法
+## Patch方法详解
+
+根据`patch`方法的入参，`n1`、`n2`就是旧新`VNode`树，`container`就是父容器元素，我们可以简单分析出这个方法其实就是对比新旧`VNode`然后最终进行`DOM`操作插入到`container`容器中的流程。
+
+- `n1`、`n2`分别是`旧VNode节点`和`新VNode节点`，`n1`、`n2`如果完全相等直接返回；
+- `n1`存在但`n1`、`n2`的`type`并不相同时，直接`unmount`掉`n1`节点；
+- `n2`的`patchFlag`是`BAIL`是后续可以跳过比对的情况所以动态子节点，`dynamicChildren`直接设置为`null`
+- 提取`const { type, ref, shapeFlag } = n2`，然后根据`type`的不同`switch`到不同分支。
+  - `type`是`TEXT`文本节点
+  - `type`是`Comment`注释节点
+  - `type`是`Static`静态节点
+  - `type`是`Fragment`空节点
+  - 继续根据`ShapeFlags`判断是`ELEMENT`、`COMPONENT`、`TELEPORT`或者`SUSPENSE`类型的组件进行处理
+
 ```ts
 const patch: PatchFn = (
     n1,
@@ -661,6 +697,7 @@ const patch: PatchFn = (
     slotScopeIds = null,
     optimized = __DEV__ && isHmrUpdating ? false : !!n2.dynamicChildren
   ) => {
+    // 【n1是旧VNode，n2是新VNode】
     if (n1 === n2) {
       return
     }
@@ -768,7 +805,8 @@ const patch: PatchFn = (
 }
 ```
 
-`n1.type === n2.type && n1.key === n2.key`判断才认为新旧VNode是相同类型的VNode
+`n1.type === n2.type && n1.key === n2.key`判断才认为新旧`VNode`是相同类型的VNode
+
 ```ts
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
@@ -782,19 +820,12 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   return n1.type === n2.type && n1.key === n2.key
 }
 ```
-
-- n1、n2分别是新旧VNode节点，n1、n2如果完全相等直接返回；
-- n1存在但n1、n2的type并不相同时，直接unmount掉n1节点；
-- 提取`const { type, ref, shapeFlag } = n2`，然后根据`type`的不同switch到不同分支。
-  - type是TEXT文本节点
-  - type是Comment注释节点
-  - type是Static静态节点
-  - type是Fragment空节点
-  - 继续根据`ShapeFlags`判断是`ELEMENT`、`COMPONENT`、`TELEPORT`或者`SUSPENSE`类型的组件进行处理
   
 继续分析几个分支调用的方法如下：
+
 - case Text
 `processText(n1, n2, container, anchor)`
+
 ```ts
 // 【处理文本节点】
 const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
@@ -817,6 +848,7 @@ const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
 
 - case Comment
 `processCommentNode(n1, n2, container, anchor)`
+
 ```ts
 // 【处理注释节点】
 const processCommentNode: ProcessTextOrCommentFn = (
@@ -842,6 +874,7 @@ const processCommentNode: ProcessTextOrCommentFn = (
 
 - case Static
 `mountStaticNode(n2, container, anchor, isSVG)`/`patchStaticNode(n1, n2, container, isSVG)`
+
 ```ts
 // 【处理静态节点】
 if (n1 == null) {
@@ -897,6 +930,7 @@ const patchStaticNode = (
 
 - default 
   - shapeFlag & ShapeFlags.ELEMENT
+  
   ```ts
     //【处理html元素节点】
     const processElement = (
@@ -936,6 +970,7 @@ const patchStaticNode = (
     }
     ```
   - shapeFlag & ShapeFlags.COMPONENT
+  
   ```ts
   //【处理组件】
   const processComponent = (
@@ -978,27 +1013,33 @@ const patchStaticNode = (
   - shapeFlag & ShapeFlags.TELEPORT
   - __FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE)
 
-可以看到这些分支处理不同类型的节点都会根据旧节点n1是否存在去`mount`或`patch`。
+可以看到这些分支处理不同类型的节点都会根据旧节点`n1`是否存在去`mount`或`patch`。
 
-在`processElement`的`patchElement`方法和`processFragment`方法过程中都要对子节点进行比较调用，在`dynamicChildren`动态子节点数组存在时调用`patchBlockChildren`方法，否则调用`patchChildren`方法。
+`patch`方法在调用的时候是一个深度优先遍历的过程，对于组件的处理最终会走到单个元素的处理方法上。而在`processElement`的`patchElement`方法和`processFragment`方法过程中都要对子节点进行比较调用。
 
-#### `processFragment`方法
+### `processFragment()`
+
 Block概念：
-- 一个`Block`其实就是一个 `VNode`，`VNode`拿到了所有的动态节点，它们存储在 `dynamicChildren` 中，因此在 `diff` 过程中就可以避免按照 `VNode` 树一层一层的遍历，而是直接找到 `dynamicChildren` 进行更新。
+
+- 一个`Block`其实就是一个块，一块 `VNode`，`VNode`拿到了所有的动态节点，它们存储在 `dynamicChildren` 中，因此在 `diff` 过程中就可以避免按照 `VNode` 树一层一层的遍历，而是直接找到 `dynamicChildren` 进行更新。
 - 使用了`v-if/v-else-if/v-else/v-for`等指令的元素可以看做一个`Block`。
 - Vue3 中不再限制组件的模板必须有一个根节点，所以如果是多个根节点，会包裹一个`Fragment`，也当成一个`Block`。
 
-节点在以下几种情景下会被Fragment包裹成为一个block块：
+节点在以下几种情景下会被`Fragment`包裹成为一个`block`块：
+
 1. 一个组件有多个根节点，会为其创建一个包裹：`STABLE_FRAGMENT`
-2. v-if，有多个子节点： `STABLE_FRAGMENT`
-3. v-for语句： `KEYED_FRAGMENT`、`UNKEYED_FRAGMENT`
-下面看`processFragment`方法的内容：
+2. `v-if`语句有多个子节点： `STABLE_FRAGMENT`
+3. `v-for`语句： `KEYED_FRAGMENT`、`UNKEYED_FRAGMENT`
+
+下面看`processFragment`方法的具体逻辑：
+
+1. 没有旧`VNode`执行`mountChildren`
+2. 新`VNode`旧`VNode`都存在且`patchFlag`是`STABLE_FRAGMENT`执行`patchBlockChildren`，因为这是一个稳定`block`所以可以快速进入递归子节点
+3. 否则执行`patchChildren`根据是否存在`key`进入`patchKeyedChildren`或`patchUnkeyedChildren`分支
+
 ```ts
 //【Vue3新增了Fragment组件，用于处理某些同级节点包裹为一个整体但又不想多一个DOM节点】
 //【Fragment主要处理children，其本身其实是个空节点】
-//【1.没有旧VNode执行mountChildren】
-//【2.新VNode旧VNode都有dynamicChildren执行patchBlockChildren】
-//【3.否则执行patchChildren】
 const processFragment = (
     n1: VNode | null,
     n2: VNode,
@@ -1036,13 +1077,13 @@ const processFragment = (
 
     // 【Fragment包裹的一定有children】
     if (n1 == null) {
-      // 【在新虚拟node中插入Fragment包裹内容起始节点，内容是空】
+      // 【第一个分支：旧VNode不存在mountChildren】
+      // 【在新VNode中插入Fragment包裹内容起始节点，内容是空】
       hostInsert(fragmentStartAnchor, container, anchor)
       hostInsert(fragmentEndAnchor, container, anchor)
       // a fragment can only have array children
       // since they are either generated by the compiler, or implicitly created
       // from arrays.
-      //【旧VNode不存在mountChildren】
       mountChildren(
         n2.children as VNodeArrayChildren,
         container,
@@ -1109,12 +1150,49 @@ const processFragment = (
 }
 ```
 
-`patchBlockChildren`方法根据新旧**动态子节点dynamicChildren**进行不同的对比操作，最后进入patch递归。
+`patchBlockChildren`方法根据新旧**动态子节点dynamicChildren**进行不同的对比操作，最后进入`patch`递归。
 
 `patchChildren`根据是否有key可以进入`patchKeyedChildren`或`patchUnkeyedChildren`分支，在新旧子节点都是多节点时就到了我们常说的**diff核心**算法。
 
-#### `patchBlockChildren`方法
-当存在`dynamicChildren`时调用，最终执行的还是`patch`方法，递归循环：
+### `mountChildren`
+
+遍历`n2`的子节点然后调用`patch`方法进入递归循环：
+
+```ts
+const mountChildren: MountChildrenFn = (
+  children,
+  container,
+  anchor,
+  parentComponent,
+  parentSuspense,
+  isSVG,
+  slotScopeIds,
+  optimized,
+  start = 0
+) => {
+  for (let i = start; i < children.length; i++) {
+    const child = (children[i] = optimized
+      ? cloneIfMounted(children[i] as VNode)
+      : normalizeVNode(children[i]))
+    patch(
+      null,
+      child,
+      container,
+      anchor,
+      parentComponent,
+      parentSuspense,
+      isSVG,
+      slotScopeIds,
+      optimized
+    )
+  }
+}
+```
+
+### `patchBlockChildren()`
+
+当存在`dynamicChildren`时且当前`block`的`patchFlag`是`STABLE_FRAGMENT`调用，相当于跳过本层的对比，继续去看子节点，继续执行`patch`方法进入递归循环：
+
 ```ts
 //【oldChildren/newChildren分别是新旧VNode的dynamicChildren】
 const patchBlockChildren: PatchBlockChildrenFn = (
@@ -1163,11 +1241,13 @@ const patchBlockChildren: PatchBlockChildrenFn = (
 }
 ```
 
-#### `patchChildren`方法
-patchChildren方法会走三种可能分支分别是：
-- patchKeyedChildren
-- patchUnkeyedChildren
-- mountChildren
+### `patchChildren()`
+
+`patchChildren`方法会走三种可能分支分别是：
+
+- `patchKeyedChildren`
+- `patchUnkeyedChildren`
+- `mountChildren`
 <!-- 【TODO：画个流程图】 -->
 ```ts
 const patchChildren: PatchChildrenFn = (
@@ -1187,6 +1267,7 @@ const patchChildren: PatchChildrenFn = (
     const c2 = n2.children
     //【提取新VNode的patchFlag/shapeFlag】
     const { patchFlag, shapeFlag } = n2
+
     // fast path
     if (patchFlag > 0) {
       //【新VNode的patchFlag>0说明需要patch且类型是KEYED_FRAGMENT，执行patchKeyedChildren方法】
@@ -1223,9 +1304,16 @@ const patchChildren: PatchChildrenFn = (
       }
     }
 
-    //【新VNode的Children有三种可能的类型：text, array or no children】
+    //【新VNode有三种可能的类型：text, array or no children】
     // children has 3 possibilities: text, array or no children.
-    // 【1.text】
+    // n1:旧VNode
+    // n2:新VNode
+    // c1:n1的Children
+    // c2:n2的Children
+    // shapeFlag:n2的shapeFlag（新节点的）
+    // prevShapeFlag:n1的shapeFlag（旧节点的）
+
+    // 【---新节点是text---】
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // text children fast path
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -1238,7 +1326,7 @@ const patchChildren: PatchChildrenFn = (
         hostSetElementText(container, c2 as string)
       }
     } else {
-      //【2.array 3.null】
+      //【---新节点是array或null---】
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         // prev children was array
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -1285,9 +1373,12 @@ const patchChildren: PatchChildrenFn = (
 }
 ```
 
-#### diff核心
-- 如果是没有key的情况`patchUnkeyedChildren`：
-取新旧节点序列较短的长度遍历新旧节点，相同索引的节点进行patch，如果旧节点序列长于新节点序列则删除后续的旧节点，如果旧节点序列短于新节点序列则新增后续的新节点
+### diff核心
+
+- 如果是没有`key`的情况`patchUnkeyedChildren`：
+
+取新旧节点序列较短的长度遍历新旧节点，相同索引的节点进行下一轮`patch`，如果旧节点序列长于新节点序列则删除后续的旧节点，如果旧节点序列短于新节点序列则新增后续的新节点
+
 ```ts
 const patchUnkeyedChildren = (
     c1: VNode[],
@@ -1352,7 +1443,8 @@ const patchUnkeyedChildren = (
 }
 ```
 
-- 如果是有key（部分有）的情况`patchKeyedChildren`：
+- 如果是有`key`（部分有）的情况`patchKeyedChildren`：
+
 ```ts
 const patchKeyedChildren = (
     c1: VNode[],
@@ -1645,6 +1737,7 @@ const patchKeyedChildren = (
 ```
 
 其中作者注释的内容如下：
+
 ```js
 // 1. sync from start
 // (a b) c
@@ -1683,21 +1776,25 @@ const patchKeyedChildren = (
 // 5.3 move and mount
 // generate longest stable subsequence only when nodes have moved
 ```
-根据注释可以看到这个流程如下：
-1. 预处理头部所有相同的节点，直接patch，无需进入diff流程
-2. 预处理尾部所有相同的节点，直接patch，无需进入diff流程
+
+根据注释可以分析整个流程如下：
+
+1. 预处理头部所有相同的节点，直接`patch`，无需进入`diff`流程
+2. 预处理尾部所有相同的节点，直接`patch`，无需进入`diff`流程
 3. 需要增加节点的情况，遍历完旧节点，新节点还剩下内容，也就是需要插入的节点
 4. 需要删除节点的情况，遍历完新节点，旧节点还剩下内容，也就是需要删除的节点
 5. 包含新增、删除、移动等多种情况的序列
   
   5-1. 首先为新节点建一个`keyToNewIndexMap`的Map用于存储【新节点key，新节点的索引】这样的一个结构
   
-  5-2. 新建`newIndexToOldIndexMap`数组长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，存储的是【旧节点（在新节点能找到复用的）在新节点序列中的索引】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
+  5-2. 新建一个`newIndexToOldIndexMap`的Array长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，存储的是【旧节点（在新节点能找到复用的）在新节点序列中的索引】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
   
   5-3. 找出`newIndexToOldIndexMap`中的最长递增子序列，这个序列是所有不需要移动的节点，剩下的节点就是需要移动的或者新增的，然后进行移动和新增操作
 
-#### 最长递增子序列
+### 最长递增子序列
+
 算法核心如下，主要涉及的算法思想是**动态规划**，从更小的粒度开始看这个问题：
+
 ```js
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 function getSequence(arr: number[]): number[] {
@@ -1742,8 +1839,7 @@ function getSequence(arr: number[]): number[] {
 }
 ```
 
-
-### Vue3 diff的优化点和总结
+## Vue3 diff的优化点和总结
 
 Vue2中的diff算法采取的是**同层比较**的方式，是full diff。
 
