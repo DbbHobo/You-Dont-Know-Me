@@ -1,8 +1,9 @@
-## String
+# String
 
 收集字符串常用的一些内置方法
 
 ## String的静态方法
+
 ### String.fromCodePoint()
 
 - The String.fromCodePoint() static method returns a string created by using the specified sequence of code points.
@@ -33,9 +34,10 @@ String.fromCharCode(8212);         // 也是返回 "—"; 8212 是 0x2014 的十
 
 ### String.raw()
 
--  The String.raw() static method is a tag function of template literals. This is similar to the r prefix in Python, or the @ prefix in C# for string literals. It's used to get the raw string form of template literals — that is, substitutions (e.g. ${foo}) are processed, but escape sequences (e.g. \n) are not.
+- The String.raw() static method is a tag function of template literals. This is similar to the r prefix in Python, or the @ prefix in C# for string literals. It's used to get the raw string form of template literals — that is, substitutions (e.g. ${foo}) are processed, but escape sequences (e.g. \n) are not.
 
 用来获取一个模板字符串的原始字符串的
+
 ```js
 String.raw`Hi\n${2+3}!`;
 // 'Hi\\n5!'，Hi 后面的字符不是换行符，\ 和 n 是两个不同的字符
@@ -61,10 +63,10 @@ String.raw({
 
 ---
 
-
 ## String的实例方法
 
 ## 改造string的方法
+
 ### String.prototype.concat()
 
 - concatenates the string arguments to the calling string and returns a new string.
@@ -109,7 +111,6 @@ str.slice(-3); // returns 'us.'
 str.slice(-3, -1); // returns 'us'
 str.slice(0, -1); // returns 'The morning is upon us'
 ```
-
 
 ### String.prototype.substring()
 
@@ -170,13 +171,13 @@ console.log(orig.trim()); // 'foo'
 - The repeat() method constructs and returns a new string which contains the specified number of copies of the string on which it was called, concatenated together.
 
 repeat() 构造并返回一个新字符串，该字符串包含被连接在一起的指定数量的字符串的副本。
+
 ```js
 const mood = 'Happy! ';
 
 console.log(`I feel ${mood.repeat(3)}`);
 // Expected output: "I feel Happy! Happy! Happy! "
 ```
-
 
 ### String.prototype.replace() / String.prototype.replaceAll()
 
@@ -189,7 +190,6 @@ var str = "Twas the night before Xmas...";
 var newstr = str.replace(/xmas/i, "Christmas");
 console.log(newstr); // Twas the night before Christmas...
 ```
-
 
 ## 寻找string中内容的方法
 
@@ -283,9 +283,9 @@ console.log(`The character at index ${index} is ${sentence.charAt(index)}`);
 
 ### String.prototype.charCodeAt() / String.prototype.codePointAt()
 
-charCodeAt() 方法返回 0 到 65535 之间的整数，表示给定索引处的 UTF-16 代码单元。
+`charCodeAt()` 方法返回 0 到 65535 之间的整数，表示给定索引处的 UTF-16 代码单元。
 
-codePointAt() 方法返回 一个 Unicode 编码点值的非负整数。
+`codePointAt()` 方法返回 一个 Unicode 编码点值的非负整数。
 
 ```js
 "ABC".charCodeAt(0) // returns 65:"A"
@@ -304,9 +304,10 @@ codePointAt() 方法返回 一个 Unicode 编码点值的非负整数。
 
 ### String.prototype.startsWith() / String.prototype.endsWith()
 
-startsWith() 方法用来判断当前字符串是否以另外一个给定的子字符串开头，并根据判断结果返回 true 或 false。
+`startsWith()` 方法用来判断当前字符串是否以另外一个给定的子字符串开头，并根据判断结果返回 true 或 false。
 
-endsWith() 方法用来判断当前字符串是否是以另外一个给定的子字符串“结尾”的，根据判断结果返回 true 或 false。
+`endsWith()` 方法用来判断当前字符串是否是以另外一个给定的子字符串“结尾”的，根据判断结果返回 true 或 false。
+
 ```js
 const str1 = 'Saturday night plans';
 
@@ -333,7 +334,7 @@ console.log(str2.endsWith('question'));
 
 ### String.prototype.at()
 
-at() 方法接受一个整数值，并返回一个新的 String，该字符串由位于指定偏移量处的单个 UTF-16 码元组成。该方法允许正整数和负整数。负整数从字符串中的最后一个字符开始倒数。
+`at()` 方法接受一个整数值，并返回一个新的 String，该字符串由位于指定偏移量处的单个 UTF-16 码元组成。该方法允许正整数和负整数。负整数从字符串中的最后一个字符开始倒数。
 
 ```js
 const sentence = 'The quick brown fox jumps over the lazy dog.';
@@ -349,25 +350,32 @@ console.log(`Using an index of ${index} the character returned is ${sentence.at(
 // Expected output: "Using an index of -4 the character returned is d"
 ```
 
-
-
 ## String总结
+
 1. 查找特定字符串序列位置的方法：
+
   - search
   - indexOf
+
 2. 字符串转化为数组的方法：
+  
   - split
+
 3. slice和substring区别：
+  
   - substring：两个参数会比较大小来判断哪一个是起始位参数哪一个是结束位置参数，通俗的讲就是小的一个数会作为起始 位置参数，大的一个数会作为结束位置参数；
   - slice：则不会有这样的规则，只遵循大于0，从前面计数，小于0，从后面计数的原则；
   - substring：除了两个参数会比较大小调换位置外，还满足小于0时按0处理的规则；
   - slice：则是根据大于0和小于0来判断计数的前后顺序；
+
 4. 可结合正则使用的方法：
+  
   - replace
   - match
   - search
   - spilt
 
 
+## 参考资料
 
 [String-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String)

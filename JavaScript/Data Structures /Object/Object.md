@@ -1,4 +1,4 @@
-## Object
+# Object
 
 收集对象常用的一些内置方法
 
@@ -13,11 +13,13 @@
 `Object.is()` 用来比较两个值是否严格相等，与严格比较运算符（===）的行为基本一致。
 
 ### 创建Object相关：
+
 ### Object.create()
 
 创建一个新对象，使用现有的对象来提供新创建的对象的**proto**。新创建的对象就会在现有对象的原型链上。
 
 在 JavaScript 中创建一个空对象最简单的方法都是 `Object.create(null)` 。 `Object.create(null)` 和 `{}` 很像， 但是并不会创建 `Object.prototype` 这个委托， 所以它比 `{}` “更空” 
+
 ```js
 var person1 = {
   name: "张三",
@@ -93,7 +95,9 @@ Object.setPrototypeOf( Bar.prototype, Foo.prototype );
 ```
 
 ### 属性相关：
+
 ### Object.getOwnPropertyNames()
+
 `Object.getOwnPropertyNames()`方法返回一个由指定对象的所有自身属性的属性名（包括不可枚举属性但不包括 Symbol 值作为名称的属性）组成的数组。
 
 ### Object.getOwnPropertyDescriptor() / Object.getOwnPropertyDescriptors()
@@ -101,6 +105,7 @@ Object.setPrototypeOf( Bar.prototype, Foo.prototype );
 ES5 的 `Object.getOwnPropertyDescriptor()` 方法会返回**某个**对象属性的描述对象（descriptor）。
 
 ES2017 引入了 `Object.getOwnPropertyDescriptors()` 方法，返回指定对象**所有**自身属性（非继承属性）的描述对象。
+
 ```js
 const object1 = {
   property1: 42,
@@ -138,6 +143,7 @@ console.log(descriptors)
 `Object.preventExtensions()`让一个对象变的不可扩展，也就是永远不能再添加新的属性。
 
 The Object.preventExtensions() static method prevents new properties from ever being added to an object. It also prevents the object's prototype from being re-assigned.
+
 - 不能添加新属性
 
 `Object.isExtensible()`判断一个对象是否是可扩展的（是否可以在它上面添加新的属性）。
@@ -147,6 +153,7 @@ The Object.preventExtensions() static method prevents new properties from ever b
 `Object.seal()`封闭一个对象，阻止添加新属性并将所有现有属性标记为不可配置。当前属性的值只要可写就可以改变。密封一个对象会让这个对象变的不能添加新属性，且所有已有属性会变的不可配置。属性不可配置的效果就是属性变的不可删除，以及一个数据属性不能被重新定义成为访问器属性，或者反之。但属性的值仍然可以修改。
 
 Sealing an object prevents extensions and makes existing properties non-configurable. 
+
 - 不能添加新属性
 - 不能删除已有属性
 - 不能配置现有属性 configurable=false
@@ -158,6 +165,7 @@ Sealing an object prevents extensions and makes existing properties non-configur
 `Object.freeze()`冻结一个对象。一个被冻结的对象再也不能被修改；冻结了一个对象则不能向这个对象添加新的属性，不能删除已有属性，不能修改该对象已有属性的可枚举性、可配置性、可写性，以及不能修改已有属性的值。此外，冻结一个对象后该对象的原型也不能被修改。freeze() 返回和传入的参数相同的对象。
 
 Freezing an object prevents extensions and makes existing properties non-writable and non-configurable. 
+
 - 不能添加新属性
 - 不能删除已有属性
 - 不能配置现有属性 configurable=false
@@ -166,9 +174,10 @@ Freezing an object prevents extensions and makes existing properties non-writabl
 `Object.isFrozen()`判断一个对象是否被冻结。一个对象是冻结的是指它不可扩展，所有属性都是不可配置的，且所有数据属性（即没有 getter 或 setter 组件的访问器的属性）都是不可写的。
 
 ### 属性遍历：
+
 ### Object.keys()
 
-object.keys 方法，返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键名。
+`object.keys()` 方法，返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键名。
 
 ```js
 // simple array
@@ -182,7 +191,7 @@ console.log(Object.keys(obj)); // console: ['0', '1', '2']
 
 ### Object.values()
 
-Object.values 方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值，值的顺序与使用 for...in 循环的顺序相同 ( 区别在于 for-in 循环枚举原型链中的属性 )。
+`Object.values()` 方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值，值的顺序与使用 for...in 循环的顺序相同 ( 区别在于 for-in 循环枚举原型链中的属性 )。
 
 ```js
 // array like object
@@ -197,7 +206,7 @@ console.log(Object.values(an_obj)); // ['b', 'c', 'a']
 
 ### Object.entries()
 
-Object.entries()方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值对数组。
+`Object.entries()` 方法返回一个数组，成员是参数对象自身的（不含继承的）所有可遍历（enumerable）属性的键值对数组。
 
 ```js
 // array like object
@@ -222,10 +231,7 @@ const obj = Object.fromEntries(map);
 console.log(obj); // { foo: "bar", baz: 42 }
 ```
 
-
-
 ---
-
 
 ## Object 的实例方法
 
@@ -254,7 +260,7 @@ console.log(object1.hasOwnProperty("toString"));
 
 ### Object.prototype.toLocaleString()
 
-直接调用 toString()方法。
+直接调用 `toString()` 方法。
 
 ### Object.prototype.toString()
 
@@ -267,20 +273,19 @@ console.log(object1.hasOwnProperty("toString"));
 ## Object总结
 
 ### 对象属性遍历
-1. for...in
+
+1. `for...in`
     - for...in循环遍历对象自身的和继承的可枚举属性（不含 Symbol 属性）。
-2. Object.keys(obj)
+2. `Object.keys(obj)`/`Object.values(obj)`/`Object.entries(obj)`
     - Object.keys返回一个数组，包括对象自身的（不含继承的）所有可枚举属性（不含 Symbol 属性）的键名。
-3. Object.getOwnPropertyNames(obj)
+3. `Object.getOwnPropertyNames(obj)`
     - Object.getOwnPropertyNames返回一个数组，包含对象自身的所有属性（不含 Symbol 属性，但是包括不可枚举属性）的键名。
-4. Object.getOwnPropertySymbols(obj)
+4. `Object.getOwnPropertySymbols(obj)`
     - Object.getOwnPropertySymbols返回一个数组，包含对象自身的所有 Symbol 属性的键名。
-5. Reflect.ownKeys(obj)
-    - Reflect.ownKeys返回一个数组，包含对象自身的（不含继承的）所有键名，不管键名是 Symbol 或字符串，也不管是否可枚举。
+5. `Reflect.ownKeys(obj)`
+  - Reflect.ownKeys返回一个数组，包含对象自身的（不含继承的）所有键名，不管键名是 Symbol 或字符串，也不管是否可枚举。
 
-
-
-
+## 参考资料
 
 [Object-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object)
 

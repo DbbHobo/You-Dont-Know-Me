@@ -1,8 +1,9 @@
-## Array
+# Array
 
 收集数组常用的一些内置方法
 
 ## Array的静态方法
+
 ### Array.isArray()
 
 确定传递的值是否是一个 Array。
@@ -49,6 +50,7 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 ---
 
 ## Array的实例方法
+
 ### Array.prototype.splice()*
 
 通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回**被修改的内容**。
@@ -99,7 +101,7 @@ sort() 方法用原地算法对数组的元素进行排序，并返回数组。�
 此方法会**改变原数组**。
 
 - The sort() method sorts the elements of an array in place and returns the reference to the same array, now sorted. The default sort order is ascending, built upon converting the elements into strings, then comparing their sequences of UTF-16 code units values.The time and space complexity of the sort cannot be guaranteed as it depends on the izhimplementation.
-- 
+
 ```js
 const months = ['March', 'Jan', 'Feb', 'Dec'];
 months.sort();
@@ -125,7 +127,6 @@ var array2 = ["d", "e", "f"];
 console.log(array1.concat(array2));
 // expected output: Array ["a", "b", "c", "d", "e", "f"]
 ```
-
 
 ### Array.prototype.slice()
 
@@ -217,7 +218,9 @@ var filteredNumbers = numbers.map(function (num, index) {
 ```
 
 ### Array.prototype.forEach()
-forEach() 方法对数组的每个元素执行一次给定的函数。
+
+`forEach()` 方法对数组的每个元素执行一次给定的函数。
+
 ```js
 const logArrayElements = (element, index /*, array */) => {
   console.log(`a[${index}] = ${element}`);
@@ -229,7 +232,7 @@ const logArrayElements = (element, index /*, array */) => {
 
 ### Array.prototype.entries() / Array.prototype.keys() / Array.prototype.values()
 
-keys()是对键名的遍历、values()是对键值的遍历，entries()是对键值对的遍历。
+`keys()`是对键名的遍历、`values()`是对键值的遍历，`entries()`是对键值对的遍历。
 
 - returns a new Array Iterator object that contains the key/value pairs for each index in the array.
 
@@ -297,7 +300,6 @@ console.log(array1);
 
 - The find() method returns the first element in the provided array that satisfies the provided testing function. If no values satisfy the testing function, undefined is returned.
 
-
 ```js
 const array1 = [5, 12, 8, 130, 44];
 
@@ -316,7 +318,7 @@ console.log(found);
 
 ### Array.prototype.findIndex() / Array.prototype.findLastIndex()
 
-数组实例的findIndex方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
+数组实例的`findIndex()`方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
 
 - The findIndex() method returns the index of the first element in an array that satisfies the provided testing function. If no elements satisfy the testing function, -1 is returned.
 
@@ -335,7 +337,8 @@ console.log(array1.findLastIndex(isLargeNumber));
 ```
 
 ### Array.prototype.fill()
-fill方法使用给定值，填充一个数组。
+
+`fill()`方法使用给定值，填充一个数组。
 
 - The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
 
@@ -387,8 +390,11 @@ console.log(beasts.indexOf('giraffe'));
 ```
 
 ### Array.prototype.flat()
+
 `flat(depth)` 方法会按照一个可指定的深度递归遍历数组，并将所有元素与遍历到的子数组中的元素合并为一个新数组返回。`flat(depth)` 方法会移除数组中的空项。
+
 - depth 可选指定要提取嵌套数组的结构深度，默认值为 1。
+
 ```js
 const arr1 = [0, 1, 2, [3, 4]];
 
@@ -402,6 +408,7 @@ console.log(arr2.flat(2));
 ```
 
 ## Array总结
+
 1. 会改变原数组的方法：
   - push
   - pop
@@ -413,7 +420,6 @@ console.log(arr2.flat(2));
 2. 数组转化为字符串的方法
   - join
 
-
-
+## 参考资料
 
 [Array-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)

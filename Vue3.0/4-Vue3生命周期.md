@@ -1,4 +1,5 @@
 # Vue3 生命周期
+
 每个 `Vue` 组件实例在创建时都需要经历一系列的初始化步骤，比如设置好数据侦听，编译模板，挂载实例到 `DOM`，以及在数据改变时更新 `DOM`。在此过程中，它也会运行被称为生命周期钩子的函数，让开发者有机会在特定阶段运行自己的代码。
 
 ## 生命周期概览
@@ -23,6 +24,7 @@ export const enum LifecycleHooks {
   SERVER_PREFETCH = 'sp'
 }
 ```
+
 ![lifecycle](./assets/lifecycle.png)
 
 ## 生命周期创建

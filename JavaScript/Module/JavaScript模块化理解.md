@@ -12,7 +12,7 @@
 
 `CommonJS` 主要由 Node 推广使用。`CommonJS` 是**同步加载**的，是**运行时加载**，因此更适合服务器端。只有加载完成之后才能进行下面的操作。因为在服务器端模块文件一般存放在本地，再加上有缓存，加载速度十分快。
 
-`CommonJS` 规范每个文件就是一个模块，有自己的作用域。在一个文件里面定义的变量、函数、类，都是**私有**的，对其他文件不可见。每个模块内部，`module` 变量代表当前模块。这个变量是一个对象，它的 `exports` 属性（即 `module.exports`）是对外的接口。加载某个模块，其实是加载该模块的 `module.exports` 属性。
+`CommonJS` 规范**每个文件就是一个模块**，有自己的作用域。在一个文件里面定义的变量、函数、类，都是**私有**的，对其他文件不可见。每个模块内部，`module` 变量代表当前模块。这个变量是一个对象，它的 `exports` 属性（即 `module.exports`）是对外的接口。加载某个模块，其实是加载该模块的 `module.exports` 属性。
 
 `CommonJS` 模块的加载机制是，输入的是被输出的值的拷贝。也就是说，**一旦输出一个值，模块内部的变化就影响不到这个值**。
 
@@ -91,18 +91,19 @@ import XXX from "./b.js";
 
 ## CommonJS 和 ES6 模块的区别
 
-CommonJS 其实加载的是一个对象，这个对象只有在脚本运行时才会生成，而且只会生成一次。但是 ES6 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成，这样我们就可以使用各种工具对 JS 模块进行依赖分析，优化代码；
+`CommonJS` 其实加载的是一个对象，这个对象只有在脚本运行时才会生成，而且只会生成一次。但是 `ES6` 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成，这样我们就可以使用各种工具对 JS 模块进行依赖分析，优化代码；
 
-因为 CommonJS 的 require 语法是同步的，所以就导致了 CommonJS 模块规范只适合用在服务端，而 ES6 模块无论是在浏览器端还是服务端都是可以使用的，但是在服务端中，还需要遵循一些特殊的规则才能使用；
+因为 `CommonJS` 的 `require` 语法是同步的，所以就导致了 `CommonJS` 模块规范只适合用在服务端，而 `ES6` 模块无论是在浏览器端还是服务端都是可以使用的，但是在服务端中，还需要遵循一些特殊的规则才能使用；
 
-CommonJS 模块输出的是一个值的拷贝，而 ES6 模块输出的是值的引用；
+`CommonJS` 模块输出的是一个值的拷贝，而 `ES6` 模块输出的是值的引用；
 
-CommonJS 模块是**运行时**加载，而 ES6 模块是**编译时**输出接口，使得对 JS 的模块进行静态分析成为了可能；
+`CommonJS` 模块是**运行时**加载，而 `ES6` 模块是**编译时**输出接口，使得对 JS 的模块进行静态分析成为了可能；
 
-因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。CommonJS 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 ES6 模块相反，使用 import 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
+因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。`CommonJS` 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 `ES6` 模块相反，使用 `import` 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
 
-关于模块顶层的 this 指向问题，在 CommonJS 顶层，this 指向当前模块；而在 ES6 模块中，this 指向 undefined；
-关于两个模块互相引用的问题，在 ES6 模块当中，是支持加载 CommonJS 模块的。但是反过来，CommonJS 并不能 require ES6 模块，在 NodeJS 中，两种模块方案是分开处理的。
+关于模块顶层的 `this` 指向问题，在 `CommonJS` 顶层，`this` 指向当前模块；而在 `ES6` 模块中，`this` 指向 `undefined`；
+
+关于两个模块互相引用的问题，在 `ES6` 模块当中，是支持加载 `CommonJS` 模块的。但是反过来，`CommonJS` 并不能 `require ES6` 模块，在 NodeJS 中，两种模块方案是分开处理的。
 
 ## AMD、CMD、UMD
 
@@ -136,5 +137,8 @@ define(function (require, exports, module) {
 - Babel module: transpile ES module
 - TypeScript: module and namespace
 
+## 参考资料
+
 [Module 的语法](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/module)
+
 [Understanding (all) JavaScript module formats and tools](https://weblogs.asp.net/dixin/understanding-all-javascript-module-formats-and-tools)
