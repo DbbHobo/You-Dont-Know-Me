@@ -8,6 +8,14 @@
 
 接受一个 `getter` 函数，返回一个只读的响应式 `ref` 对象。该 `ref` 通过 `.value` 暴露 `getter` 函数的返回值。它也可以接受一个带有 `get` 和 `set` 函数的对象来创建一个可写的 `ref` 对象。
 
+```js
+const count = ref(1)
+const plusOne = computed(() => count.value + 1)
+
+console.log(plusOne.value) // 2
+plusOne.value++ // 错误
+```
+
 ### computed 实现
 
 - 关键词`<getter>`、`<ComputedRefImpl>`
@@ -51,7 +59,14 @@ export function computed<T>(
 }
 ```
 
-可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的1.依赖值改变2.引起派发更新3.调用effect.scheduler()4.`_dirty`改变。`ComputedRefImpl`类如下：
+可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
+
+1. 依赖值改变
+2. 引起派发更新
+3. 调用`effect.scheduler()`
+4. `_dirty`改变
+
+`ComputedRefImpl`类如下：
 
 ```ts
 export class ComputedRefImpl<T> {
@@ -108,7 +123,7 @@ export class ComputedRefImpl<T> {
 
 可以看到`computed`实际上就是创建了一个只读的`ref`对象，因此我们推荐使用计算属性来描述依赖响应式状态的复杂逻辑，计算属性值会基于其响应式依赖被缓存，一个计算属性仅会在其响应式依赖更新时才重新计算。计算属性的 `getter` 应只做计算而没有任何其他的副作用，这一点非常重要，请务必牢记。举例来说，不要在 `getter` 中做异步请求或者更改 `DOM`！一个计算属性的声明中描述的是如何根据其他值派生一个值。因此 `getter` 的职责应该仅为计算和返回该值。
 
-为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 list，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 list。没有缓存的话，我们会重复执行非常多次 list 的 getter，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。从计算属性返回的值是派生状态。可以把它看作是一个“临时快照”，每当源状态发生变化时，就会创建一个新的快照。更改快照是没有意义的，因此计算属性的返回值应该被视为只读的，并且永远不应该被更改——应该更新它所依赖的源状态以触发新的计算。
+为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 `list`，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 `list`。没有缓存的话，我们会重复执行非常多次 `list` 的 `getter`，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。从计算属性返回的值是派生状态。可以把它看作是一个“临时快照”，每当源状态发生变化时，就会创建一个新的快照。更改快照是没有意义的，因此计算属性的返回值应该被视为只读的，并且永远不应该被更改——应该更新它所依赖的源状态以触发新的计算。
 
 ## watch()
 
@@ -139,10 +154,17 @@ export class ComputedRefImpl<T> {
 立即运行一个函数，同时响应式地追踪其依赖，并在依赖更改时重新执行。
 
 3. **watchPostEffect()**
-`watchEffect()` 使用 `flush: 'post'` 选项时的别名。设置 `flush: 'post'` 将会使侦听器延迟到组件渲染之后再执行。当你更改了响应式状态，它可能会同时触发 Vue 组件更新和侦听器回调。默认情况下，用户创建的侦听器回调，都会在 Vue 组件更新之前被调用。这意味着你在侦听器回调中访问的 DOM 将是被 Vue 更新之前的状态。如果想在侦听器回调中能访问被 Vue 更新之后的 DOM，你需要指明 flush: 'post' 选项
+`watchEffect()` 使用 `flush: 'post'` 选项时的别名。设置 `flush: 'post'` 将会使侦听器延迟到组件渲染之后再执行。当你更改了响应式状态，它可能会同时触发 `Vue` 组件更新和侦听器回调。默认情况下，用户创建的侦听器回调，都会在 `Vue` 组件更新之前被调用。这意味着你在侦听器回调中访问的 DOM 将是被 `Vue` 更新之前的状态。如果想在侦听器回调中能访问被 `Vue` 更新之后的 DOM，你需要指明 `flush: 'post'` 选项
 
 4. **watchSyncEffect()**
-`watchEffect()` 使用 `flush: 'sync'` 选项时的别名。在某些特殊情况下 (例如要使缓存失效)，可能有必要在响应式依赖发生改变时立即触发侦听器。这可以通过设置 flush: 'sync' 来实现。然而，该设置应谨慎使用，因为如果有多个属性同时更新，这将导致一些性能和数据一致性的问题。
+`watchEffect()` 使用 `flush: 'sync'` 选项时的别名。在某些特殊情况下 (例如要使缓存失效)，可能有必要在响应式依赖发生改变时立即触发侦听器。这可以通过设置 `flush: 'sync'` 来实现。然而，该设置应谨慎使用，因为如果有多个属性同时更新，这将导致一些性能和数据一致性的问题。
+
+```js
+const count = ref(0)
+watch(count, (count, prevCount) => {
+  /* ... */
+})
+```
 
 ### watch 实现
 
@@ -250,7 +272,7 @@ export function watchSyncEffect(
 
 - 根据用户传入的不同类型数据，构造`getter()`方法用于后续实例化`watch effect`，监听响应式数据，进行依赖收集
 - 实例化一个`SchedulerJob`，如果有`cb`回调函数，除了执行对应`watch effect`的`run()`方法得到`newValue`之外还要执行`cb`回调函数，然后根据`options`里的`flush`参数确定执行时机，这个`scheduler`也用于后续实例化`watch effect`
-- 实例化一个`ReactiveEffect`，用于依赖收集、派发更新
+- 实例化一个`ReactiveEffect`，用于依赖收集、派发更新，并且根据`flush`参数确认`scheduler`任务到底加入哪个任务队列
 - 初始操作，根据`immediate`等参数判断是否立即执行一次回调
 
 ```ts
@@ -509,3 +531,8 @@ function doWatch(
   }
 }
 ```
+
+## computed() 和 watch() 异同
+
+1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是直接包装 `triggerRefValue` 依赖收集方法。
+2. `computed`用`_dirty`参数判断是否需要执行对应副作用effect的run方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。

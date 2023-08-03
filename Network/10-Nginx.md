@@ -1,21 +1,34 @@
 # Nginx
-Nginx is a web server that can also be used as a reverse proxy, load balancer, mail proxy and HTTP cache. 
+
+Nginx is a web server that can also be used as a reverse proxy, load balancer, mail proxy and HTTP cache.
 
 Nginx is built to offer low memory usage and high concurrency. Rather than creating new processes for each web request, Nginx uses an asynchronous, event-driven approach where requests are handled in a single thread.
 
 ## 正向代理 反向代理
+
 正向代理是一个位于客户端和目标服务器之间的代理服务器(中间服务器)。为了从原始服务器取得内容，客户端向代理服务器发送一个请求，并且指定目标服务器，之后代理向目标服务器转交并且将获得的内容返回给客户端。正向代理的情况下客户端必须要进行一些特别的设置才能使用。
-              
+
 反向代理正好相反。对于客户端来说，反向代理就好像目标服务器。并且客户端不需要进行任何设置。客户端向反向代理发送请求，接着反向代理判断请求走向何处，并将请求转交给客户端，使得这些内容就好似他自己一样，一次客户端并不会感知到反向代理后面的服务，也因此不需要客户端做任何设置，只需要把反向代理服务器当成真正的服务器就好了。
 
+两者异同在于：
+
+1. 正向代理其实是客户端的代理，帮助客户端访问其无法访问的服务器资源。反向代理则是服务器的代理，帮助服务器做负载均衡，安全防护等。
+
+2. 正向代理一般是客户端架设的，比如在自己的机器上安装一个代理软件。而反向代理一般是服务器架设的，比如在自己的机器集群中部署一个反向代理服务器。
+
+3. 正向代理中，服务器不知道真正的客户端到底是谁，以为访问自己的就是真实的客户端。而在反向代理中，客户端不知道真正的服务器是谁，以为自己访问的就是真实的服务器。
+
+4. 正向代理和反向代理的作用和目的不同。正向代理主要是用来解决访问限制问题。而反向代理则是提供负载均衡、安全防护等作用。二者均能提高访问速度。
+
 ## 负载均衡
+
 负载均衡是在支持应用程序的资源池中平均分配网络流量的一种方法。如果没有负载均衡，客户端与服务端的操作通常是：客户端请求服务端，然后服务端去数据库查询数据，将返回的数据带给客户端。
 
 公司通常在多台服务器上运行其应用程序。这种服务器安排称为服务器场。用户对应用程序的请求首先转到负载均衡器。然后，负载均衡器会将每个请求路由到服务器场中最适合处理该请求的单个服务器。
 
 - 应用程序负载均衡
 
-复杂的现代应用程序拥有多个服务器场，其中包含多个专用于单个应用程序功能的服务器。应用程序负载均衡器会查看请求内容（如 HTTP 标头或 SSL 会话 ID）以重定向流量。 
+复杂的现代应用程序拥有多个服务器场，其中包含多个专用于单个应用程序功能的服务器。应用程序负载均衡器会查看请求内容（如 HTTP 标头或 SSL 会话 ID）以重定向流量。
 
 例如，电子商务应用程序具有产品目录、购物车和结账功能。应用程序负载均衡器会将浏览产品的请求发送给包含图像和视频但不需要保持开放连接的服务器。相比之下，它会将购物车请求发送给能够保持多个客户端连接并长时间保存购物车数据的服务器。
 
@@ -29,9 +42,10 @@ Nginx is built to offer low memory usage and high concurrency. Rather than creat
 
 - DNS 负载均衡
 
-在 DNS 负载均衡中，您可以将域配置为跨域上的资源池路由网络请求。域可以对应于网站、邮件系统、打印服务器或可通过互联网访问的其他服务。DNS 负载均衡有助于在全球分布的资源池中保持应用程序可用性以及均衡网络流量。 
+在 DNS 负载均衡中，您可以将域配置为跨域上的资源池路由网络请求。域可以对应于网站、邮件系统、打印服务器或可通过互联网访问的其他服务。DNS 负载均衡有助于在全球分布的资源池中保持应用程序可用性以及均衡网络流量。
 
 ## nginx配置
+
 配置文件分为三个模块：
 
 - `全局`：从配置文件开始到events块之间，主要是设置一些影响 `nginx` 服务器整体运行的配置指令。
@@ -96,6 +110,7 @@ http {
 
 }
 ```
+
 - `main`: nginx的全局配置，对全局生效。
 - `events`: 配置影响nginx服务器或与用户的网络连接。
 - `http`: 可以嵌套多个server，配置代理，缓存，日志定义等绝大多数功能和第三方模块的配置。
@@ -108,7 +123,9 @@ http {
   - `upstream`: 配置后端服务器具体地址，负载均衡配置不可或缺的部分。
 
 ## nginx解决跨域的原理
+
 前端服务器的域名为：`fe.server.com`，后端服务器的域名为：`dev.server.com`。在`fe.server.com`对`dev.server.com`发起请求一定会出现跨域。只需要启动一个 `nginx` 服务器，将 `server_name` 设置为`fe.server.com`,然后设置相应的 `location` 以拦截前端需要跨域的请求，最后将请求代理回 `dev.server.com`。如下面的配置：
+
 ```js
 server {
     listen       80;
@@ -118,8 +135,11 @@ server {
     }
 }
 ```
+
 这样可以绕过浏览器的同源策略：`fe.server.com`访问 `nginx` 的 `fe.server.com`属于同源访问，而 `nginx` 对服务端转发的请求不会触发浏览器的同源策略。
 
 ## 参考资料
+
 [What Is Nginx? A Basic Look at What It Is and How It Works](https://kinsta.com/knowledgebase/what-is-nginx/)
+
 [Nginx 配置详解](https://www.runoob.com/w3cnote/nginx-setup-intro.html)

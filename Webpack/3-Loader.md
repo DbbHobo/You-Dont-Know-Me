@@ -10,22 +10,7 @@
 2. 应用规则：对选中后的文件通过 use 配置项来应用 `Loader`，可以只应用一个 `Loader` 或者按照从后往前的顺序应用一组 `Loader`，同时还可以分别给 `Loader` 传入参数。
 3. 重置顺序：一组 `Loader` 的执行顺序默认是**从右到左**执行，通过 `enforce` 选项可以让其中一个 `Loader` 的执行顺序放到最前或者最后。
 
-## 常见 Loader
-
-- `file-loader`：把文件输出到一个文件夹中，在代码中通过相对 URL 去引用输出的文件 (处理图片和字体)
-- `url-loader`：与 file-loader 类似，区别是用户可以设置一个阈值，大于阈值会交给 file-loader 处理，小于阈值时返回文件 base64 形式编码 (处理图片和字体)
-- `source-map-loader`：加载额外的 Source Map 文件，以方便断点调试
-- `svg-inline-loader`：将压缩后的 SVG 内容注入代码中
-- `image-loader`：加载并且压缩图片文件
-- `babel-loader`：把 ES6 转换成 ES5
-- `sass-loader`：将 SCSS/SASS 代码转换成 CSS
-- `css-loader`：加载 CSS，支持模块化、压缩、文件导入等特性
-- `style-loader`：把 CSS 代码注入到 JavaScript 中，通过 DOM 操作去加载 CSS
-- `postcss-loader`：扩展 CSS 语法，使用下一代 CSS，可以配合 autoprefixer 插件自动补齐 CSS3 前缀
-- `eslint-loader`：通过 ESLint 检查 JavaScript 代码
-- `vue-loader`：加载 Vue.js 单文件组件
-
-### Loader 配置例子
+## Loader 配置例子
 
 ```js
 const path = require("path");
@@ -42,12 +27,28 @@ module.exports = {
 };
 ```
 
+## 常见 Loader
+
+- `file-loader`：把文件输出到一个文件夹中，在代码中通过相对 URL 去引用输出的文件 (处理图片和字体)
+- `url-loader`：与 file-loader 类似，区别是用户可以设置一个阈值，大于阈值会交给 file-loader 处理，小于阈值时返回文件 base64 形式编码 (处理图片和字体)
+- `source-map-loader`：加载额外的 Source Map 文件，以方便断点调试
+- `svg-inline-loader`：将压缩后的 SVG 内容注入代码中
+- `image-loader`：加载并且压缩图片文件
+- `babel-loader`：把 ES6 转换成 ES5
+- `sass-loader`：将 SCSS/SASS 代码转换成 CSS
+- `css-loader`：加载 CSS，支持模块化、压缩、文件导入等特性
+- `style-loader`：把 CSS 代码注入到 JavaScript 中，通过 DOM 操作去加载 CSS
+- `postcss-loader`：扩展 CSS 语法，使用下一代 CSS，可以配合 autoprefixer 插件自动补齐 CSS3 前缀
+- `eslint-loader`：通过 ESLint 检查 JavaScript 代码
+- `vue-loader`：加载 Vue.js 单文件组件
+
 ## Loader开发
 
 1. 开发
 由于 `Webpack` 是运行在 `Node.js` 之上的，一个 `Loader` 其实就是一个 `Node.js` 模块，这个模块需要导出一个函数。这个导出的函数的工作就是获得处理前的原内容，对原内容执行处理后，返回处理后的内容。
 
 一个最简单的 `Loader` 的源码如下：
+
 ```js
 module.exports = function(source) {
   // source 为 compiler 传递给 Loader 的一个文件的原内容
@@ -76,6 +77,7 @@ module.exports = function(source) {
 `resolveLoader` 用于配置 `Webpack` 如何寻找 `Loader`。 默认情况下只会去 `node_modules` 目录下寻找，为了让 `Webpack` 加载放在本地项目中的 `Loader` 需要修改 `resolveLoader.modules`。
 
 假如本地的 `Loader` 在项目目录中的 `./loaders/loader-name` 中，则需要如下配置：
+
 ```js
 module.exports = {
   resolveLoader:{
@@ -84,6 +86,7 @@ module.exports = {
   }
 }
 ```
+
 加上以上配置后， `Webpack` 会先去 `node_modules` 项目下寻找 `Loader`，如果找不到，会再去 `./loaders/` 目录下寻找。
 
 3. 发布到npm
@@ -91,5 +94,7 @@ module.exports = {
 - 首先在`npmjs.com`注册一个`npm`账号，邮箱验证。
 - 执行 `npm login` 进行登录
 - 执行 `npm publish` 进行发布
+
+## 参考资料
 
 [深入浅出 webpack](http://webpack.wuhaolin.cn/5%E5%8E%9F%E7%90%86/5-4%E7%BC%96%E5%86%99Plugin.html)
