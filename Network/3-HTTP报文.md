@@ -5,7 +5,9 @@
 用于 `HTTP` 协议交互的信息被称为 `HTTP` 报文。 请求端（客户端）的 `HTTP` 报文叫做**请求报文**， 响应端（服务器端）的叫做**响应报文**。报文本身是由多行（ 用 CR+LF 作换行符） 数据构成的字符串文本。`HTTP` 报文大致可分为**报文首部**`Header` 和**报文主体**`Body` 两块。
 
 ## HTTP 请求报文 / HTTP 响应报文
+
 `HTTP` 请求报文 和 `HTTP` 响应报文都由 `Header + Body` 组成：
+
 - 在请求中， HTTP 报文由 **方法**、 **URI**、 **HTTP版本**、 **HTTP首部字段**、**实体**等部分构成。
 - 在响应中， HTTP 报文由 **HTTP版本**、 **状态码（ 数字和原因短语）** 、**HTTP首部字段**、**实体**等部分构成。
 
@@ -31,6 +33,7 @@
 可能包含 `HTTP` 的 RFC 里未定义的首部（ `Cookie` 等）
 
 请求报文例子如下：
+
 ```
 /* 请求行 */
 Request URL: https://mcs.snssdk.com/list
@@ -60,6 +63,7 @@ user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 ```
 
 响应报文例子如下：
+
 ```
 /* 状态行 */
 Status Code: 200 
@@ -82,8 +86,6 @@ server-timing: cdn-cache;desc=MISS, edge;dur=1, origin;dur=48
 server-timing: inner; dur=13
 via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 ```
-
-
 
 ## HTTP 报文首部字段
 
@@ -114,7 +116,9 @@ via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 ![web](./assets/http3.png)
 
 ## 内容协商机制
+
 内容协商机制是指客户端和服务器端就响应的资源内容进行交涉， 然后提供给客户端最为适合的资源。 内容协商会以响应资源的语言、 字符集、 编码方式等作为判断的基准。内容协商的分类有很多种，主要的几种类型是：
+
 - `Accept`：希望接收的媒体资源的 MIME 类型
 - `Accept-Charset`：用来告知（服务器）客户端可以处理的字符集类型
 - `Accept-Encoding`：希望接收的内容编码形式（所支持的压缩算法）
@@ -123,6 +127,7 @@ via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 在服务端驱动型内容协商或者主动内容协商中，浏览器（或者其他任何类型的用户代理）会随同 `URL` 发送一系列的 `HTTP` 标头。这些标头描述了用户倾向的选择。服务器则以此为线索，通过内部算法来选择最佳方案提供给客户端。如果它不能提供一个合适的资源，它可能使用 406（Not Acceptable）、415（Unsupported Media Type）进行响应并为其支持的媒体类型设置标头。
 
 ## 传输类型
+
 `MIME`媒体类型（通常称为 `Multipurpose Internet Mail Extensions` 或 `MIME` 类型）是一种标准，用来表示文档、文件或字节流的性质和格式。
 
 浏览器通常使用 `MIME` 类型（而不是文件扩展名）来确定如何处理 `URL`，因此 `Web` 服务器在响应头中添加正确的 `MIME` 类型非常重要。如果配置不正确，浏览器可能会曲解文件内容，网站将无法正常工作，并且下载的文件也会被错误处理。
@@ -136,6 +141,7 @@ type/subtype
 ![web](./assets/http8.png)
 
 举例有如下常见类型：
+
 ```
 text/plain
 text/html
@@ -152,9 +158,18 @@ multipart/form-data
 multipart/byteranges
 ```
 
+`application/x-www-form-urlencoded`：会在url上拼接字符串，如：k=123&c=12241，同时对于中文还会转码。
+`application/json`：直接会在请求体中添加object对象 如： { a: 123, b: 456 }
+`multipart/form-data`: 在network中可以看到添加带数据类型等各类标识的文件类型字符串请求体告诉服务器端接收对象是一个文件数据流
+
 ## 参考资料
+
 《图解HTTP》
+
 《Web性能权威指南》
+
 [MIME 类型](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Basics_of_HTTP/MIME_Types)
+
 [内容协商](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Content_negotiation)
+
 [关于队头阻塞（Head-of-Line blocking），看这一篇就足够了](https://zhuanlan.zhihu.com/p/330300133)

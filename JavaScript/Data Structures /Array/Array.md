@@ -51,6 +51,81 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 
 ## Array的实例方法
 
+### Array.prototype.push()*
+
+push() 方法将指定的元素添加到数组的末尾，并返回新的数组长度。
+
+此方法会**改变原数组**。
+
+```js
+const animals = ['pigs', 'goats', 'sheep'];
+
+const count = animals.push('cows');
+console.log(count);
+// Expected output: 4
+console.log(animals);
+// Expected output: Array ["pigs", "goats", "sheep", "cows"]
+
+animals.push('chickens', 'cats', 'dogs');
+console.log(animals);
+// Expected output: Array ["pigs", "goats", "sheep", "cows", "chickens", "cats", "dogs"]
+```
+
+### Array.prototype.pop()*
+
+pop() 方法从数组中删除最后一个元素，并返回该元素的值。此方法会更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
+
+此方法会**改变原数组**。
+
+```js
+const plants = ['broccoli', 'cauliflower', 'cabbage', 'kale', 'tomato'];
+
+console.log(plants.pop());
+// Expected output: "tomato"
+
+console.log(plants);
+// Expected output: Array ["broccoli", "cauliflower", "cabbage", "kale"]
+
+plants.pop();
+
+console.log(plants);
+// Expected output: Array ["broccoli", "cauliflower", "cabbage"]
+```
+
+### Array.prototype.unshift()*
+
+unshift() 方法将指定元素添加到数组的开头，并返回数组的新长度。
+
+此方法会**改变原数组**。
+
+```js
+const array1 = [1, 2, 3];
+
+console.log(array1.unshift(4, 5));
+// Expected output: 5
+
+console.log(array1);
+// Expected output: Array [4, 5, 1, 2, 3]
+```
+
+### Array.prototype.shift()*
+
+shift() 方法从数组中删除第一个元素，并返回该元素的值。此方法更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
+
+此方法会**改变原数组**。
+
+```js
+const array1 = [1, 2, 3];
+
+const firstElement = array1.shift();
+
+console.log(array1);
+// Expected output: Array [2, 3]
+
+console.log(firstElement);
+// Expected output: 1
+```
+
 ### Array.prototype.splice()*
 
 通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回**被修改的内容**。
@@ -149,6 +224,8 @@ console.log(animals.slice(1, 5));
 
 ### Array.prototype.join()
 
+**数组 => 字符串**
+
 将一个数组（或一个类数组对象）的所有元素连接成一个字符串并返回这个字符串。如果数组只有一个项目，那么将返回该项目而不使用分隔符。
 
 - creates and returns a new string by concatenating all of the elements in an array (or an array-like object), separated by commas or a specified separator string. If the array has only one item, then that item will be returned without using the separator.
@@ -159,6 +236,24 @@ a.join(); // 'Wind,Water,Fire'
 a.join(", "); // 'Wind, Water, Fire'
 a.join(" + "); // 'Wind + Water + Fire'
 a.join(""); // 'WindWaterFire'
+```
+
+### Array.prototype.map()
+
+返回一个新数组，包含了该数组中的每个元素调用一次传入的函数后的返回值。
+
+- creates a new array with the results of calling a provided function on every element in the calling array.
+
+```js
+var numbers = [1, 2, 3, 4];
+var filteredNumbers = numbers.map(function (num, index) {
+  if (index < 3) {
+    return num;
+  }
+});
+//index goes from 0,so the filterNumbers are 1,2,3 and undefined.
+// filteredNumbers is [1, 2, 3, undefined]
+// numbers is still [1, 2, 3, 4]
 ```
 
 ### Array.prototype.every()
@@ -197,24 +292,6 @@ const filterItems = (arr, query) => {
 };
 console.log(filterItems(fruits, "ap")); // ['apple', 'grapes']
 console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
-```
-
-### Array.prototype.map()
-
-返回一个新数组，包含了该数组中的每个元素调用一次传入的函数后的返回值。
-
-- creates a new array with the results of calling a provided function on every element in the calling array.
-
-```js
-var numbers = [1, 2, 3, 4];
-var filteredNumbers = numbers.map(function (num, index) {
-  if (index < 3) {
-    return num;
-  }
-});
-//index goes from 0,so the filterNumbers are 1,2,3 and undefined.
-// filteredNumbers is [1, 2, 3, undefined]
-// numbers is still [1, 2, 3, 4]
 ```
 
 ### Array.prototype.forEach()
@@ -336,18 +413,6 @@ console.log(array1.findLastIndex(isLargeNumber));
 // Index of element with value: 130
 ```
 
-### Array.prototype.fill()
-
-`fill()`方法使用给定值，填充一个数组。
-
-- The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
-
-```js
-let arr = new Array(3).fill({name: "Mike"});
-arr[0].name = "Ben";
-// [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
-```
-
 ### Array.prototype.includes()
 
 返回一个**布尔值**，表示某个数组是否包含给定的值。
@@ -407,18 +472,33 @@ console.log(arr2.flat(2));
 // Expected output: Array [0, 1, 2, Array [3, 4]]
 ```
 
+### Array.prototype.fill()
+
+`fill()`方法使用给定值，填充一个数组。
+
+- The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
+
+```js
+let arr = new Array(3).fill({name: "Mike"});
+arr[0].name = "Ben";
+// [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
+```
+
 ## Array总结
 
-1. 会改变原数组的方法：
-  - push
-  - pop
-  - shift
-  - unshift
-  - splice
-  - sort
-  - reverse
-2. 数组转化为字符串的方法
-  - join
+### 会改变原数组的方法
+
+- push
+- pop
+- shift
+- unshift
+- splice
+- sort
+- reverse
+
+### 数组转化为字符串的方法
+
+- join
 
 ## 参考资料
 

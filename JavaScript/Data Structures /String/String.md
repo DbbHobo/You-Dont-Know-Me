@@ -84,9 +84,11 @@ var greetList = ["Hello", " ", "Venkat", "!"];
 
 ### String.prototype.split()
 
+**字符串 => 数组**
+
 - splits a String object into an array of strings by separating the string into substrings, using a specified separator string to determine where to make each split.
 
-用指定的分隔符字符串将一个 String 对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置。字符串 => 数组
+用指定的分隔符字符串将一个 String 对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置。
 
 ```js
 const names = "Harry Trump ;Fred Barney; Helen Rigby ; Bill Abel ;Chris Hand ";
@@ -267,11 +269,15 @@ console.log(`The word "${word}" ${sentence.includes(word) ? 'is' : 'is not'} in 
 // Expected output: "The word "fox" is in the sentence"
 ```
 
-### String.prototype.charAt()
+### String.prototype.charAt() / String.prototype.charCodeAt() / String.prototype.codePointAt()
 
 - returns a new string consisting of the single UTF-16 code unit located at the specified offset into the string.
 
-从一个字符串中返回指定的字符。
+`charAt()` 从一个字符串中返回指定的字符。
+
+`charCodeAt()` 方法返回 0 到 65535 之间的整数，表示给定索引处的 UTF-16 代码单元。
+
+`codePointAt()` 方法返回 一个 Unicode 编码点值的非负整数。
 
 ```js
 const sentence = "The quick brown fox jumps over the lazy dog.";
@@ -279,15 +285,7 @@ const index = 4;
 
 console.log(`The character at index ${index} is ${sentence.charAt(index)}`);
 // expected output: "The character at index 4 is q"
-```
 
-### String.prototype.charCodeAt() / String.prototype.codePointAt()
-
-`charCodeAt()` 方法返回 0 到 65535 之间的整数，表示给定索引处的 UTF-16 代码单元。
-
-`codePointAt()` 方法返回 一个 Unicode 编码点值的非负整数。
-
-```js
 "ABC".charCodeAt(0) // returns 65:"A"
 
 "ABC".charCodeAt(1) // returns 66:"B"
@@ -352,29 +350,28 @@ console.log(`Using an index of ${index} the character returned is ${sentence.at(
 
 ## String总结
 
-1. 查找特定字符串序列位置的方法：
+### 查找特定字符串序列位置的方法
 
-  - search
-  - indexOf
+- search
+- indexOf
 
-2. 字符串转化为数组的方法：
+### 字符串转化为数组的方法
   
-  - split
+- split
 
-3. slice和substring区别：
+### slice和substring区别
   
-  - substring：两个参数会比较大小来判断哪一个是起始位参数哪一个是结束位置参数，通俗的讲就是小的一个数会作为起始 位置参数，大的一个数会作为结束位置参数；
-  - slice：则不会有这样的规则，只遵循大于0，从前面计数，小于0，从后面计数的原则；
-  - substring：除了两个参数会比较大小调换位置外，还满足小于0时按0处理的规则；
-  - slice：则是根据大于0和小于0来判断计数的前后顺序；
+- substring：两个参数会比较大小来判断哪一个是起始位参数哪一个是结束位置参数，通俗的讲就是小的一个数会作为起始 位置参数，大的一个数会作为结束位置参数；
+- slice：则不会有这样的规则，只遵循大于0，从前面计数，小于0，从后面计数的原则；
+- substring：除了两个参数会比较大小调换位置外，还满足小于0时按0处理的规则；
+- slice：则是根据大于0和小于0来判断计数的前后顺序；
 
-4. 可结合正则使用的方法：
+### 可结合正则使用的方法
   
-  - replace
-  - match
-  - search
-  - spilt
-
+- replace
+- match
+- search
+- spilt
 
 ## 参考资料
 
