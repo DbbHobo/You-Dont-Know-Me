@@ -145,7 +145,7 @@ mySearch = function(src: string, sub: string): boolean {
 }
 ```
 
-### Interface可拓展性
+### Interface可拓展性extends
 
 和类一样，接口也可以相互继承。 这让我们能够从一个接口里复制成员到另一个接口里，可以更灵活地将接口分割到可重用的模块里。一个接口可以继承多个接口，创建出多个接口的合成接口。
 
@@ -240,7 +240,26 @@ const project: SpecialProject = {
 };
 ```
 
+## 总结
+
+在TypeScript中，接口和类型别名都是用于定义类型的工具。
+
+- 接口(interface)不能表达联合类型(unions)，映射类型(mapped types)，或条件类型(conditional types)。而类型别名(type alias)可以表达任何类型。
+
+- 接口可以使用extends关键字进行继承，但类型别名不能使用extends。
+
+- 当你在处理继承关系的对象时，应该使用接口。使用extends关键字可以使TypeScript的类型检查器运行稍微更快，比使用&运算符更高效。
+
+- 在相同作用域内，具有相同名称的接口会合并其声明，这可能会导致意外的错误。
+
+- 此外，类型别名隐式地具有索引签名Record<PropertyKey, unknown>，有时会出现这种情况。
+
+结论是，如果你在描述对象的结构，或者需要进行扩展和合并，应该优先选择`interface`。如果你需要定义更复杂的类型或使用条件类型，应该使用`type`。在实际开发中，根据具体需求来选择合适的工具，或者在某些情况下结合使用两者，可以使你的代码更清晰、更有可维护性。
+
 ## 参考资料
 
 [Typesrcipt类](https://www.tslang.cn/docs/handbook/interfaces.html)
+
 [Typescript常见类型](https://www.typescriptlang.org/zh/docs/handbook/2/everyday-types.html)
+
+[Type vs Interface: Which Should You Use In 2023?](https://www.totaltypescript.com/type-vs-interface-which-should-you-use)

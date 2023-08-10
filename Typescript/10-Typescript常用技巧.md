@@ -68,13 +68,23 @@ type Obj =  {
 
 ## infer
 
-在条件类型语句中，可以用 `infer` 声明一个类型变量并且对它进行使用。
+在TypeScript中，`infer`关键字通常与条件类型(conditional types)一起使用，用于在泛型类型中推断类型参数。`infer`关键字允许你从一个类型中提取出一个具体的类型，并将它用于其他地方。
+
+下面是一个示例，演示了如何在条件类型中使用`infer`：
 
 ```ts
-type ReturnType<T> = T extends (
-  ...args: any[]
-) => infer R ? R : any;
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+function add(a: number, b: number): number {
+    return a + b;
+}
+
+type AddReturnType = ReturnType<typeof add>; // 此时AddReturnType会被推断为number类型
 ```
+
+在上面的例子中，我们定义了一个`ReturnType`类型，它接受一个类型参数`T`。通过使用条件类型，我们检查`T`是否是一个函数类型，如果是，就使用`infer R`来提取函数的返回类型，并将其赋值给R。如果不是函数类型，则返回`never`类型。在调用`ReturnType<typeof add>`时，`infer`关键字被用来推断函数add的返回类型为number。
+
+总之，`infer`关键字在`TypeScript`中用于从复杂的类型中提取子类型，并在泛型条件类型中进行类型推断。这在许多高级类型操作中非常有用，例如从`Promise`中提取出`resolved`类型等。
 
 ## 符号
 
