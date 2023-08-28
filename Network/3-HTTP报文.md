@@ -34,7 +34,7 @@
 
 请求报文例子如下：
 
-```
+```text
 /* 请求行 */
 Request URL: https://mcs.snssdk.com/list
 Request Method: POST
@@ -64,7 +64,7 @@ user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 
 响应报文例子如下：
 
-```
+```text
 /* 状态行 */
 Status Code: 200 
 Remote Address: 59.81.65.33:443
@@ -132,7 +132,7 @@ via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 
 浏览器通常使用 `MIME` 类型（而不是文件扩展名）来确定如何处理 `URL`，因此 `Web` 服务器在响应头中添加正确的 `MIME` 类型非常重要。如果配置不正确，浏览器可能会曲解文件内容，网站将无法正常工作，并且下载的文件也会被错误处理。
 
-```
+```text
 type/subtype
 ```
 
@@ -142,24 +142,98 @@ type/subtype
 
 举例有如下常见类型：
 
+- Type application:
+
+```text
+  application/java-archive
+  application/EDI-X12   
+  application/EDIFACT   
+  application/javascript   
+  application/octet-stream   
+  application/ogg   
+  application/pdf  
+  application/xhtml+xml   
+  application/x-shockwave-flash    
+  application/json  
+  application/ld+json  
+  application/xml   
+  application/zip  
+  application/x-www-form-urlencoded  
 ```
-text/plain
-text/html
-image/jpeg
-image/png
-audio/mpeg
-audio/*
-video/mp4
-application/*
-application/json
-application/javascript
-application/octet-stream
-multipart/form-data
-multipart/byteranges
+
+- Type audio:
+
+```text
+  audio/mpeg   
+  audio/x-ms-wma   
+  audio/vnd.rn-realaudio   
+  audio/x-wav   
+```
+
+- Type image:
+
+```text
+  image/gif   
+  image/jpeg   
+  image/png   
+  image/tiff    
+  image/vnd.microsoft.icon    
+  image/x-icon   
+  image/vnd.djvu   
+  image/svg+xml    
+```
+
+- Type multipart:
+
+```
+  multipart/mixed    
+  multipart/alternative   
+  multipart/related (using by MHTML (HTML mail).)  
+  multipart/form-data  
+```
+
+- Type text:
+
+```text
+  text/css    
+  text/csv    
+  text/html    
+  text/javascript (obsolete)    
+  text/plain    
+  text/xml   
+```
+
+- Type video:
+
+```text
+  video/mpeg    
+  video/mp4    
+  video/quicktime    
+  video/x-ms-wmv    
+  video/x-msvideo    
+  video/x-flv   
+  video/webm   
+```
+
+- Type vnd:
+
+```text
+  application/vnd.android.package-archive
+  application/vnd.oasis.opendocument.text    
+  application/vnd.oasis.opendocument.spreadsheet  
+  application/vnd.oasis.opendocument.presentation   
+  application/vnd.oasis.opendocument.graphics   
+  application/vnd.ms-excel    
+  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet   
+  application/vnd.ms-powerpoint    
+  application/vnd.openxmlformats-officedocument.presentationml.presentation    
+  application/msword   
+  application/vnd.openxmlformats-officedocument.wordprocessingml.document   
+  application/vnd.mozilla.xul+xml   
 ```
 
 `application/x-www-form-urlencoded`：会在url上拼接字符串，如：k=123&c=12241，同时对于中文还会转码。
-`application/json`：直接会在请求体中添加object对象 如： { a: 123, b: 456 }
+`application/json`：直接会在请求体中添加object对象，如： { a: 123, b: 456 }
 `multipart/form-data`: 在network中可以看到添加带数据类型等各类标识的文件类型字符串请求体告诉服务器端接收对象是一个文件数据流
 
 ## 参考资料
