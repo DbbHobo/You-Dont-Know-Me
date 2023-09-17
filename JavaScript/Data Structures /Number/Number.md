@@ -184,6 +184,7 @@ JavaScript 中最小的安全整数 (-(2^53 - 1)).
 ## Number的实例方法
 
 由于数字值可以使用 `Number` 对象进行封装，因此数字值可以调用 `Number.prototype` 上的方法
+
 ### Number.prototype.toExponential(fractionDigits)
 
 返回使用指数表示法表示数字的字符串。
@@ -211,4 +212,5 @@ JavaScript 中最小的安全整数 (-(2^53 - 1)).
 ## 参考资料
 
 [Number-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Number)
+
 [JavaScript 深入之浮点数精度](https://github.com/mqyqingfeng/Blog/issues/155)

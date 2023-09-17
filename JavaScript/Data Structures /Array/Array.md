@@ -20,7 +20,7 @@ if (!Array.isArray) {
 
 ### Array.of()
 
-创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。总是返回参数值组成的数组。如果没有参数，就返回一个空数组。用来替代Array()或new Array()，行为统一。
+创建一个具有可变数量参数的新数组实例，而不考虑参数的数量或类型。总是返回参数值组成的数组。如果没有参数，就返回一个空数组。用来替代`Array()`或`new Array()`，行为统一。
 
 - creates a new Array instance from a variable number of arguments, regardless of number or type of the arguments.
 
@@ -53,7 +53,7 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 
 ### Array.prototype.push()*
 
-push() 方法将指定的元素添加到数组的末尾，并返回新的数组长度。
+`push()` 方法将指定的元素添加到数组的末尾，并返回新的数组长度。
 
 此方法会**改变原数组**。
 
@@ -73,7 +73,7 @@ console.log(animals);
 
 ### Array.prototype.pop()*
 
-pop() 方法从数组中删除最后一个元素，并返回该元素的值。此方法会更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
+`pop()` 方法从数组中删除最后一个元素，并返回该元素的值。此方法会更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
 
 此方法会**改变原数组**。
 
@@ -94,7 +94,7 @@ console.log(plants);
 
 ### Array.prototype.unshift()*
 
-unshift() 方法将指定元素添加到数组的开头，并返回数组的新长度。
+`unshift()` 方法将指定元素添加到数组的开头，并返回数组的新长度。
 
 此方法会**改变原数组**。
 
@@ -110,7 +110,7 @@ console.log(array1);
 
 ### Array.prototype.shift()*
 
-shift() 方法从数组中删除第一个元素，并返回该元素的值。此方法更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
+`shift()` 方法从数组中删除第一个元素，并返回该元素的值。此方法更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
 
 此方法会**改变原数组**。
 
@@ -149,7 +149,7 @@ console.log(months);
 
 ### Array.prototype.reverse()*
 
-reverse() 方法将数组中元素的位置颠倒，并返回该数组。数组的第一个元素会变成最后一个，数组的最后一个元素变成第一个。
+`reverse()` 方法将数组中元素的位置颠倒，并返回该数组。数组的第一个元素会变成最后一个，数组的最后一个元素变成第一个。
 
 此方法会**改变原数组**。
 
@@ -171,7 +171,7 @@ console.log('array1:', array1);
 
 ### Array.prototype.sort()*
 
-sort() 方法用原地算法对数组的元素进行排序，并返回数组。默认排序顺序是在将元素转换为字符串，然后比较它们的 UTF-16 代码单元值序列时构建的。由于它取决于具体实现，因此无法保证排序的时间和空间复杂性。
+`sort()` 方法用原地算法对数组的元素进行排序，并返回数组。默认排序顺序是在将元素转换为字符串，然后比较它们的 UTF-16 代码单元值序列时构建的。由于它取决于具体实现，因此无法保证排序的时间和空间复杂性。
 
 此方法会**改变原数组**。
 
@@ -339,14 +339,14 @@ for (let elem of ['a', 'b'].values()) {
 
 - executes a reducer function (that you provide) on each element of the array, resulting in a single output value.
 
-reduce 为数组中的每一个元素依次执行 callback 函数，不包括数组中被删除或从未被赋值的元素，接受四个参数：
+`reduce` 为数组中的每一个元素依次执行 `callback` 函数，不包括数组中被删除或从未被赋值的元素，接受四个参数：
 
-- accumulator 累计器
-- currentValue 当前值
-- currentIndex 当前索引
-- array 数组
+- `accumulator` 累计器
+- `currentValue` 当前值
+- `currentIndex` 当前索引
+- `array` 数组
 
-回调函数第一次执行时，accumulator 和 currentValue 的取值有两种情况：如果调用 reduce()时提供了 initialValue，accumulator 取值为 initialValue，currentValue 取数组中的第一个值；如果没有提供 initialValue，那么 accumulator 取数组中的第一个值，currentValue 取数组中的第二个值。
+回调函数第一次执行时，`accumulator` 和 `currentValue` 的取值有两种情况：如果调用 `reduce()` 时提供了 `initialValue`，`accumulator` 取值为 `initialValue`，`currentValue` 取数组中的第一个值；如果没有提供 `initialValue`，那么 `accumulator` 取数组中的第一个值，`currentValue` 取数组中的第二个值。
 
 ```js
 [0, 1, 2, 3, 4].reduce(
@@ -373,7 +373,7 @@ console.log(array1);
 
 ### Array.prototype.find() / Array.prototype.findLast()
 
-数组实例的find方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
+数组实例的 `find()` 方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
 
 - The find() method returns the first element in the provided array that satisfies the provided testing function. If no values satisfy the testing function, undefined is returned.
 

@@ -8,7 +8,7 @@
 
 - The String.fromCodePoint() static method returns a string created by using the specified sequence of code points.
 
-用于从 Unicode 码点返回对应字符，但是这个方法不能识别码点大于0xFFFF的字符。Unicode => 字符串
+用于从 Unicode 码点返回对应字符，但是这个方法不能识别码点大于0xFFFF的字符。可以用来表示更广泛范围的字符，尤其是在处理高代码点（例如 Emoji）时非常有用。**Unicode => 字符串**
 
 ```js
 String.fromCodePoint(42); // "*"
@@ -23,7 +23,7 @@ String.fromCodePoint(0x1d306, 0x61, 0x1d307); // "\uD834\uDF06a\uD834\uDF07" ===
 
 - The String.fromCharCode() static method returns a string created from the specified sequence of UTF-16 code units.
 
-用于从 Unicode 码点返回对应字符。Unicode => 字符串
+用于从 UTF-16 编码中的 16 位值返回对应字符。**Unicode => 字符串**
 
 ```js
 String.fromCharCode(65, 66, 67);   // 返回 "ABC"
@@ -65,8 +65,6 @@ String.raw({
 
 ## String的实例方法
 
-## 改造string的方法
-
 ### String.prototype.concat()
 
 - concatenates the string arguments to the calling string and returns a new string.
@@ -84,11 +82,9 @@ var greetList = ["Hello", " ", "Venkat", "!"];
 
 ### String.prototype.split()
 
-**字符串 => 数组**
-
 - splits a String object into an array of strings by separating the string into substrings, using a specified separator string to determine where to make each split.
 
-用指定的分隔符字符串将一个 String 对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置。
+用指定的分隔符字符串将一个 String 对象分割成子字符串数组，以一个指定的分割字串来决定每个拆分的位置。**字符串 => 数组**
 
 ```js
 const names = "Harry Trump ;Fred Barney; Helen Rigby ; Bill Abel ;Chris Hand ";
@@ -172,7 +168,7 @@ console.log(orig.trim()); // 'foo'
 
 - The repeat() method constructs and returns a new string which contains the specified number of copies of the string on which it was called, concatenated together.
 
-repeat() 构造并返回一个新字符串，该字符串包含被连接在一起的指定数量的字符串的副本。
+构造并返回一个新字符串，该字符串包含被连接在一起的指定数量的字符串的副本。
 
 ```js
 const mood = 'Happy! ';
@@ -192,8 +188,6 @@ var str = "Twas the night before Xmas...";
 var newstr = str.replace(/xmas/i, "Christmas");
 console.log(newstr); // Twas the night before Christmas...
 ```
-
-## 寻找string中内容的方法
 
 ### String.prototype.indexOf() / String.prototype.lastIndexOf()
 
@@ -258,7 +252,7 @@ console.log(array[1]);
 
 - The includes() method performs a case-sensitive search to determine whether one string may be found within another string, returning true or false as appropriate.
 
-includes() 方法执行区分大小写的搜索，以确定是否可以在另一个字符串中找到一个字符串，并根据情况返回 true 或 false。
+方法执行区分大小写的搜索，以确定是否可以在另一个字符串中找到一个字符串，并根据情况返回 true 或 false。
 
 ```js
 const sentence = 'The quick brown fox jumps over the lazy dog.';
