@@ -10,12 +10,15 @@ Algorithm
 
 Browser
 
+- [ ] BOM、DOM
 - [ ] 跨域
 - [ ] 事件机制
 - [ ] 浏览器缓存
 - [ ] 浏览器本地存储
 - [ ] 渲染机制、重绘、回流
 - [ ] EventLoop 事件循环、宏任务、微任务
+- [ ] WebWorkers
+- [ ] XMLHttpRequest对象
 
 Css
 
@@ -27,7 +30,7 @@ Css
 JavaScript
 
 - [ ] 数据类型、类型判断、类型转换、typeof、instanceof
-- [ ] 常用数据类型 Array Object String Function Date 等
+- [ ] 常用数据类型 Array Object String Function Map Set Proxy Reflect Symbol Date Reg等
 - [ ] 同步、异步、Promise、Generator、async、await
 - [ ] 原型链、继承、new、this、闭包、call、apply、bind
 - [ ] 浅拷贝、深拷贝
@@ -46,18 +49,25 @@ Network
 - [ ] CDN
 - [ ] Nginx
 - [ ] WebSocket
+- [ ] Cookie、Session、Token
 
 Node
 
+- [ ] Node基础模块
+
 Playground
+
 - [ ] 调试代码
 
 Project
 
 - [ ] 前端调试工具
+- [ ] 文件上传和下载
 - [ ] 项目优化经验
+- [ ] ES6实践
 - [ ] Git常用命令
 - [ ] HTTP 头部
+- [ ] JSBridge
 - [ ] Linux常用命令
 - [ ] Npm
 
@@ -77,12 +87,14 @@ React
 
 Typescript
 
-- [ ] 接口
+- [ ] 接口和类型别名
 - [ ] 泛型
 - [ ] 枚举
 - [ ] 高级类型
 
 Vite
+
+- [ ] Vite 特性简介
 
 Vue2 & Vue3
 
@@ -96,11 +108,13 @@ Vue2 & Vue3
 
 Webpack
 
-- [ ] webpack 原理
-- [ ] Module、Loader 转换器
+- [ ] Webpack 原理
+- [ ] Module 模块概念
+- [ ] Loader 转换器
 - [ ] Plugin 插件
-- [ ] hot reload 原理
-- [ ] webpack 优化
+- [ ] Hot Reload 热更新原理
+- [ ] Webpack 优化
+- [ ] Webpack 工作流程
 
 ---
 
@@ -113,13 +127,3 @@ Webpack
 **I am the sunlight on ripened grain**
 
 **I am the gentle autumn's rain**
-
-我是吹拂而过的千缕之风
-
-已化为璀璨似钻的雪花
-
-我是洒落在熟穗上的日光
-
-化为了温柔的秋雨
-
-当笔记本记录
