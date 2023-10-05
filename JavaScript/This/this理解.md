@@ -1,6 +1,6 @@
-## this
+# this
 
-### 背景
+## 背景
 
 JavaScript 允许在函数体内部，引用当前环境的其他变量。
 
@@ -14,15 +14,15 @@ let f = function () {
 
 现在问题就来了，由于函数可以在不同的运行环境执行，所以需要有一种机制，能够在函数体内部获得当前的运行环境（context）。所以，this 就出现了，它的设计目的就是**在函数体内部，指代函数当前的运行环境**。
 
-上面代码中，函数体里面的 this.x 就是指当前运行环境的 x。
+上面代码中，函数体里面的 `this.x` 就是指当前运行环境的 x。
 
-### 理解 this
+## 理解 this 指向
 
-要理解 JavaScript 中的 this 其实也很简单，按接下来几种方式去解析理解会发现 this 其实很简单。new 的方式优先级最高，接下来是 call/apply/bind 这些函数，然后是 obj.foo() 这种对象的方法调用方式，最后是 foo 这种直接函数调用方式，同时，箭头函数的 this 一旦被绑定，就不会再被任何方式所改变。
+要理解 JavaScript 中的 `this` 其实也很简单，按接下来几种方式去解析理解会发现 `this` 其实很简单。`new` 的方式优先级最高，接下来是 `call`/`apply`/`bind` 这些函数，然后是 `obj.foo()` 这种对象的方法调用方式，最后是 `foo` 这种直接函数调用方式，同时，箭头函数的 `this` 一旦被绑定，就不会再被任何方式所改变。
 
-this 是在**运行时**进行绑定的， 并不是在编写时绑定， 它的上下文取决于**函数调用**时的各种条件。 this 的绑定和函数声明的位置没有任何关系， 取决于函数的调用方式。
+`this` 是在**运行时**进行绑定的， 并不是在编写时绑定， 它的上下文取决于**函数调用**时的各种条件。 `this` 的绑定和函数声明的位置没有任何关系， 取决于函数的调用方式。
 
-- new 绑定
+### new 绑定
 
 ```js
 function foo(a) {
@@ -33,7 +33,7 @@ console.log(bar.a); // 2
 // 使用 new 来调用 foo(..) 时， 我们会构造一个新对象并把它绑定到 foo(..) 调用中的 this 上。
 ```
 
-- 独立函数调用
+### 独立函数调用
 
 时刻记住，引用数据类型的值是按引用访问的。
 
@@ -45,7 +45,7 @@ var a = 2;
 foo(); // 2
 ```
 
-- 隐式绑定
+### 隐式绑定
 
 ```js
 function foo() {
@@ -109,7 +109,7 @@ const o = {
 setTimeout(o.fn, 1000); // 0
 ```
 
-- 显式绑定
+### 显式绑定
 
 ```js
 function foo() {
@@ -137,12 +137,12 @@ var obj = {
 // 1 awesome 2 awesome 3 awesome
 ```
 
-基本的判断流程
+### 基本的判断流程
 
 1. 函数是否在 `new` 中调用（`new` 绑定） ？ 如果是的话 `this` 绑定的是新创建的对象。
-2. 函数是否通过 `call`、 `apply`（显式绑定） 或者硬绑定调用？ 如果是的话， `this` 绑定的是指定的对象。
-3. 函数是否在某个上下文对象中调用（隐式绑定） ？ 如果是的话， `this` 绑定的是那个上下文对象。
-4. 如果都不是的话， 使用默认绑定。 如果在严格模式下， 就绑定到 `undefined`， 否则绑定到全局对象。
+2. 函数是否通过 `call`、 `apply`（显式绑定）或者硬绑定调用 ？ 如果是的话，`this` 绑定的是指定的对象。
+3. 函数是否在某个上下文对象中调用（隐式绑定） ？ 如果是的话，`this` 绑定的是那个上下文对象。
+4. 如果都不是的话，使用默认绑定。如果在严格模式下，就绑定到 `undefined`，否则绑定到全局对象。
 
 箭头函数的绑定无法被修改。`new` 也不行！
 
@@ -163,11 +163,11 @@ let bar = foo.call(obj1);
 bar.call(obj2); // 2, 不是 3 ！因为箭头函数的绑定无法被修改
 ```
 
-### call apply bind
+## call apply bind
 
-- Function.prototype.call
+- `Function.prototype.call`
 
-本质 Function.prototype.call。call() 提供新的 this 值给当前调用的函数/方法。你可以使用 call 来实现继承：写一个方法，然后让另外一个新的对象来继承它，而不是在新对象中再写一次这个方法。
+本质 `Function.prototype.call`。`call()` 提供新的 `this` 值给当前调用的函数/方法。你可以使用 `call` 来实现继承：写一个方法，然后让另外一个新的对象来继承它，而不是在新对象中再写一次这个方法。
 
 ```js
 var employee1 = { firstName: "John", lastName: "Rodson" };
@@ -183,9 +183,9 @@ invite.call(employee1, "Hello", "How are you?"); // Hello John Rodson, How are y
 invite.call(employee2, "Hello", "How are you?"); // Hello Jimmy Baily, How are you?
 ```
 
-- Function.prototype.apply
+- `Function.prototype.apply`
 
-本质 Function.prototype.apply。apply() 与 call() 非常相似，不同之处在于提供参数的方式。apply 使用参数**数组**而不是一组参数列表。
+本质 `Function.prototype.apply`。`apply()` 与 `call()` 非常相似，不同之处在于提供参数的方式。`apply()` 使用参数**数组**而不是一组参数列表。
 
 ```js
 var employee1 = { firstName: "John", lastName: "Rodson" };
@@ -201,9 +201,9 @@ invite.apply(employee1, ["Hello", "How are you?"]); // Hello John Rodson, How ar
 invite.apply(employee2, ["Hello", "How are you?"]); // Hello Jimmy Baily, How are you?
 ```
 
-- Function.prototype.bind
+- `Function.prototype.bind`
 
-本质 Function.prototype.bind。bind() 可以创建一个函数，不论怎么调用，这个函数都有同样的 this 值。
+本质 `Function.prototype.bind`。`bind()` 可以创建一个函数，不论怎么调用，这个函数都有同样的 `this` 值。
 
 ```js
 var employee1 = { firstName: "John", lastName: "Rodson" };
@@ -220,6 +220,8 @@ var inviteEmployee2 = invite.bind(employee2);
 inviteEmployee1("Hello", "How are you?"); // Hello John Rodson, How are you?
 inviteEmployee2("Hello", "How are you?"); // Hello Jimmy Baily, How are you?
 ```
+
+## 参考资料
 
 [JavaScript 的 this 原理](https://www.ruanyifeng.com/blog/2018/06/javascript-this.html)
 
