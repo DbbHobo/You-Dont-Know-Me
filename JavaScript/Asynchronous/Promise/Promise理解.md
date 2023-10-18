@@ -72,11 +72,11 @@ Promise.prototype.finally = function (callback) {
 
 `all`和`race`传入的数组中如果有会抛出异常的异步任务，那么只有最先抛出的错误会被捕获，并且是被`then`的第二个参数或者后面的`catch`捕获；但并不会影响数组中其它的异步任务的执行。
 
-`Promise.all()`方法接受一个**数组**作为参数，p1、p2、p3都是 Promise 实例，如果不是，就会先调用下面讲到的`Promise.resolve`方法，将参数转为 Promise 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 Promise 实例。如果作为参数的 Promise 实例，自己定义了catch方法，那么它一旦被rejected，并不会触发`Promise.all()`的catch方法。
+`Promise.all()`方法接受一个**数组**作为参数，p1、p2、p3都是 `Promise` 实例，如果不是，就会先调用下面讲到的`Promise.resolve`方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 `Promise` 实例。如果作为参数的`Promise`实例，自己定义了`catch`方法，那么它一旦被 `rejected`，并不会触发`Promise.all()`的`catch`方法。
 
 p的状态由p1、p2、p3决定，分成两种情况：
--（1）只有p1、p2、p3的状态都变成fulfilled，p的状态才会变成fulfilled，此时p1、p2、p3的**返回值组成一个数组**，传递给p的回调函数。
--（2）只要p1、p2、p3之中有一个被rejected，p的状态就变成rejected，此时**第一个被reject的实例的返回值**，会传递给p的回调函数。
+-（1）只有p1、p2、p3的状态都变成`fulfilled`，p的状态才会变成`fulfilled`，此时p1、p2、p3的**返回值组成一个数组**，传递给p的回调函数。
+-（2）只要p1、p2、p3之中有一个被`rejected`，p的状态就变成`rejected`，此时**第一个被reject的实例的返回值**，会传递给p的回调函数。
 
 ```js
 const p = Promise.all([p1, p2, p3]);
@@ -84,9 +84,9 @@ const p = Promise.all([p1, p2, p3]);
 
 ### Promise.allSettled()
 
-`Promise.allSettled(iterable)` 方法接受一组 Promise 实例作为参数，包装成一个新的 Promise 实例。只有等到所有这些参数实例都返回结果，不管是fulfilled还是rejected，包装实例才会结束。该方法返回的新的 Promise 实例，一旦结束，状态总是fulfilled，不会变成rejected。状态变成fulfilled后，Promise 的监听函数接收到的参数是一个数组，每个成员对应一个传入Promise.allSettled()的 Promise 实例。
+`Promise.allSettled(iterable)` 方法接受一组 `Promise` 实例作为参数，包装成一个新的 `Promise` 实例。只有等到所有这些参数实例都返回结果，不管是`fulfilled`还是`rejected`，包装实例才会结束。该方法返回的新的 `Promise` 实例，一旦结束，状态总是`fulfilled`，不会变成`rejected`。状态变成`fulfilled`后，`Promise` 的监听函数接收到的参数是一个数组，每个成员对应一个传入`Promise.allSettled()`的 `Promise` 实例。
 
-返回结果是一个数组，该数组的每个成员都是一个对象，每个对象都有status属性，该属性的值只可能是字符串fulfilled或字符串rejected。fulfilled时，对象有value属性，rejected时有reason属性，对应两种状态的返回值。
+返回结果是一个数组，该数组的每个成员都是一个对象，每个对象都有`status`属性，该属性的值只可能是字符串`fulfilled`或字符串`rejected`。`fulfilled`时，对象有`value`属性，`rejected`时有`reason`属性，对应两种状态的返回值。
 
 ```js
 [
@@ -97,9 +97,9 @@ const p = Promise.all([p1, p2, p3]);
 
 ### Promise.race()
 
-`Promise.race(iterable)`方法：`Promise.race()`方法接受一个数组作为参数，只要入参 `Promise` 实例之中有一个实例率先改变状态，race 方法返回的 `Promise` 的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给 race 方法返回的 `Promise` 的回调函数。
+`Promise.race(iterable)`方法：`Promise.race()`方法接受一个数组作为参数，只要入参 `Promise` 实例之中有一个实例率先改变状态，`race` 方法返回的 `Promise` 的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给 `race` 方法返回的 `Promise` 的回调函数。
 
-只要p1、p2、p3之中有一个实例率先改变状态，p的状态就跟着改变。那个率先改变的 Promise 实例的返回值，就传递给p的回调函数。
+只要p1、p2、p3之中有一个实例率先改变状态，p的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给p的回调函数。
 
 ```js
 const p = Promise.race([p1, p2, p3]);

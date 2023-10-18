@@ -296,7 +296,7 @@ console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
 
 ### Array.prototype.forEach()
 
-`forEach()` 方法对数组的每个元素执行一次给定的函数。
+`forEach()` 方法对数组的每个元素执行一次给定的函数。在`forEach`中用`return`不会返回，函数会继续执行，想要中途返回可以用`some`或者`every`方法替换。
 
 ```js
 const logArrayElements = (element, index /*, array */) => {
@@ -499,6 +499,31 @@ arr[0].name = "Ben";
 ### 数组转化为字符串的方法
 
 - join
+
+### 类数组对象转化为数组
+
+- Array.prototype.slice.call(arguments)
+- Array.from(arguments)
+- [...arguments]
+- Array.prototype.concat.apply([], arguments)
+
+### 寻找数组中是否包含某个值
+
+- Array.prototype.indexOf()
+- Array.prototype.find() / Array.prototype.findLast()
+- Array.prototype.findIndex() / Array.prototype.findLastIndex()
+- Array.prototype.includes()
+
+### 数组扁平化
+
+```js
+let arr = [1, [2, [3, [4]]], 5];
+let str = JSON.stringify(arr);
+```
+
+- Array.prototype.flat()
+- str.replace(/(\[|\])/g, '').split(',')
+- JSON.parse(`[${str.replace(/\[|\]/g,'')}]`)
 
 ## 参考资料
 

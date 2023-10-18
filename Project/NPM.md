@@ -188,7 +188,7 @@ npm unlink
 
 ## npm npx yarn pnpm
 
-`npm`, `npx`, `yarn`, 和 `pnpm` 都是 `JavaScript` 生态系统中用于管理包依赖和运行脚本的工具。它们在功能和使用方式上有一些区别：
+`npm`, `npx`, `yarn` 和 `pnpm` 都是 `JavaScript` 生态系统中用于管理包依赖和运行脚本的工具。它们在功能和使用方式上有一些区别：
 
 ### npm (Node Package Manager)
 
