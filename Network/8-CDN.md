@@ -1,6 +1,6 @@
-## CDN
+# CDN
 
-### CDN 回源
+## CDN 回源
 
 - 回源原理
 
@@ -14,7 +14,7 @@
 
 `CDN` 本来是给我们的网站加速的，但是有时会因为不合适的回源策略给服务器带来负担，只有选择正确的策略才能给自己的网站带来更高的访问效率。
 
-### CDN 回源率计算方法
+## CDN 回源率计算方法
 
 回源比分为回源请求数比例及回源流量比例两种：
 
@@ -26,7 +26,7 @@
 
 回源流量是回源请求文件大小产生的流量和请求本身产生的流量 回源流量比=回源流量/回源流量+用户请求访问的流量
 
-### CDN 常见多级缓存
+## CDN 常见多级缓存
 
 - CDN 概念
 
@@ -67,6 +67,7 @@
 `CDN` 边缘节点对开发者是透明的，相比于浏览器 Ctrl+F5 的强制刷新来使浏览器本地缓存失效，开发者可以通过 `CDN` 服务商提供的“刷新缓存”接口来达到清理 `CDN` 边缘节点缓存的目的。这样开发者在更新数据后，可以使用“刷新缓存”功能来强制 `CDN` 节点上的数据缓存过期，保证客户端在访问时，拉取到最新的数据。
 
 ## 参考资料
+
 [这就是 CDN 回源原理和 CDN 多级缓存啊！](https://cloud.tencent.com/developer/article/1439913)
 [What is a content delivery network on Azure?](https://docs.microsoft.com/en-us/azure/cdn/cdn-overview)
 [Content Delivery Network (CDN) Meaning & Definition](https://www.webopedia.com/definitions/cdn/)

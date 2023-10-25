@@ -26,7 +26,7 @@
 
 当 301、 302、 303 响应状态码返回时， 几乎所有的浏览器都会把 `POST` 改成 `GET`， 并删除请求报文内的主体， 之后请求会自动再次发送。
 
-附带条件的请求是指当协商缓存命中时会返回这个状态码，采用 `GET` 方法的请求报文中包含 `If-Match`， `If-ModifiedSince`， `If-None-Match`， `If-Range`， `If-Unmodified-Since` 中任一首部。
+附带条件的请求是指当**协商缓存**命中时会返回这个状态码，采用 `GET` 方法的请求报文中包含 `If-Match`， `If-ModifiedSince`， `If-None-Match`， `If-Range`， `If-Unmodified-Since` 中任一首部。
 
 ### 4XX 状态码
 
@@ -46,4 +46,5 @@
 - **503 Service Unavailable** 表明服务器暂时处于超负载或正在进行停机维护， 现在无法处理请求。
 
 ## 参考资料
+
 [HTTP 响应代码](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Status)

@@ -8,8 +8,8 @@
 
 `HTTP` 请求报文 和 `HTTP` 响应报文都由 `Header + Body` 组成：
 
-- 在请求中， HTTP 报文由 **方法**、 **URI**、 **HTTP版本**、 **HTTP首部字段**、**实体**等部分构成。
-- 在响应中， HTTP 报文由 **HTTP版本**、 **状态码（ 数字和原因短语）** 、**HTTP首部字段**、**实体**等部分构成。
+- 在请求中， HTTP 报文由 **方法**、 **URI**、 **HTTP版本**、 **HTTP请求首部字段**、**空行**、**实体**等部分构成。
+- 在响应中， HTTP 报文由 **HTTP版本**、 **状态码（ 数字和原因短语）** 、**HTTP响应首部字段**、**空行**、**实体**等部分构成。
 
 ![web](./assets/http4.png)
 
@@ -32,7 +32,7 @@
 
 可能包含 `HTTP` 的 RFC 里未定义的首部（ `Cookie` 等）
 
-请求报文例子如下：
+**请求报文**例子如下：
 
 ```text
 /* 请求行 */
@@ -62,7 +62,7 @@ sec-fetch-site: cross-site
 user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36
 ```
 
-响应报文例子如下：
+**响应报文**例子如下：
 
 ```text
 /* 状态行 */
@@ -114,6 +114,25 @@ via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 实体首部字段是包含在请求报文和响应报文中的实体部分所使用的首部，用于补充内容的更新时间等与实体相关的信息，描述消息正文内容。
 
 ![web](./assets/http3.png)
+
+## HTTP请求方法
+
+- `GET`: 通常用来获取资源
+- `POST`: 提交数据，即上传数据
+- `HEAD`: 获取资源的元信息
+- `PUT`: 修改数据
+- `DELETE`: 删除资源
+- `CONNECT`: 建立连接隧道，用于代理服务器
+- `OPTIONS`: 列出可对资源实行的请求方法，用来跨域请求，预检请求中会遇到
+- `TRACE`: 追踪请求-响应的传输路径
+
+`GET`和`POST`请求有什么区别：
+
+从缓存的角度，`GET` 请求会被浏览器主动缓存下来，留下历史记录，而 `POST` 默认不会。
+从编码的角度，`GET` 只能进行 `URL` 编码，只能接收 `ASCII` 字符，而 `POST` 没有限制。
+从参数的角度，`GET` 一般放在 `URL` 中，因此不安全，`POST` 放在请求体中，更适合传输敏感信息。
+从幂等性的角度，`GET`是幂等的，而`POST`不是。(幂等表示执行相同的操作，结果也是相同的)
+从`TCP`的角度，`GET` 请求会把请求报文一次性发出去，而 `POST` 会分为两个 `TCP` 数据包，首先发 `header` 部分，如果服务器响应 100(continue)， 然后发 `body` 部分。(火狐浏览器除外，它的 `POST` 请求只发一个 TCP 包)
 
 ## 内容协商机制
 
@@ -185,7 +204,7 @@ type/subtype
 
 - Type multipart:
 
-```
+```text
   multipart/mixed    
   multipart/alternative   
   multipart/related (using by MHTML (HTML mail).)  

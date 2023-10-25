@@ -55,7 +55,9 @@ function isInViewPortOfOne (el) {
 }
 ```
 
-(2) `getBoundingClientRect`
+(2) `Element.getBoundingClientRect()`提供了元素的大小及其相对于视口的位置。
+
+该方法返回的 DOMRect 对象中的 `width` 和 `height` 属性是包含了 `padding` 和 `border-width` 的，而不仅仅是内容部分的宽度和高度。在标准盒子模型中，这两个属性值分别与元素的 `width/height + padding + border-width` 相等。而如果是 `box-sizing: border-box`，两个属性则直接与元素的 `width` 或 `height` 相等。
 
 ```js
 const target = document.querySelector('.target');
@@ -73,9 +75,11 @@ console.log(clientRect);
 
 如果一个元素在视窗之内的话，那么它一定满足下面四个条件：top 大于等于 0，left 大于等于 0，bottom 小于等于视窗高度，right 小于等于视窗宽度
 
-(3) Intersection Observer
+(3) `IntersectionObserver`
 
-通过`new IntersectionObserver`创建了观察者 `observer`，传入的参数 `callback` 在重叠比例超过 `threshold` 时会被执行
+`IntersectionObserver` 接口提供了一种异步观察目标元素与其祖先元素或顶级文档视口（`viewport`）交叉状态的方法。其祖先元素或视口被称为根（`root`）。
+
+通过`new IntersectionObserver`创建了观察者 `observer`，传入的参数 `callback` 在重叠比例超过 `threshold` 时会被执行。
 
 ```js
 const options = {
