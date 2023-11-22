@@ -16,6 +16,19 @@
 - `watchSyncEffect()`
 - `watch()`
 
+## 关键方法
+
+- `createRef`
+- `RefImpl`
+- `createReactiveObject`
+- `Dep`
+- `ReactiveEffect`
+- `trackRefValue`
+- `triggerRefValue`
+- `trackEffects`
+- `triggerEffects`
+- `triggerEffect`
+
 ## ref()
 
 **new RefImpl() -> new Dep() -> trackRefValue()/triggerRefValue() -> trackEffects()/triggerEffects()**
@@ -24,14 +37,15 @@
 
 官方文档提供的关于响应式API包含`ref()`函数，定义如下：接受一个**内部值**，返回一个响应式的、可更改的 `ref` 对象，此对象只有一个指向其内部值的属性 `.value`。
 
-可以先来看一下`ref`函数的实现，首先调用`createRef`传入两个参数，第一个是值，第二个根据是`ref`还是`shallowRef`传入boolean值，然后实例化一个`RefImpl`对象，文件在`reactivity/src/ref.ts`，`<RefImpl>`类的实现如下：
+可以先来看一下`ref()`函数的实现，首先调用`createRef()`传入两个参数，第一个是值，第二个根据是`ref`还是`shallowRef`传入boolean值，然后实例化一个`RefImpl`对象，`<RefImpl>`类的实现如下：
 
 ```ts
-// 深度响应式
+// 【packages/reactivity/src/ref.ts】
+// 【深度响应式】
 export function ref(value?: unknown) {
   return createRef(value, false)
 }
-// 浅响应式
+// 【浅响应式】
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
@@ -66,11 +80,13 @@ class RefImpl<T> {
   }
 
   set value(newVal) {
+    // 【旧值是浅响应的、新值只读、新值是浅响应的那么value直接赋值为新值即可，否则调用toReactive处理新值再复制给value】
+    // 【和 ref() 不同，shallowRef 的内部值将会原样存储和暴露，并且不会被深层递归地转为响应式。只有对 .value 的访问是响应式的。】
     const useDirectValue =
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
 
-    //【Object.is判断断两个值是否为同一个值】
+    //【使用Object.is判断断新值是否变化】
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
@@ -79,6 +95,7 @@ class RefImpl<T> {
     }
   }
 }
+
 // 【根据一个Vue创建的代理返回其原始对象。】
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
@@ -87,9 +104,13 @@ export function toRaw<T>(observed: T): T {
 // 【如果是对象调用reactive进行proxy代理】
 export const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
+// 【对比两个值是否变化】
+// compare whether a value has changed, accounting for NaN.
+export const hasChanged = (value: any, oldValue: any): boolean =>
+  !Object.is(value, oldValue)
 ```
 
-一个`ref`操作过的响应式对象如下，可以看到如果是原始值，那么`_rawValue`和`_value`的值是一样的，如果是一个对象，那么`_value`则是通过`proxy`改造后的值(调用`reactive()`)，`_rawValue`是原始值：
+一个`ref`操作过的响应式对象如下，可以看到如果是基础类型值，那么`_rawValue`和`_value`的值是一样的，如果是一个对象，那么`_value`则是通过`proxy`改造后的值(调用`reactive()`)，`_rawValue`是原始值：
 
 ![ref](./assets/ref1.png)
 
@@ -101,9 +122,9 @@ export const toReactive = <T extends unknown>(value: T): T =>
 
 - 关键词`Proxy()`、`<Dep>`、`<ReactiveEffect>`
 
-官方文档提供的关于响应式API包含`reactive()`函数定义如下，返回一个**对象**的响应式代理。
+官方文档提供的关于响应式API包含`reactive()`函数，定义如下：返回一个**对象**的响应式代理。
 
-`reactive`方法其实是调用`createReactiveObject`方法，文件在`reactivity/src/reactive.ts`，可以看到经过一系列判断，最终会用ES6特性`Proxy`包裹`target`对象，对`target`进行代理，最终返回一个响应式对象，并且用一个名为`reactiveMap`的`WeakMap`来存储`target`和对应的`proxy`用于后续的判断（代理过了也就无需再次处理了）：
+`reactive`方法其实是调用`createReactiveObject()`方法，可以看到经过一系列判断，最终会用ES6特性`Proxy`包裹`target`对象，对`target`进行代理，最终返回一个响应式对象，并且用一个名为`reactiveMap`的`WeakMap`来存储`target`和对应的`proxy`用于后续的判断（代理过了也就无需再次处理了）：
 
 - 对象已经是`Proxy`代理对象就直接返回
 - `reactiveMap`已经有此`Proxy`代理对象直接返回
@@ -113,7 +134,8 @@ export const toReactive = <T extends unknown>(value: T): T =>
 - 将当前`Proxy`代理对象加入`reactiveMap`中
 
 ```ts
-export const reactiveMap = new WeakMap<Target, any>()
+// 【packages/reactivity/src/reactive.ts】
+export const reactiveMap = new WeakMap<Target, any>()//【已有的reactive对象】
 export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 export const shallowReadonlyMap = new WeakMap<Target, any>()
@@ -123,6 +145,7 @@ export function reactive(target: object) {
   if (isReadonly(target)) {
     return target
   }
+  // 【mutableHandlers，mutableCollectionHandlers对target进行代理】
   return createReactiveObject(
     target,
     false,
@@ -172,7 +195,7 @@ function createReactiveObject(
     return target
   }
 
-  //【实例化Proxy对象，'Map'、'Set'、'WeakMap'、'WeakSet'类型使用collectionHandlers代理，'Object'、'Array'类型使用baseHandlers代理】
+  //【实例化Proxy对象，'Map'、'Set'、'WeakMap'、'WeakSet'类型使用collectionHandlers->mutableCollectionHandlers代理，'Object'、'Array'类型使用baseHandlers->mutableHandlers代理】
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
@@ -240,6 +263,7 @@ export const toRawType = (value: unknown): string => {
 我们先来研究常规的处理`Object`和`Array`的`mutableHandlers`，代理了五个方法`get`,`set`,`deleteProperty`,`has`,`ownKeys`具体如下：
 
 ```ts
+// 【packages/reactivity/src/baseHandlers.ts】
 //【不同API的代理handler不同】
 import {
   mutableHandlers,
@@ -430,6 +454,43 @@ import {
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 
+export const mutableCollectionHandlers: ProxyHandler<CollectionTypes> = {
+  get: /*#__PURE__*/ createInstrumentationGetter(false, false)
+}
+
+function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
+  const instrumentations = shallow
+    ? isReadonly
+      ? shallowReadonlyInstrumentations
+      : shallowInstrumentations
+    : isReadonly
+    ? readonlyInstrumentations
+    : mutableInstrumentations
+
+  return (
+    target: CollectionTypes,
+    key: string | symbol,
+    receiver: CollectionTypes
+  ) => {
+    if (key === ReactiveFlags.IS_REACTIVE) {
+      return !isReadonly
+    } else if (key === ReactiveFlags.IS_READONLY) {
+      return isReadonly
+    } else if (key === ReactiveFlags.RAW) {
+      return target
+    }
+
+    return Reflect.get(
+      hasOwn(instrumentations, key) && key in target
+        ? instrumentations
+        : target,
+      key,
+      receiver
+    )
+  }
+}
+
+// 【代理了如下方法】
 const mutableInstrumentations: Record<string, Function> = {
   get(this: MapTypes, key: unknown) {
     return get(this, key)
@@ -596,11 +657,12 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
 
 ### Dep
 
-在依赖收集的方法`track`、`trackEffects`中我们会调用`createDep`方法创建`dep`实例（代表一个“依赖”），它和`ReactiveEffect`实例（代表一个“更新”）是多对多关系。
+在依赖收集的方法`trackRefValue()`、`track()`、`trackEffects()`中我们会调用`createDep()`方法创建`dep`实例（代表当前数据对应的一个“依赖”），它和`ReactiveEffect`实例（代表一个“更新”）是多对多关系。
 
-然后我们再来看`createDep`函数看一下`dep`的结构，可以看到`dep`是`Set`类型，收集的是`<ReactiveEffect>`类型的`effects`，`<Dep>`类的实现如下，`dep`实例其实就是一个`ReactiveEffect`实例数组构造的`Set`，还有`w`、`n`两个属性：
+然后我们再来看`createDep()`函数看一下`dep`的结构，可以看到`dep`是`Set`类型，收集的是`<ReactiveEffect>`实例`effects`，`<Dep>`类的实现如下，`dep`实例其实就是一个`ReactiveEffect`实例数组构造的`Set`，还有`w`、`n`两个属性：
 
 ```ts
+// 【packages/reactivity/src/dep.ts】
 export const createDep = (effects?: ReactiveEffect[]): Dep => {
   const dep = new Set<ReactiveEffect>(effects) as Dep
   //【effect.run执行前收集过-was】
@@ -613,12 +675,19 @@ export const createDep = (effects?: ReactiveEffect[]): Dep => {
 
 ### ReactiveEffect
 
-`<ReactiveEffect>`类的实现如下，`run()`方法根据`effectTrackDepth <= maxMarkerBits`判断执行`initDepMarkers(this)`和`finalizeDepMarkers(this)`或`cleanupEffect(this)`，最后会执行`fn()`回调进行具体的创建或者更新组件等：
+`<ReactiveEffect>`类的实现如下，`ReactiveEffect`实例主要保存有`deps`数组、`parent`父副作用实例、`run()`方法、`stop()`方法等。
+
+那么`<ReactiveEffect>`类型的`effects`会在何时实例化呢，可以看到如下，在`effect`、`watch`、`computed`、`render`等api的实现中会实例化`ReactiveEffect`用于依赖收集和派发更新，并且收集所有用到的数据对应的`dep`实例：
+
+![ref](./assets/ref2.png)
+
+`run()`方法根据`effectTrackDepth <= maxMarkerBits`判断执行`initDepMarkers(this)`和`finalizeDepMarkers(this)`或`cleanupEffect(this)`。根据组件化的特性可以知道，`effect`实例是存在嵌套关系的，所以Vue规定了一个最大的嵌套深度30，通过位运算的每一位去对应当前`effect`实例。最后会执行`fn()`回调进行具体的创建或者更新组件等，前文中提到过组件的构建此时就会调用`componentUpdateFn()`方法。
 
 ```ts
+// 【packages/reactivity/src/effect.ts】
 // 【全局唯一的activeEffect，存储当前创建/运行的组件ReactiveEffect实例】
 export let activeEffect: ReactiveEffect | undefined
-// 【默认需要收集】
+// 【默认需要依赖收集】
 export let shouldTrack = true
 /**
 JavaScript 将数字存储为 64 位浮点数，但所有按位运算都以 32 位二进制数执行。
@@ -635,7 +704,7 @@ const maxMarkerBits = 30
 // The number of effects currently being tracked recursively.
 // 【依赖收集深度】
 let effectTrackDepth = 0
-// 【当前操作哪一位】
+// 【当前操作哪一位对应哪个effect实例】
 export let trackOpBit = 1
 
 export class ReactiveEffect<T = any> {
@@ -689,11 +758,11 @@ export class ReactiveEffect<T = any> {
       activeEffect = this
       shouldTrack = true
 
-      //【trackOpBit 是代表当前操作的位，它是由 effect 嵌套深度effectTrackDepth决定】
+      //【trackOpBit 是代表当前操作的位，它是由effect实例已经收集的依赖深度effectTrackDepth决定】
       //【初始值...000010】
       trackOpBit = 1 << ++effectTrackDepth
 
-      //【如果依赖收集嵌套深度比最大限制30还大，就用兜底方案也就是清除所有effect，否则给当前effect的所有deps标记w已经收集过】
+      //【如果依赖收集嵌套深度比最大限制30还大，就用兜底方案也就是清除所有依赖，否则给当前effect实例对应的所有deps标记w已经收集过】
       if (effectTrackDepth <= maxMarkerBits) {
         initDepMarkers(this)
       } else {
@@ -733,7 +802,7 @@ export class ReactiveEffect<T = any> {
   }
 }
 
-// 【遍历当前ReactiveEffect实例的deps然后对每一个dep实例w属性进行标记收集过】
+// 【遍历当前ReactiveEffect实例的deps然后对每一个dep实例w属性进行标记收集过，trackOpBit就是当前effect实例所在位】
 export const initDepMarkers = ({ deps }: ReactiveEffect) => {
   if (deps.length) {
     for (let i = 0; i < deps.length; i++) {
@@ -742,7 +811,7 @@ export const initDepMarkers = ({ deps }: ReactiveEffect) => {
   }
 }
 
-// 【遍历当前ReactiveEffect实例的deps根据是否收集过以及是否重新收集的，否则当前ReactiveEffect实例的deps推入此dep】
+// 【遍历当前ReactiveEffect实例的deps根据是否收集过以及是否重新收集的，如果原来收集过但没有被重新收集则当前dep实例删除当前effect实例并且不会再次加入deps，也就是从当前effect实例的deps数组中剔除，相当于解除了这种依赖收集关系】
 export const finalizeDepMarkers = (effect: ReactiveEffect) => {
   const { deps } = effect
   if (deps.length) {
@@ -765,7 +834,7 @@ export const finalizeDepMarkers = (effect: ReactiveEffect) => {
   }
 }
 
-//【超限的时候需要清空所有依赖】
+//【effect深度超限的时候需要清空所有依赖】
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
@@ -777,22 +846,65 @@ function cleanupEffect(effect: ReactiveEffect) {
 }
 ```
 
-那么`<ReactiveEffect>`类型的`effects`会在何时实例化呢，可以看到如下，在`effect`、`watch`、`computed`、`render`等api的实现中会实例化`ReactiveEffect`用于依赖收集和派发更新：
-
-![ref](./assets/ref2.png)
-
 ## 响应式过程
 
-前文我们讲到在调用`ref()`/`reactive()`等`API`时，在改写对象属性的`get`/`set`时会调用`trackRefValue()`/`triggerRefValue()`/`track()`/`trigger()`方法进入依赖收集和派发更新过程，也就是俗称的响应式。接下来就看一下这几个方法：
+前文我们讲到在调用`ref()`/`reactive()`等`API`时，在改写对象属性的`get`/`set`时会调用`trackRefValue()`/`triggerRefValue()`/`track()`/`trigger()`方法。而这些响应式对象的属性读取`get`和改写`set`通常是在`watch()`、`computed()`、`template`渲染等时机触发，此时就会调用`trackRefValue()`/`triggerRefValue()`/`track()`/`trigger()`等方法进入依赖收集和派发更新过程，也就是俗称的响应式。在组件的`render`方法生成`VNode`的过程中，我们可以看到对响应式对象的引用，在组件挂载、更新过程中都会依赖收集和派发更新，下面是一个`template`编译成的`render`方法例子：
 
-### `trackRefValue`/`triggerRefValue`
+```js
+(function anonymous(
+) {
+const _Vue = Vue
+const { createElementVNode: _createElementVNode, createTextVNode: _createTextVNode } = _Vue
 
-- 依赖收集`trackRefValue`/派发更新`triggerRefValue`
+const _hoisted_1 = ["id"]
+const _hoisted_2 = { style: {"color":"red"} }
+const _hoisted_3 = ["onClick"]
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, toDisplayString: _toDisplayString, createElementVNode: _createElementVNode, createTextVNode: _createTextVNode } = _Vue
+
+    return (_openBlock(), _createElementBlock(_Fragment, null, [
+      (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(commits, ({ commit }) => {
+        return (_openBlock(), _createElementBlock("div", { key: commit }, [
+          _createElementVNode("span", { id: commit.author }, _toDisplayString(commit.author.name), 9 /* TEXT, PROPS */, _hoisted_1),
+          _createTextVNode(" --- "),
+          _createElementVNode("span", null, _toDisplayString(commit.author.date), 1 /* TEXT */)
+        ]))
+      }), 128 /* KEYED_FRAGMENT */)),
+      _createElementVNode("div", _hoisted_2, _toDisplayString(currentBranchPlus), 1 /* TEXT */),
+      _createElementVNode("div", {
+        style: {"color":"aquamarine"},
+        onClick: $event => (clickToChangeBranch())
+      }, " click me!" + _toDisplayString(reactiveObj.name), 9 /* TEXT, PROPS */, _hoisted_3)
+    ], 64 /* STABLE_FRAGMENT */))
+  }
+}
+})
+```
+
+除此之外`watch()`、`computed()`等API中同样也会进入依赖收集和派发更新过程。
+
+### `trackRefValue()`/`triggerRefValue()`
+
+- 依赖收集`trackRefValue()`/派发更新`triggerRefValue()`
 - 在`ref()`实例化`RefImpl`然后改写`value`属性的`getter`/`setter`中使用
-- 最终会调用`trackEffects`/`triggerEffects`
+- 最终会调用`trackEffects()`/`triggerEffects()`
 - 当前`ref`对象有无对应`dep`实例，若无则调用`createDep()`创建一个，并挂在当前`ref`对象的`dep`属性上
 
+`trackRefValue()`过程：
+
+1. 获取`ref`实例的原始对象
+2. `ref`实例若不存在就调用`createDep()`创建对应的`dep`实例
+3. 调用`trackEffects(dep)`进入依赖收集过程
+
+`triggerRefValue()`过程：
+
+1. 获取`ref`实例的原始对象
+2. 此时`ref`实例必然有对应的`dep`实例，直接调用`triggerEffects(dep)`
+
 ```ts
+// 【packages/reactivity/src/ref.ts】
 //【基础ref包含dep（可选）和value属性】
 type RefBase<T> = {
   dep?: Dep
@@ -808,7 +920,8 @@ export const enum TrackOpTypes {
 
 export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
-    // 【获取ref对象的原始值】
+    // 【获取ref对象的原始对象】
+    // 【这是一个可以用于临时读取而不引起代理访问/跟踪开销，或是写入而不触发更改的特殊方法。不建议保存对原始对象的持久引用，请谨慎使用。】
     ref = toRaw(ref)
     // 【ref.dep若不存在，调用createDep()生成对应dep】
     if (__DEV__) {
@@ -848,15 +961,38 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
 }
 ```
 
+![ref](./assets/reactive1.png)
+![ref](./assets/reactive2.png)
+
 ### `track`/`trigger`
 
-- 依赖收集`track`/派发更新`trigger`
-- 在`reactive()`的用`Proxy`代理的`get`/`set`/`deleteProperty`/`has`/`ownKeys`方法中使用
-- 最终会调用`trackEffects`/`triggerEffects`
+- 依赖收集`track()`/派发更新`trigger()`
+- 在`reactive()`的用`Proxy`代理的`get()`/`set()`/`deleteProperty()`/`has()`/`ownKeys()`方法中调用
+- 最终会调用`trackEffects()`/`triggerEffects()`
 - `targetMap`是一个全局`WeakMap`对象，用来存储`<响应式对象，响应式对象对应的deps map>`，`响应式对象对应的deps map`存储的是`<属性，属性对应的dep map>`，在依赖收集和派发更新的过程中会对这个全局对象进行操作
 
+`track()`过程：
+
+1. 首先在全局对象`targetMap`中查找是否存在`target`对象的`depsMap`，有就获取没有就创建
+2. 然后在`target`对象对应的`depsMap`中查找是否存在`key`属性对应的`dep`实例，在对象中每个属性都会有一个对应`dep`实例，有就获取没有就创建
+3. 上面两步其实就是找到某个`reactive`对象的某个属性对应的`dep`过程，然后调用`trackEffects(dep)`进入依赖收集过程
+
+![ref](./assets/reactive3.png)
+![ref](./assets/reactive4.png)
+![ref](./assets/reactive5.png)
+
+`trigger()`过程：
+
+1. 从全局对象`targetMap`中找到`target`对象的`depsMap`，找不到说明根本没经过依赖收集直接退出
+2. 然后根据操作类型在`target`对象对应的`depsMap`中找到`key`属性对应的`dep`实例们，比如`clear`操作那就是所有属性对应的`dep`实例，再比如修改数组的length操作那就要判断如果length小于原来长度，那么超出来的部分都是需要去更新的部分等等情况
+3. 上面两步其实就是找到某个`reactive`对象改动之后需要去触发更新的所有`dep`实例们，然后调用`triggerEffects(dep)`进入派发更新过程，如果是多个`dep`就需要遍历调用
+
+![ref](./assets/reactive6.png)
+![ref](./assets/reactive7.png)
+
 ```ts
-//【依赖收集的操作类型】
+// 【packages/reactivity/src/effect.ts】
+//【-----依赖收集的操作类型-----】
 export const enum TrackOpTypes {
   GET = 'get',
   HAS = 'has',
@@ -876,13 +1012,13 @@ const targetMap = new WeakMap<any, KeyToDepMap>()
 //【依赖收集-reactive是对象，要对对象里每一个属性进行操作】
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
-    // 【targetMap：{target -> key -> dep}，首先找到目标对象target对应的map数据，没有就新建一个空map】
+    // 【第一步：targetMap：{target -> key -> dep}，首先找到目标对象target对应的map数据，没有就新建一个空map】
     let depsMap = targetMap.get(target)
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
     }
 
-    // 【获取目标对象target的key属性对应的dep set，没有获取到就创建一个空dep set并加入】
+    // 【第二步：获取目标对象target的key属性对应的dep set，没有获取到就创建一个空dep set并加入】
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = createDep()))
@@ -892,12 +1028,12 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
       ? { effect: activeEffect, target, type, key }
       : undefined
 
-    // 【进入真正的依赖收集过程】
+    // 【第三步：进入真正的依赖收集过程】
     trackEffects(dep, eventInfo)
   }
 }
 
-//【派发更新的操作类型】
+//【-----派发更新的操作类型-----】
 export const enum TriggerOpTypes {
   SET = 'set',
   ADD = 'add',
@@ -931,7 +1067,7 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
-    //【数组的length改变或者通过索引改变某一项的情况，length的话相当于数组每一项的dep都要，改变某一项就将此项对应的dep加入】
+    //【数组的length改变或者通过索引改变某一项的情况，length的话相当于数组每一项的dep都要更新，改变某一项就将此项对应的dep加入】
     depsMap.forEach((dep, key) => {
       if (key === 'length' || key >= toNumber(newValue)) {
         deps.push(dep)
@@ -1015,11 +1151,29 @@ export function trigger(
 
 ### `trackEffects`/`triggerEffects`
 
-- 依赖收集`trackEffects`/派发更新`triggerEffects`
-我们来分析一下**依赖收集**和**派发更新**的具体过程，`activeEffect`用于收集全局唯一的当前正在收集的这个`effect`，`dep`实例有两个属性`w`和`n`用于判断是否需要将当前`effect`加入`dep Set`进行收集，`w`用来表示以前是否被收集过，`n`表示是否是这一轮新收集的，这两标记用二进制表示，用于与`trackOpBit`做位运算，先看`trackEffects`函数经过一系列判断，最关键的是在`dep.add(activeEffect!);activeEffect!.deps.push(dep);`语句就是完成依赖收集的过程，再看`triggerEffects`函数，将`dep`转化为数组并且遍历调用`triggerEffect`函数，然后调用每一个`effect`实例的`scheduler()`或`run()`方法，进行派发更新。
+- 依赖收集`trackEffects()`/派发更新`triggerEffects()`
+- `effect.run()`方法中确定全局唯一的`activeEffect`是当前正在处理的`effect`实例
+
+我们来分析一下**依赖收集**和**派发更新**的具体过程，`activeEffect`用于收集全局唯一的当前正在收集的这个`effect`实例，`dep`实例有两个属性`w`和`n`用于判断是否需要将当前`effect`加入`dep Set`进行收集，`w`用来表示以前是否被收集过，`n`表示是否是这一轮新收集的，这两标记用二进制表示，用于与`trackOpBit`做位运算，先看`trackEffects()`函数经过一系列判断，最关键的是在`dep.add(activeEffect!);activeEffect!.deps.push(dep);`语句就是完成依赖收集的过程，再看`triggerEffects`函数，将`dep`转化为数组并且遍历调用`triggerEffect`函数，然后调用每一个`effect`实例的`scheduler()`或`run()`方法，进行派发更新。`scheduler()`和`run()`的主要区别是前者可以把任务放在任务队列的队头队中或者队尾由用户自行控制，后者则是默认的方式执行，同样的是两者都是派发更新去执行最终的回调`fn()`(实例化`ReactiveEffect`的第一个参数，比如组件更新是`componentUpdateFn`、侦听器或者计算属性就是一个`getter`)。
+
+`trackEffects()`过程：
+
+1. 判断是否需要进行依赖收集，需要的话进行下一步
+2. 把当前`effect`实例加入当前`dep`
+3. 把当前`dep`加入当前`effect`实例的`deps`中
+
+![ref](./assets/reactive8.png)
+
+`triggerEffects()`过程：
+
+1. 遍历`dep`中收集的所有`effect`实例并调用`triggerEffect()`
+2. `triggerEffect()`中去调用`effect`实例的`scheduler()`或`run()`方法，继而真正的去更新视图或者其他回调
+
+![ref](./assets/reactive9.png)
 
 ```ts
-//【依赖收集嵌套深度】
+// 【packages/reactivity/src/effect.ts】
+//【-----依赖收集嵌套深度-----】
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
 export let trackOpBit = 1
@@ -1041,6 +1195,7 @@ export function trackEffects(
   //【判断是否需要track】
   if (effectTrackDepth <= maxMarkerBits) {
     if (!newTracked(dep)) {
+      // 【将当前dep对应的effect实例所在位设置为1，代表是新收集的】
       dep.n |= trackOpBit // set newly tracked
       shouldTrack = !wasTracked(dep)
     }
@@ -1063,6 +1218,7 @@ export function trackEffects(
   }
 }
 
+// 【-----派发更新-----】
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
@@ -1234,4 +1390,6 @@ export const toReadonly = <T extends unknown>(value: T): T =>
 
 ## 总结
 
-响应式的核心思想还是**依赖收集**和**派发更新**，但和Vue2的实现方式大不相同。Vue2中核心方法是`Object.defineProperty()`，因此只能做到监听对象的已有属性，还有对数组要进行特殊处理，针对数组的一部分方法进行改写，手动去监听，因此Vue2中的响应式有一定的局限性。而在Vue3中应用ES6的Proxy进行响应式改造使得Array、Map、Set都能变成响应式对象，并且将响应式的内容进行单独模块划分。
+响应式的核心思想还是**依赖收集**和**派发更新**，但和Vue2的实现方式大不相同。Vue2中核心方法是`Object.defineProperty()`，因此只能做到监听对象的已有属性，还有对数组要进行特殊处理，针对数组的一部分方法进行改写，手动去监听，因此Vue2中的响应式有一定的局限性。而在Vue3中应用ES6的`Proxy`进行响应式改造使得`Array`、`Map`、`Set`都能变成响应式对象，并且将响应式的内容进行单独模块划分。
+
+![vue](./assets/vue3响应式.png)

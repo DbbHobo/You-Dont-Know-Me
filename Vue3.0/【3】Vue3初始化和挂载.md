@@ -1,8 +1,28 @@
 # `Vue3` 的初始化过程和挂载过程
 
+## 关键方法
+
+- `createApp`
+- `ensureRenderer`
+- `baseCreateRenderer`
+- `createAppAPI`
+- `mount`
+- `render`
+- `createBaseVNode`
+
 ## Vue 初始化
 
 我们来分析一下首次渲染的过程，首先，在`Vue3`中，我们初始化`Vue`实例通常是调用 `Vue.createApp` 方法写出如下的代码：
+
+```html
+<div id="demo">
+  <div v-for="{ commit, url } in commits" :key="commit">
+    <span :id="commit.author">{{ commit.author.date }}</span>
+    ---
+    <span @click="handleClick()">{{ url }}</span>
+  </div>
+</div>
+```
 
 ```js
 const API_URL = `https://api.github.com/repos/vuejs/core/commits?per_page=3&sha=`
@@ -13,15 +33,12 @@ Vue.createApp({
     currentBranch: 'main',
     commits: null
   }),
-
   created() {
     this.fetchData()
   },
-
   watch: {
     currentBranch: 'fetchData'
   },
-
   methods: {
     fetchData() {
       fetch(`${API_URL}${this.currentBranch}`)
@@ -41,13 +58,14 @@ Vue.createApp({
 }).mount('#demo')
 ```
 
-## 生成App实例过程
+## 生成app实例过程
 
-首先来看 `createApp` 方法，传入 `options` 会创建一个APP实例并调用 `mount` 方法，`APP` 实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount` 方法的第一个参数作为根元素，`createApp` 方法在 `runtime-dom/index.ts` 中查看：
+首先来看 `createApp` 方法，传入 `options` 会创建一个APP实例并调用 `mount` 方法，`app` 实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，`mount` 方法的第一个参数作为根元素：
 
-```js
+```ts
+// 【/packages/runtime-core/src/apiCreateApp.ts】
 export const createApp = ((...args) => {
-  //【ensureRenderer返回render和createApp方法】
+  //【ensureRenderer返回render和createApp方法，生成app实例】
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -56,6 +74,7 @@ export const createApp = ((...args) => {
   }
   //【先把mount方法缓存下来，同vue2.0】
   const { mount } = app 
+  // 【重写mount方法，针对浏览器渲染进行具体的处理，比如寻找根节点（根容器）然后再调用缓存的mount方法进行挂载】
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
@@ -98,7 +117,7 @@ export const createApp = ((...args) => {
 
 `mount` 方法中传入的 `container` 经过 `normalizeContainer` 方法处理如下：
 
-```js
+```ts
 function normalizeContainer(
   container: Element | ShadowRoot | string
 ): Element | null {
@@ -126,9 +145,10 @@ function normalizeContainer(
 }
 ```
 
-`ensureRenderer` 其实最终调用的是 `baseCreateRenderer` 方法返回的 `render` 和 `createAppAPI`，`createApp` 由 `createAppAPI` 传入 `render` 方法然后返回，所以能调用 `ensureRenderer().createApp(...args)` 并返回`APP`实例：
+`ensureRenderer` 其实最终调用的是 `baseCreateRenderer` 方法返回的 `render` 和 `createAppAPI`，`createApp` 由 `createAppAPI` 传入 `render` 方法然后返回，所以调用 `ensureRenderer().createApp(...args)` 并返回`app`实例：
 
-```js
+```ts
+// 【packages/runtime-core/src/renderer.ts】
 const render: RootRenderFunction = (vnode, container, isSVG) => {
   if (vnode == null) {
     if (container._vnode) {
@@ -151,7 +171,7 @@ return {
 
 这样我们继续来看一下 `createAppAPI` 方法定义如下，生成 `APP` 实例包含 `use`、`mixin`、`component`、`directive`、`mount`、`unmount`、`provide` 等方法，传入的 `render` 方法会在 `mount` / `unmount` 方法中调用：
 
-```js
+```ts
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
@@ -271,7 +291,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          //【创建虚拟VNode】
+          //【创建VNode】
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -373,11 +393,56 @@ export function createAppContext(): AppContext {
 }
 ```
 
+由以上分析可知：开发者写的`Vue.createApp({...}).mount('#demo')`实际上就是生成了一个`app`实例，并且调用实例方法`mount`进行挂载。
+
+![vue](./assets/vue1.png)
+![vue](./assets/vue2.png)
+
 ## 挂载过程 生成VNode调用render去操作DOM挂载
 
-然后我们接着去看 `mount` 方法，在 `mount` 方法会调用 `createVNode` 创建虚拟 `VNode`，虚拟 `VNode` 传入 `render` 方法进行渲染：
+然后我们接着去看 `mount` 方法，在 `mount` 方法会调用 `createVNode` 创建 `VNode`， `VNode` 传入 `render` 方法进行渲染：
 
-```js
+```ts
+//【先把mount方法缓存下来，同vue2.0】
+const { mount } = app 
+// 【重写mount方法，针对浏览器渲染进行具体的处理，比如寻找根节点（根容器）然后再调用缓存的mount方法进行挂载】
+app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+  const container = normalizeContainer(containerOrSelector)
+  if (!container) return
+
+  const component = app._component
+  if (!isFunction(component) && !component.render && !component.template) {
+    // __UNSAFE__
+    // Reason: potential execution of JS expressions in in-DOM template.
+    // The user must make sure the in-DOM template is trusted. If it's
+    // rendered by the server, the template should not contain any user data.
+    component.template = container.innerHTML
+    // 2.x compat check
+    if (__COMPAT__ && __DEV__) {
+      for (let i = 0; i < container.attributes.length; i++) {
+        const attr = container.attributes[i]
+        if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          compatUtils.warnDeprecation(
+            DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
+            null
+          )
+          break
+        }
+      }
+    }
+  }
+
+  // clear content before mounting
+  container.innerHTML = ''
+  const proxy = mount(container, false, container instanceof SVGElement)
+  if (container instanceof Element) {
+    container.removeAttribute('v-cloak')
+    container.setAttribute('data-v-app', '')
+  }
+  return proxy
+}
+
+// 【缓存的mount方法如下】
 mount(
     rootContainer: HostElement,
     isHydrate?: boolean,
@@ -392,7 +457,7 @@ mount(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
         }
-        //【生成虚拟VNode】
+        //【1. 生成VNode】
         const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -411,8 +476,10 @@ mount(
         if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
         } else {
+            // 【2. 根据VNode和根容器进行DOM挂载】
             render(vnode, rootContainer, isSVG)
         }
+        // 【render调用完毕，已经完成挂载，isMounted设为true】
         isMounted = true
         app._container = rootContainer  //根元素
         // for devtools and telemetry
@@ -435,11 +502,20 @@ mount(
 },
 ```
 
-### 生成虚拟VNode过程
+### 生成VNode过程
 
-`createVNode` 方法具体实现，在`runtime-core/src/vnode.ts`中，实际是调用 `_createVNode` 方法，这一步确定 `shapeFlag`、`patchFlag` 等，如果有 `children` 则`normailize`：
+```ts
+//【1. 生成VNode】
+const vnode = createVNode(
+    rootComponent as ConcreteComponent,
+    rootProps
+)
+```
 
-```js
+`createVNode` 方法具体实现是调用 `_createVNode` 方法，这一步确定 `shapeFlag`、`patchFlag` 等，如果有 `children` 则 `normailize`：
+
+```ts
+// 【packages/runtime-core/src/vnode.ts】
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -501,7 +577,8 @@ function _createVNode(
       props.style = normalizeStyle(style)
     }
   }
-  // 判断当前内容是何shapeFlag
+  // 【判断当前内容是何shapeFlag，我们的例子中传的是type:{template:'...'}，所以shapeFlag是4也就是STATEFUL_COMPONENT】
+  // 【type可能性其实有很多种，可能是DOM可能是对象可能是函数，从而分为不同的shapeFlag】
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
@@ -540,9 +617,12 @@ function _createVNode(
 }
 ```
 
-可以看到最后返回的是 `createBaseVNode` 如下，`Vue3`构造虚拟`VNode` 和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag` 等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个 `VNode` 在后续的 `update` 过程中是否需要 `patch` 或者如何去 `patch`，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag` 使用的是默认值0，`shapeFlag` 是 `ShapeFlags.ELEMENT`：
+![vue](./assets/vue3.png)
 
-```js
+可以看到最后返回的是 `createBaseVNode` 如下，`Vue3`构造`VNode` 和`Vue2`并不太一样，增加了 `type`、`patchFlag`、`shapeFlag` 等字段用于后续的`patch`方法优化，同样也会规范化子节点，然后我们可以在源码中看到这样一段注释 presence of a patch flag indicates this node needs patching on updates，说明`patchFlag`用于判断这个 `VNode` 在后续的 `update` 过程中是否需要 `patch` 或者如何去 `patch`，这是`Vue3`在`Vue2`基础上的一个优化点，这是我们首次渲染根实例，`patchFlag` 使用的是默认值0，`shapeFlag` 是 `ShapeFlags.ELEMENT`：
+
+```ts
+// 【packages/runtime-core/src/vnode.ts】
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -628,11 +708,23 @@ function createBaseVNode(
 }
 ```
 
+<!-- 【TODO：看一下normalizeChildren方法】 -->
+
+这一步通过最终调用`createBaseVNode`方法返回对应的`VNode`，以供后续挂载使用。
+
+![vue](./assets/vue4.png)
+
 ### 挂载到根元素过程
 
-然后我们接着去看 `render` 方法，在 `runtime-core/src/renderer.ts`中，可以看到入参有3个参数，分别是虚拟VNode、根元素、isSvg，可以看到其中还有一个判断条件VNode是否为null，是的话调用 `unmount` 方法卸载掉内容，否则就执行 `patch` 方法：
+```ts
+// 【2. 根据VNode和根容器进行DOM挂载】
+render(vnode, rootContainer, isSVG)
+```
 
-```js
+然后我们接着去看 `render` 方法，可以看到入参有3个参数，分别是`VNode`、根元素、isSvg，可以看到其中还有一个判断条件`VNode`是否为null，是的话调用 `unmount` 方法卸载掉内容，否则就执行 `patch` 方法：
+
+```ts
+// 【packages/runtime-core/src/renderer.ts】
 const render: RootRenderFunction = (vnode, container, isSVG) => {
   if (vnode == null) {
     if (container._vnode) {
@@ -647,15 +739,20 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 }
 ```
 
-下一步我们走进 `patch` 方法，
-1. 首先`isSameVNodeType`判断两个`VNode`节点是否相同，不同直接把`old VNode`的内容给unmount；
-2. `n2.patchFlag === PatchFlags.BAIL`判断`new VNode`的`patchFlag`是否为`BAIL`类型，是则optimize设为false，后续要进行full patch
-3. 可以看到根据`new VNode`的type不同Switch语句走了不同的分支，调用了不同的方法；
-  - 可以看一下其中一个比较简单的例子，在`case 'Static'`，再根据`old VNode`是否存在，如果不存在，直接调用`mountStaticNode`插入`new Vnode`的静态内容，如果存在则调用`patchStaticNode`对比新旧静态节点。
+![vue](./assets/vue5.png)
 
-可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造虚拟VNode时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的`VNode`有不同的对比方法。`patch` 方法如下：
+其实`render`方法的核心就是`patch`方法，下一步我们走进 `patch` 方法：
 
-```js
+1. 首先n1存在的情况下`isSameVNodeType`判断两个`VNode`节点是否相同，不同直接把`old VNode`的内容给`unmount`；
+2. `n2.patchFlag === PatchFlags.BAIL`判断`new VNode`的`patchFlag`是否为`BAIL`类型，是则optimize设为false，后续要进行full patch；
+3. 可以看到根据`n2`的`type`不同`switch`语句走了不同的分支，调用了不同的方法；
+  
+可以看一下其中一个比较简单的例子，在`case 'Static'`，再根据`old VNode`是否存在，如果不存在，直接调用`mountStaticNode`插入`n2`的静态内容，如果存在则调用`patchStaticNode`对比新旧静态节点。
+
+可以看到在 `patch` 这块`Vue3`和`Vue2`并不太一样，在构造`VNode`时候的 `type`、`patchFlag`、`shapeFlag` 都是用于优化 `patch` 过程的，不同类型的`VNode`有不同的对比方法。`patch` 方法如下：
+
+```ts
+// 【packages/runtime-core/src/renderer.ts】
 const patch: PatchFn = (
     n1,
     n2,
@@ -672,18 +769,21 @@ const patch: PatchFn = (
     }
 
     // patching & not same type, unmount old tree
+    // 【n1，n2的type不同直接卸载旧节点挂载新节点】
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
     }
 
+    // 【n2的patchFlag若是BAIL则后续进行full patch不走优化流程】
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
       n2.dynamicChildren = null
     }
 
     const { type, ref, shapeFlag } = n2
+    // 【根据新VNode也就是n2的type走进不同的分支进行处理】
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -791,10 +891,13 @@ const patch: PatchFn = (
 
 ```
 
-然后挂载根组件我们走进的是`processComponent`方法，这个分支，由于没有`old VNode`，所以直接进入`mountComponent`方法，最终会生成DOM并渲染：
+![vue](./assets/vue6.png)
 
-```js
-// 组件首次挂载or更新走mountComponent or updateComponent
+然后根据前文我们知道当前`VNode`的`shapeFlag`是4也就是`STATEFUL_COMPONENT`。当前挂载根组件我们走进的是`processComponent`方法，这个分支，由于是首次渲染所以`n1`为null，所以直接进入`mountComponent`方法，最终会生成DOM并渲染：
+
+```ts
+// 【packages/runtime-core/src/renderer.ts】
+// 【组件首次挂载or更新走 mountComponent or updateComponent】
 const processComponent = (
   n1: VNode | null,
   n2: VNode,
@@ -842,7 +945,7 @@ const mountComponent: MountComponentFn = (
     isSVG,
     optimized
   ) => {
-    // 创建组件实例instance
+    // 【1.创建组件实例instance】
     // 2.x compat may pre-create the component instance before actually
     // mounting
     const compatMountInstance =
@@ -869,7 +972,7 @@ const mountComponent: MountComponentFn = (
       ;(instance.ctx as KeepAliveContext).renderer = internals
     }
 
-    // 调用setupComponent进行一些初始化工作
+    // 【2.调用setupComponent进行一些初始化工作】
     // resolve props and slots for setup context
     if (!(__COMPAT__ && compatMountInstance)) {
       if (__DEV__) {
@@ -895,7 +998,7 @@ const mountComponent: MountComponentFn = (
       return
     }
 
-    // 构造renderEffect
+    // 【3.构造组件对应的renderEffect】
     setupRenderEffect(
       instance,
       initialVNode,
@@ -912,3 +1015,7 @@ const mountComponent: MountComponentFn = (
     }
   }
 ```
+
+## 总结
+
+![vue](./assets/vue3初始化和挂载.png)

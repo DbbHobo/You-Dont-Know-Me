@@ -13,10 +13,10 @@ core-main
     ├── compiler-ssr           # 编译-服务器端ssr相关
     ├── reactivity             # 响应式核心
     ├── reactivity-transform   # 实验模块
-    ├── runtime-core           # 平台无关的运行时render相关核心
-    ├── runtime-dom            # 浏览器环境运行时dom render相关
-    ├── runtime-test           # Vue内部测试用
-    ├── server-renderer        # 用于 SSR 服务端渲染的逻辑
+    ├── runtime-core           # 渲染-平台无关的运行时render相关核心
+    ├── runtime-dom            # 渲染-浏览器环境运行时dom render相关
+    ├── runtime-test           # 渲染-Vue内部测试用
+    ├── server-renderer        # 渲染-用于 SSR 服务端渲染的逻辑
     ├── sfc-playground         # playground
     ├── shared                 # 公用方法等
     ├── size-check             # 用于观测tree-shaking后的大小
@@ -37,6 +37,7 @@ core-main
 ## Vue3 Web端入口runtime+compile
 
 ```ts
+// 【../packages/vue/src/index.ts】
 //【依赖两个核心模块@vue/compiler-dom和@vue/runtime-dom】
 // This entry is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.

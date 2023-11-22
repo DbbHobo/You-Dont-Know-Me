@@ -10,7 +10,8 @@
 
 `nextTick()`实现在`runtime-core/scheduler.ts`，可以看到Vue3中使用的是`Promise`方法微任务回调用户的内容，Vue2中则是判断当前环境是否能使用几种方法，最差就降级到`setTimeout`方法：
 
-```js
+```ts
+// 【packages/runtime-core/src/scheduler.ts】
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 // 【如果当前正在执行Flush更新，则在currentFlushPromise执行resolve以后再执行用户Fn】
@@ -26,19 +27,21 @@ export function nextTick<T = void>(
 
 ## Vue3中的任务队列执行机制
 
+前文中可以知道在实例化`ReactiveEffect`对象时，有两个至关重要的参数，第一个是`fn`回调，第二个是`scheduler`，这个`scheduler`通常是一个匿名函数，内部会调用`queueJob`、`queuePostRenderEffect`(其实也就是`queuePostFlushCb`)等方法去安排job在哪个阶段执行。
+
 Vue3中有三个任务队列：
 
 - `Pre`队列：组件更新前置任务队列（但没有单独的数据结构，而是把按序执行`queue`任务队列当作执行前置任务队列）
 - `Queue`队列：组件更新时的任务队列`queue[]`，允许插队，按任务id从小大排列执行
 - `Post`队列：组件更新后置任务队列`pendingPostFlushCbs[]`，允许插队，按任务id从小大排列执行
 
-从加入job队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs/flushPostFlushCbs -> nextTick的fn回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
+从加入job队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs -> flushPostFlushCbs -> nextTick的fn回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
 
 - `queueJob()`/`queuePostFlushCb()`方法把任务加进任务队列
 - `queueFlush`是任务队列开始执行前的准备工作会把任务队列的执行放入`promise.then()`中
 - `flushJobs()`/`flushPostFlushCbs()`则是遍历执行`queue`/`pendingPostFlushCbs`任务队列
 
-基础数据定义如下，可以看到定义了一个主任务队列和后置任务队列，前置任务也用了主任务队列，只不过放在最前面：
+相关的数据定义如下，可以看到定义了一个主任务队列和后置任务队列，前置任务也用了主任务队列，只不过放在最前面：
 
 ```ts
 // 【一个任务】
@@ -95,9 +98,11 @@ type CountMap = Map<SchedulerJob, number>
 
 ### 任务 `EffectScheduler`
 
+`EffectScheduler` 其实就是一个匿名函数类型，通常用来包装`SchedulerJob`任务实例，为其安排合适的任务队列位置。
+
 在实例化`ReactiveEffect`的构造函数中我们可以看到，第一个参数是用于`effect.run()`里回调用的`fn`，第二个`scheduler`是在派发更新的时候如果有`scheduler`函数会调用`scheduler`函数否则调用`run`函数。
 
-```js
+```ts
 export type EffectScheduler = (...args: any[]) => any
 
 constructor(
@@ -127,7 +132,7 @@ function triggerEffect(
 
 对`EffectScheduler`实例的使用有如下场景：
 
-- 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段实例化了一个`EffectScheduler`实例，调用`queueJob`把当前任务加入任务队列：
+- 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段构造了一个`scheduler`，调用`queueJob`把当前任务加入任务队列：
 
 ```ts
 // 【定义一个名叫update的SchedulerJob类型job】
@@ -142,7 +147,7 @@ const effect = (instance.effect = new ReactiveEffect(
 ))
 ```
 
-- 在`watch`中也实例化了一个`EffectScheduler`实例，根据用户传入的参数是`post`/`pre`(默认`pre`)调用`queuePostRenderEffect`/`queueJob`把当前任务加入任务队列，若是`sync`则`scheduler`直接为当前`EffectScheduler`实例直接同步执行：
+- 在`watch`中也构造了一个`scheduler`，根据用户传入的参数是`post`/`pre`(默认`pre`)调用`queuePostRenderEffect`/`queueJob`把当前任务加入任务队列，若是`sync`则`scheduler`直接为当前`EffectScheduler`实例直接同步执行：
 
 ```ts
 const job: SchedulerJob = () => {
@@ -214,6 +219,7 @@ const effect = new ReactiveEffect(getter, scheduler)
 该方法负责维护主任务队列，接受一个函数作为参数，为待入队任务，会将任务 `push` 到 `queue` 队列中，会判断是否唯一。会在当前宏任务执行结束后，清空队列。
 
 ```ts
+// 【packages/runtime-core/src/scheduler.ts】
 // 【加入主任务队列-queue】
 const queue: SchedulerJob[] = []//任务队列
 let flushIndex = 0
@@ -304,10 +310,12 @@ function queueFlush() {
 该方法负责处理执行前置队列任务，因为它按入`queue`任务队列的顺序进行遍历执行的，可以看到该方法在`render`/`updateComponentPreRender`中有调用。
 
 ```ts
+// 【packages/runtime-core/src/scheduler.ts】
 // 【执行前置任务队列-queue】
 export function flushPreFlushCbs(
   seen?: CountMap,
   // if currently flushing, skip the current job itself
+  // 【当前正在执行任务队列的话，从正在执行的那个之后开始，否则从0开始】
   i = isFlushing ? flushIndex + 1 : 0
 ) {
   if (__DEV__) {
@@ -328,7 +336,7 @@ export function flushPreFlushCbs(
 }
 ```
 
-### 执行当前任务队列 `flushJobs()` => `flushPostFlushCbs`
+### 执行当前任务队列 `flushJobs()`
 
 该方法负责处理执行队列任务，主要逻辑如下：
 
@@ -339,6 +347,7 @@ export function flushPreFlushCbs(
 5. 检查是否有在执行过程中加入主任务队列的任务，继续全部执行掉
 
 ```ts
+// 【packages/runtime-core/src/scheduler.ts】
 let isFlushing = false //flushJobs中
 let isFlushPending = false //queueFlush中
 
@@ -404,6 +413,7 @@ function flushJobs(seen?: CountMap) {
 该方法负责处理执行后置队列任务。
 
 ```ts
+// 【packages/runtime-core/src/scheduler.ts】
 // 【执行后置任务队列-pendingPostFlushCbs】
 export function flushPostFlushCbs(seen?: CountMap) {
   if (pendingPostFlushCbs.length) {
@@ -446,3 +456,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
   }
 }
 ```
+
+## 总结
+
+![nextTick](./assets/Vue3任务执行顺序.png)

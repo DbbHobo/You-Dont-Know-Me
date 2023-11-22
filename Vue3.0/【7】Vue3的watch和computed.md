@@ -20,9 +20,20 @@ plusOne.value++ // 错误
 
 - 关键词`<getter>`、`<ComputedRefImpl>`
 
-`computed` API入口在`reactivity/src/computed.ts`：
+1. 获取`computed()`参数中的`getter`/`setter`
+2. 实例化一个`ComputedRefImp`l对象
 
 ```ts
+// 【packages/runtime-core/src/apiComputed.ts】
+import { computed as _computed } from '@vue/reactivity'
+import { isInSSRComponentSetup } from './component'
+
+export const computed = ((getterOrOptions: any, debugOptions?: any) => {
+  // @ts-ignore
+  return _computed(getterOrOptions, debugOptions, isInSSRComponentSetup)
+}) as typeof _computed
+
+// 【packages/reactivity/src/computed.ts】
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
@@ -59,16 +70,10 @@ export function computed<T>(
 }
 ```
 
-可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
-
-1. 依赖值改变
-2. 引起派发更新
-3. 调用`effect.scheduler()`
-4. `_dirty`改变
-
 `ComputedRefImpl`类如下：
 
 ```ts
+// 【packages/reactivity/src/computed.ts】
 export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
@@ -91,6 +96,7 @@ export class ComputedRefImpl<T> {
     // 【_dirty控制着是否需要重新计算也就是执行effect.run()】
     // 【triggerEffect中会根据是否存在scheduler函数调用scheduler或者run方法】
     this.effect = new ReactiveEffect(getter, () => {
+      // 【派发更新triggerEffect方法中会调用effect.scheduler()也就是本方法】
       if (!this._dirty) {
         this._dirty = true
         triggerRefValue(this)
@@ -121,7 +127,19 @@ export class ComputedRefImpl<T> {
 }
 ```
 
-可以看到`computed`实际上就是创建了一个只读的`ref`对象，因此我们推荐使用计算属性来描述依赖响应式状态的复杂逻辑，计算属性值会基于其响应式依赖被缓存，一个计算属性仅会在其响应式依赖更新时才重新计算。计算属性的 `getter` 应只做计算而没有任何其他的副作用，这一点非常重要，请务必牢记。举例来说，不要在 `getter` 中做异步请求或者更改 `DOM`！一个计算属性的声明中描述的是如何根据其他值派生一个值。因此 `getter` 的职责应该仅为计算和返回该值。
+![computed](./assets/computed1.png)
+![computed](./assets/computed2.png)
+![computed](./assets/computed3.png)
+![computed](./assets/computed4.png)
+
+可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
+
+1. 依赖值改变
+2. 引起派发更新
+3. 调用`effect.scheduler()`
+4. `_dirty`改变
+
+因此我们推荐使用计算属性来描述依赖响应式状态的复杂逻辑，计算属性值会基于其响应式依赖被缓存，一个计算属性仅会在其响应式依赖更新时才重新计算。计算属性的 `getter` 应只做计算而没有任何其他的副作用，这一点非常重要，请务必牢记。举例来说，不要在 `getter` 中做异步请求或者更改 `DOM`！一个计算属性的声明中描述的是如何根据其他值派生一个值。因此 `getter` 的职责应该仅为计算和返回该值。
 
 为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 `list`，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 `list`。没有缓存的话，我们会重复执行非常多次 `list` 的 `getter`，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。从计算属性返回的值是派生状态。可以把它看作是一个“临时快照”，每当源状态发生变化时，就会创建一个新的快照。更改快照是没有意义的，因此计算属性的返回值应该被视为只读的，并且永远不应该被更改——应该更新它所依赖的源状态以触发新的计算。
 
@@ -166,9 +184,49 @@ watch(count, (count, prevCount) => {
 })
 ```
 
+在 `setup()` 或 `<script setup>` 中用同步语句创建的侦听器，会自动绑定到宿主组件实例上，并且会在宿主组件卸载时自动停止。因此，在大多数情况下，你无需关心怎么停止一个侦听器。
+
+一个关键点是，侦听器必须用同步语句创建：如果用异步回调创建一个侦听器，那么它不会绑定到当前组件上，你必须手动停止它，以防内存泄漏。如下方这个例子：
+
+```vue
+<script setup>
+import { watchEffect } from 'vue'
+
+// 它会自动停止
+watchEffect(() => {})
+
+// ...这个则不会！
+setTimeout(() => {
+  watchEffect(() => {})
+}, 100)
+</script>
+```
+
+要手动停止一个侦听器，请调用 `watch` 或 `watchEffect` 返回的函数：
+
+```js
+const unwatch = watchEffect(() => {})
+
+// ...当该侦听器不再需要时
+unwatch()
+```
+
+注意，需要异步创建侦听器的情况很少，请尽可能选择同步创建。如果需要等待一些异步数据，你可以使用条件式的侦听逻辑：
+
+```js
+// 需要异步请求得到的数据
+const data = ref(null)
+
+watchEffect(() => {
+  if (data.value) {
+    // 数据加载后执行某些操作...
+  }
+})
+```
+
 ### watch 实现
 
-`watch` API入口在`runtime-core/src/apiWatch.ts`，调用`watch`方法可以传入`source`、`cb`回调、`options`，然后创建一个对应的`watch effect`副作用，有`cb`回调执行回调，否则执行`effect.run()`。
+调用`watch`方法可以传入`source`、`cb`回调、`options`，然后创建一个对应的`watch effect`副作用，有`cb`回调执行回调，否则执行`effect.run()`。
 
 `watch()`/`watchEffect()`/`watchPostEffect()`/`watchSyncEffect()`四个API的区别在于调用`doWatch()`方法时入参：
 
@@ -178,6 +236,7 @@ watch(count, (count, prevCount) => {
 - `watchSyncEffect()`: `doWatch(effect,null,(__DEV__? { ...options, flush: 'sync' } : { flush: 'sync' }) as WatchOptionsBase)`
 
 ```ts
+// 【packages/runtime-core/src/apiWatch.ts】
 // overload: array of multiple sources + cb
 export function watch<
   T extends MultiWatchSources,
@@ -276,6 +335,7 @@ export function watchSyncEffect(
 - 初始操作，根据`immediate`等参数判断是否立即执行一次回调
 
 ```ts
+// 【packages/runtime-core/src/apiWatch.ts】
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
@@ -523,7 +583,7 @@ function doWatch(
 
   // 【当已不再需要该侦听器时，直接调用本侦听器】
   return () => {
-    // 【返回一个函数，停止本侦听器】
+    // 【返回一个匿名函数，停止本侦听器】
     effect.stop()
     if (instance && instance.scope) {
       remove(instance.scope.effects!, effect)
@@ -532,7 +592,13 @@ function doWatch(
 }
 ```
 
+![watch](./assets/watch1.png)
+![watch](./assets/watch2.png)
+![watch](./assets/watch3.png)
+
 ## computed() 和 watch() 异同
 
-1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是直接包装 `triggerRefValue` 依赖收集方法。
-2. `computed`用`_dirty`参数判断是否需要执行对应副作用effect的run方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。
+1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是相当于构造一个ref对象直接包装 `triggerRefValue` 这个依赖收集方法。
+2. `computed`用`_dirty`参数（默认true）判断是否需要执行对应`effect`实例的`run`方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。
+
+![watch、computed](./assets/Vue3的watch和computed.png)

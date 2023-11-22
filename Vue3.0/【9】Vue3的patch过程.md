@@ -552,9 +552,11 @@ function shouldSetAsProp(
 }
 ```
 
-## 挂载过程，由mount到render方法再到patch方法
+## patch方法入口
 
-之前分析到，用户调用`createApp`生成App实例：
+### 挂载过程，由mount到render方法再到patch方法
+
+之前分析到，用户调用`createApp`生成app实例：
 
 ```ts
 const app = ensureRenderer().createApp(...args)
@@ -570,7 +572,7 @@ return {
 }
 ```
 
-接着就可以调用App实例的`mount`方法：
+接着就可以调用app实例的`mount`方法：
 
 ```ts
 mount(
@@ -606,6 +608,305 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 ```
 
 当`VNode`存在时，就会进入`patch`方法。
+
+### 组件挂载、更新的回调componentUpdateFn
+
+前文中讲到在 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
+
+1. `renderComponentRoot`生成最新的`VNode`
+2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`
+
+```ts
+const componentUpdateFn = () => {
+    // 【首次挂载-组件实例还未挂载 isMounted是false】
+    if (!instance.isMounted) {
+      let vnodeHook: VNodeHook | null | undefined
+      const { el, props } = initialVNode
+      const { bm, m, parent } = instance
+      const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
+
+      //【...省略】
+
+      if (el && hydrateNode) {
+        //【...省略】
+      } else {
+        //【...省略】
+
+        //【1.renderComponentRoot生成VNode赋值给subTree】
+        const subTree = (instance.subTree = renderComponentRoot(instance))
+
+        //【...省略】
+
+        //【2.递归调用patch进行VNode对比然后挂载】
+        patch(
+          null,
+          subTree,
+          container,
+          anchor,
+          instance,
+          parentSuspense,
+          isSVG
+        )
+
+        //【...省略】
+
+        initialVNode.el = subTree.el
+      }
+
+      //【...省略】
+
+      // 【实例上的isMounted标志设为true，代表挂载完成】
+      instance.isMounted = true
+
+      //【...省略】
+
+      // #2458: deference mount-only object parameters to prevent memleaks
+      initialVNode = container = anchor = null as any
+    } else {
+      // 【更新组件-组件实例已经挂载 isMounted是true 说明是更新】
+      // updateComponent
+      // This is triggered by mutation of component's own state (next: null)
+      // OR parent calling processComponent (next: VNode)
+      let { next, bu, u, parent, vnode } = instance
+      let originNext = next
+      let vnodeHook: VNodeHook | null | undefined
+      
+      //【...省略】
+
+      //【1.const nextTree = renderComponentRoot(instance)构造VNode】
+      const nextTree = renderComponentRoot(instance)
+      
+      //【...省略】
+
+      const prevTree = instance.subTree//【旧VNode】
+      instance.subTree = nextTree//【新VNode】
+
+      //【...省略】
+
+      //【2.递归执行patch进行挂载更新DOM】
+      patch(
+        prevTree,
+        nextTree,
+        // parent may have changed if it's in a teleport
+        hostParentNode(prevTree.el!)!,
+        // anchor may have changed if it's in a fragment
+        getNextHostNode(prevTree),
+        instance,
+        parentSuspense,
+        isSVG
+      )
+    }
+  }
+```
+
+## Patch方法前置条件生成VNode
+
+前文中讲到组件挂载过程的第三步调用 **`setupRenderEffect`** 设置组件渲染逻辑，就会调用`renderComponentRoot`生成VNode。`renderComponentRoot`的核心是调用`render`方法，而`render`方法其实是件组件挂载过程的第二步生成，要么是`setup`返回的渲染函数要么是将`template`编译`compile`成的`render`方法。
+
+```ts
+export function renderComponentRoot(
+  instance: ComponentInternalInstance
+): VNode {
+  const {
+    type: Component,
+    vnode,
+    proxy,
+    withProxy,
+    props,
+    propsOptions: [propsOptions],
+    slots,
+    attrs,
+    emit,
+    render,
+    renderCache,
+    data,
+    setupState,
+    ctx,
+    inheritAttrs
+  } = instance
+
+  let result
+  let fallthroughAttrs
+  const prev = setCurrentRenderingInstance(instance)
+  if (__DEV__) {
+    accessedAttrs = false
+  }
+
+  try {
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      // withProxy is a proxy with a different `has` trap only for
+      // runtime-compiled render functions using `with` block.
+      const proxyToUse = withProxy || proxy
+      result = normalizeVNode(
+        render!.call(
+          proxyToUse,
+          proxyToUse!,
+          renderCache,
+          props,
+          setupState,
+          data,
+          ctx
+        )
+      )
+      fallthroughAttrs = attrs
+    } else {
+      // functional
+      const render = Component as FunctionalComponent
+      // in dev, mark attrs accessed if optional props (attrs === props)
+      if (__DEV__ && attrs === props) {
+        markAttrsAccessed()
+      }
+      result = normalizeVNode(
+        render.length > 1
+          ? render(
+              props,
+              __DEV__
+                ? {
+                    get attrs() {
+                      markAttrsAccessed()
+                      return attrs
+                    },
+                    slots,
+                    emit
+                  }
+                : { attrs, slots, emit }
+            )
+          : render(props, null as any /* we know it doesn't need it */)
+      )
+      fallthroughAttrs = Component.props
+        ? attrs
+        : getFunctionalFallthrough(attrs)
+    }
+  } catch (err) {
+    blockStack.length = 0
+    handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
+    result = createVNode(Comment)
+  }
+
+  // attr merging
+  // in dev mode, comments are preserved, and it's possible for a template
+  // to have comments along side the root element which makes it a fragment
+  let root = result
+  let setRoot: SetRootFn = undefined
+  if (
+    __DEV__ &&
+    result.patchFlag > 0 &&
+    result.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    ;[root, setRoot] = getChildRoot(result)
+  }
+
+  if (fallthroughAttrs && inheritAttrs !== false) {
+    const keys = Object.keys(fallthroughAttrs)
+    const { shapeFlag } = root
+    if (keys.length) {
+      if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+        if (propsOptions && keys.some(isModelListener)) {
+          // If a v-model listener (onUpdate:xxx) has a corresponding declared
+          // prop, it indicates this component expects to handle v-model and
+          // it should not fallthrough.
+          // related: #1543, #1643, #1989
+          fallthroughAttrs = filterModelListeners(
+            fallthroughAttrs,
+            propsOptions
+          )
+        }
+        root = cloneVNode(root, fallthroughAttrs)
+      } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
+        const allAttrs = Object.keys(attrs)
+        const eventAttrs: string[] = []
+        const extraAttrs: string[] = []
+        for (let i = 0, l = allAttrs.length; i < l; i++) {
+          const key = allAttrs[i]
+          if (isOn(key)) {
+            // ignore v-model handlers when they fail to fallthrough
+            if (!isModelListener(key)) {
+              // remove `on`, lowercase first letter to reflect event casing
+              // accurately
+              eventAttrs.push(key[2].toLowerCase() + key.slice(3))
+            }
+          } else {
+            extraAttrs.push(key)
+          }
+        }
+        if (extraAttrs.length) {
+          warn(
+            `Extraneous non-props attributes (` +
+              `${extraAttrs.join(', ')}) ` +
+              `were passed to component but could not be automatically inherited ` +
+              `because component renders fragment or text root nodes.`
+          )
+        }
+        if (eventAttrs.length) {
+          warn(
+            `Extraneous non-emits event listeners (` +
+              `${eventAttrs.join(', ')}) ` +
+              `were passed to component but could not be automatically inherited ` +
+              `because component renders fragment or text root nodes. ` +
+              `If the listener is intended to be a component custom event listener only, ` +
+              `declare it using the "emits" option.`
+          )
+        }
+      }
+    }
+  }
+
+  if (
+    __COMPAT__ &&
+    isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
+    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
+    root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+  ) {
+    const { class: cls, style } = vnode.props || {}
+    if (cls || style) {
+      if (__DEV__ && inheritAttrs === false) {
+        warnDeprecation(
+          DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
+          instance,
+          getComponentName(instance.type)
+        )
+      }
+      root = cloneVNode(root, {
+        class: cls,
+        style: style
+      })
+    }
+  }
+
+  // inherit directives
+  if (vnode.dirs) {
+    if (__DEV__ && !isElementRoot(root)) {
+      warn(
+        `Runtime directive used on component with non-element root node. ` +
+          `The directives will not function as intended.`
+      )
+    }
+    // clone before mutating since the root may be a hoisted vnode
+    root = cloneVNode(root)
+    root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
+  }
+  // inherit transition data
+  if (vnode.transition) {
+    if (__DEV__ && !isElementRoot(root)) {
+      warn(
+        `Component inside <Transition> renders non-element root node ` +
+          `that cannot be animated.`
+      )
+    }
+    root.transition = vnode.transition
+  }
+
+  if (__DEV__ && setRoot) {
+    setRoot(root)
+  } else {
+    result = root
+  }
+
+  setCurrentRenderingInstance(prev)
+  console.log('组件VNode-----------------',result)
+  return result
+}
+```
 
 ## Patch关键参数
 
@@ -686,6 +987,7 @@ export const enum ShapeFlags {
   - 继续根据`ShapeFlags`判断是`ELEMENT`、`COMPONENT`、`TELEPORT`或者`SUSPENSE`类型的组件进行处理
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const patch: PatchFn = (
     n1,
     n2,
@@ -928,7 +1230,7 @@ const patchStaticNode = (
 - case Fragment
 `processFragment(n1,n2,container,anchor,parentComponent,parentSuspense,isSVG,slotScopeIds,optimized)`
 
-- default 
+- default
   - shapeFlag & ShapeFlags.ELEMENT
   
   ```ts
@@ -969,6 +1271,7 @@ const patchStaticNode = (
         }
     }
     ```
+  
   - shapeFlag & ShapeFlags.COMPONENT
   
   ```ts
@@ -1010,8 +1313,10 @@ const patchStaticNode = (
       }
   }
   ```
+  
   - shapeFlag & ShapeFlags.TELEPORT
-  - __FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE)
+  
+  - __FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE
 
 可以看到这些分支处理不同类型的节点都会根据旧节点`n1`是否存在去`mount`或`patch`。
 
@@ -1152,7 +1457,7 @@ const processFragment = (
 
 `patchBlockChildren`方法根据新旧**动态子节点dynamicChildren**进行不同的对比操作，最后进入`patch`递归。
 
-`patchChildren`根据是否有key可以进入`patchKeyedChildren`或`patchUnkeyedChildren`分支，在新旧子节点都是多节点时就到了我们常说的**diff核心**算法。
+`patchChildren`根据是否有`key`可以进入`patchKeyedChildren`或`patchUnkeyedChildren`分支，在新旧子节点都是多节点时就到了我们常说的**diff核心**算法。
 
 ### `mountChildren`
 
@@ -1248,7 +1553,7 @@ const patchBlockChildren: PatchBlockChildrenFn = (
 - `patchKeyedChildren`
 - `patchUnkeyedChildren`
 - `mountChildren`
-<!-- 【TODO：画个流程图】 -->
+
 ```ts
 const patchChildren: PatchChildrenFn = (
     n1,
@@ -1787,7 +2092,7 @@ const patchKeyedChildren = (
   
   5-1. 首先为新节点建一个`keyToNewIndexMap`的Map用于存储【新节点key，新节点的索引】这样的一个结构
   
-  5-2. 新建一个`newIndexToOldIndexMap`的Array长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，存储的是【旧节点（在新节点能找到复用的）在新节点序列中的索引】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
+  5-2. 新建一个`newIndexToOldIndexMap`的Array长度等于剩余需要`patch`节点个数(去掉可复用的头尾部)，找到相同key的新节点然后在`newIndexToOldIndexMap`中新节点所在索引位置存储【旧节点（在新节点能找到复用的）的旧索引+1】，并且判断旧节点序列是否需要移动操作，如果索引是完全递增的代表不需要移动，否则就是需要
   
   5-3. 找出`newIndexToOldIndexMap`中的最长递增子序列，这个序列是所有不需要移动的节点，剩下的节点就是需要移动的或者新增的，然后进行移动和新增操作
 
@@ -1848,3 +2153,5 @@ Vue3中的diff算法中有`block`、`fragment`和`patchFlags`等概念，优化�
 还有一个优化点在于提升静态节点，或静态的属性，这可以减少创建 VNode 的消耗，静态提升是以树为单位的。
 
 然后对于多个动态有key节点的diff过程，通过寻找最长子序列算法尽可能少的复用和减少节点的移动也是一个性能提升点。
+
+![patch](./assets/Vue3的patch过程.png)

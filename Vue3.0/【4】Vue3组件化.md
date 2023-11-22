@@ -12,9 +12,25 @@ app.component('my-component', {
 const MyComponent = app.component('my-component')
 ```
 
-## Vue3 组件的构建过程
+## 关键方法
 
-前文我们讲到，`const app = ensureRenderer().createApp(...args)`会创建根APP实例，根APP实例再调用`mount`方法，其中关键的步骤如下：
+- `createVNode`
+- `_createVNode`
+- `createBaseVNode`
+- `render`
+- `patch`
+- `mountComponent`
+- `updateComponent`
+- `createComponentInstance`
+- `setupComponent`
+- `setupRenderEffect`
+- `renderComponentRoot`
+- `new ReactiveEffect`
+- `effect.run()`
+
+## 组件的构建过程
+
+前文我们讲到，`const app = ensureRenderer().createApp(...args)`会创建app实例，app实例再调用`mount`方法，`mount`方法中关键的步骤如下：
 
 ```ts
 // 【1.生成VNode】
@@ -47,6 +63,8 @@ export type VNodeTypes =
   | typeof Suspense
   | typeof SuspenseImpl
 
+
+// 【packages/runtime-core/src/vnode.ts】
 function _createVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -61,7 +79,7 @@ function _createVNode(
     }
     type = Comment
   }
-
+  // 【type分情况】
   if (isVNode(type)) {
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
@@ -108,7 +126,8 @@ function _createVNode(
       props.style = normalizeStyle(style)
     }
   }
-
+  // 【判断当前内容是何shapeFlag，我们的例子中传的是type:{template:'...'}，所以shapeFlag是4也就是STATEFUL_COMPONENT】
+  // 【type可能性其实有很多种，可能是DOM可能是对象可能是函数，从而分为不同的shapeFlag】
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
@@ -146,6 +165,7 @@ function _createVNode(
   )
 }
 
+// 【packages/runtime-core/src/vnode.ts】
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
@@ -183,7 +203,7 @@ function createBaseVNode(
     dynamicChildren: null,
     appContext: null
   } as VNode
-  
+
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
@@ -226,6 +246,7 @@ function createBaseVNode(
     convertLegacyVModelProps(vnode)
     defineLegacyVNodeProperties(vnode)
   }
+
   return vnode
 }
 ```
@@ -351,22 +372,25 @@ function createBaseVNode(
 
 首先来看`render`方法如下，然后会走到`patch`方法，然后我们去看`patch`方法里，根据`type`不同，进行不同处理，我们要看的是如何处理组件，也就是`processComponent`方法，下一步根据是首次挂载或者是更新调用`mountComponent`或者`updateComponent`方法：
 
-**createVNode -> render(vnode) -> patch -> processComponent -> mountComponent/updateComponent**
+**【1】createVNode  【2】render(vnode) -> patch -> processComponent -> mountComponent/updateComponent**
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const render: RootRenderFunction = (vnode, container, isSVG) => {
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }
     } else {
-      // 【实际上是调用patch】
+      // 【核心是调用patch】
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     flushPreFlushCbs()
     flushPostFlushCbs()
     container._vnode = vnode
 }
+
+// 【packages/runtime-core/src/renderer.ts】
 // 【patch根据type有很多处理分支】
 const patch: PatchFn = (
     n1,
@@ -523,9 +547,10 @@ const processComponent = (
 }
 ```
 
-组件的挂载`mountComponent`又分为几个步骤：
+组件的首次挂载调用`mountComponent`方法又分为几个步骤：
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const mountComponent: MountComponentFn = (
     initialVNode,
     container,
@@ -606,12 +631,12 @@ const mountComponent: MountComponentFn = (
 }
 ```
 
-1. 第一步：调用 **`createComponentInstance`** 创建组件实例
-   - 创建组件实例包含各类属性
+1. 【第一步】：调用 **`createComponentInstance`** 创建组件实例
+   - 创建组件实例包含各类属性，例如：uid/type/parent/subTree/effect/生命周期hooks/vnode 等等
    - 缕清父子组件上下文关系
 
 ```ts
-// 【createComponentInstance】
+// 【mountComponent的第一步】
 const compatMountInstance =
   __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
 const instance: ComponentInternalInstance =
@@ -622,6 +647,8 @@ const instance: ComponentInternalInstance =
     parentSuspense
   ))
 
+// 【packages/runtime-core/src/component.ts】
+// 【1.createComponentInstance】
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -629,7 +656,7 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
-  // 【appContext存储父实例】
+  // 【appContext存储父组件的appContext，如果没有parent也就是根组件的话直接用根组件自身的appContext也就是app实例的appContext】
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
@@ -726,596 +753,18 @@ export function createComponentInstance(
 }
 ```
 
-官方示例tree.html中我们可以看到构造的组件实例如下：
+![vue](./assets/createComponentInstance1.png)
+![vue](./assets/createComponentInstance2.png)
 
-```json
-{
-  uid: 0,
-  vnode: {
-    __v_isVNode: true,
-    __v_skip: true,
-    type: {
-      components: {
-        TreeItem: {
-          name: "TreeItem",
-          template: "#item-template",
-          props: {
-            model: function Object() { [native code] },
-          },
-          setup: function(props) {
-            const state = reactive({
-              open: false,
-              isFolder: computed(() => {
-                return props.model.children && props.model.children.length
-              })
-            })
-            
-            function toggle() {
-              state.open = !state.open
-            }
-            
-            function changeType() {
-              if (!state.isFolder) {
-                props.model.children = []
-                addChild()
-                state.open = true
-              }
-            }
-            
-            function addChild() {
-              props.model.children.push({ name: 'new stuff' })
-            }
-            
-            return {
-              ...toRefs(state),
-              toggle,
-              changeType,
-              addChild
-            }
-          },
-        },
-      },
-      data: () => ({
-        treeData
-      }),
-      template: "\n  内容如下：\n  <tree-item class=\"item\" :model=\"treeData\"></tree-item>\n",
-    },
-    props: null,
-    key: null,
-    ref: null,
-    scopeId: null,
-    slotScopeIds: null,
-    children: null,
-    component: null,
-    suspense: null,
-    ssContent: null,
-    ssFallback: null,
-    dirs: null,
-    transition: null,
-    el: null,
-    anchor: null,
-    target: null,
-    targetAnchor: null,
-    staticCount: 0,
-    shapeFlag: 4,
-    patchFlag: 0,
-    dynamicProps: null,
-    dynamicChildren: null,
-    appContext: {
-      app: {
-        _uid: 0,
-        _component: {
-          components: {
-            TreeItem: {
-              name: "TreeItem",
-              template: "#item-template",
-              props: {
-                model: function Object() { [native code] },
-              },
-              setup: function(props) {
-                const state = reactive({
-                  open: false,
-                  isFolder: computed(() => {
-                    return props.model.children && props.model.children.length
-                  })
-                })
-                
-                function toggle() {
-                  state.open = !state.open
-                }
-                
-                function changeType() {
-                  if (!state.isFolder) {
-                    props.model.children = []
-                    addChild()
-                    state.open = true
-                  }
-                }
-                
-                function addChild() {
-                  props.model.children.push({ name: 'new stuff' })
-                }
-                
-                return {
-                  ...toRefs(state),
-                  toggle,
-                  changeType,
-                  addChild
-                }
-              },
-            },
-          },
-          data: () => ({
-            treeData
-          }),
-          template: "\n  内容如下：\n  <tree-item class=\"item\" :model=\"treeData\"></tree-item>\n",
-        },
-        _props: null,
-        _container: null,
-        _context: [Circular],
-        _instance: null,
-        version: "3.2.41",
-        config: {
-          isNativeTag: (tag) => isHTMLTag(tag) || isSVGTag(tag),
-          performance: false,
-          globalProperties: {
-          },
-          optionMergeStrategies: {
-          },
-          errorHandler: undefined,
-          warnHandler: undefined,
-          compilerOptions: {
-          },
-        },
-        use: function(plugin, ...options) {
-          if (installedPlugins.has(plugin)) {
-            warn2(`Plugin has already been applied to target app.`);
-          } else if (plugin && isFunction(plugin.install)) {
-            installedPlugins.add(plugin);
-            plugin.install(app, ...options);
-          } else if (isFunction(plugin)) {
-            installedPlugins.add(plugin);
-            plugin(app, ...options);
-          } else if (true) {
-            warn2(`A plugin must either be a function or an object with an "install" function.`);
-          }
-          return app;
-        },
-        mixin: function(mixin) {
-          if (true) {
-            if (!context.mixins.includes(mixin)) {
-              context.mixins.push(mixin);
-            } else if (true) {
-              warn2("Mixin has already been applied to target app" + (mixin.name ? `: ${mixin.name}` : ""));
-            }
-          } else if (true) {
-            warn2("Mixins are only available in builds supporting Options API");
-          }
-          return app;
-        },
-        component: function(name, component) {
-          if (true) {
-            validateComponentName(name, context.config);
-          }
-          if (!component) {
-            return context.components[name];
-          }
-          if (context.components[name]) {
-            warn2(`Component "${name}" has already been registered in target app.`);
-          }
-          context.components[name] = component;
-          return app;
-        },
-        directive: function(name, directive) {
-          if (true) {
-            validateDirectiveName(name);
-          }
-          if (!directive) {
-            return context.directives[name];
-          }
-          if (context.directives[name]) {
-            warn2(`Directive "${name}" has already been registered in target app.`);
-          }
-          context.directives[name] = directive;
-          return app;
-        },
-        mount: (containerOrSelector) => {
-          const container = normalizeContainer(containerOrSelector);
-          if (!container)
-            return;
-          const component = app._component;
-          if (!isFunction(component) && !component.render && !component.template) {
-            component.template = container.innerHTML;
-            if (false) {
-              for (let i = 0; i < container.attributes.length; i++) {
-                const attr = container.attributes[i];
-                if (attr.name !== "v-cloak" && /^(v-|:|@)/.test(attr.name)) {
-                  compatUtils5.warnDeprecation(DeprecationTypes5.GLOBAL_MOUNT_CONTAINER, null);
-                  break;
-                }
-              }
-            }
-          }
-          container.innerHTML = "";
-          const proxy = mount(container, false, container instanceof SVGElement);
-          if (container instanceof Element) {
-            container.removeAttribute("v-cloak");
-            container.setAttribute("data-v-app", "");
-          }
-          return proxy;
-        },
-        unmount: function() {
-          if (isMounted) {
-            render2(null, app._container);
-            if (true) {
-              app._instance = null;
-              devtoolsUnmountApp(app);
-            }
-            delete app._container.__vue_app__;
-          } else if (true) {
-            warn2(`Cannot unmount an app that is not mounted.`);
-          }
-        },
-        provide: function(key, value) {
-          if (key in context.provides) {
-            warn2(`App already provides property with key "${String(key)}". It will be overwritten with the new value.`);
-          }
-          context.provides[key] = value;
-          return app;
-        },
-      },
-      config: {
-        isNativeTag: (tag) => isHTMLTag(tag) || isSVGTag(tag),
-        performance: false,
-        globalProperties: {
-        },
-        optionMergeStrategies: {
-        },
-        errorHandler: undefined,
-        warnHandler: undefined,
-        compilerOptions: {
-        },
-      },
-      mixins: [
-      ],
-      components: {
-      },
-      directives: {
-      },
-      provides: {
-      },
-      optionsCache: {
-      },
-      propsCache: {
-      },
-      emitsCache: {
-      },
-      reload: () => {
-        render2(cloneVNode(vnode), rootContainer, isSVG);
-      },
-    },
-  },
-  type: {
-    components: {
-      TreeItem: {
-        name: "TreeItem",
-        template: "#item-template",
-        props: {
-          model: function Object() { [native code] },
-        },
-        setup: function(props) {
-          const state = reactive({
-            open: false,
-            isFolder: computed(() => {
-              return props.model.children && props.model.children.length
-            })
-          })
-          
-          function toggle() {
-            state.open = !state.open
-          }
-          
-          function changeType() {
-            if (!state.isFolder) {
-              props.model.children = []
-              addChild()
-              state.open = true
-            }
-          }
-          
-          function addChild() {
-            props.model.children.push({ name: 'new stuff' })
-          }
-          
-          return {
-            ...toRefs(state),
-            toggle,
-            changeType,
-            addChild
-          }
-        },
-      },
-    },
-    data: () => ({
-      treeData
-    }),
-    template: "\n  内容如下：\n  <tree-item class=\"item\" :model=\"treeData\"></tree-item>\n",
-  },
-  parent: null,
-  appContext: {
-    app: {
-      _uid: 0,
-      _component: {
-        components: {
-          TreeItem: {
-            name: "TreeItem",
-            template: "#item-template",
-            props: {
-              model: function Object() { [native code] },
-            },
-            setup: function(props) {
-              const state = reactive({
-                open: false,
-                isFolder: computed(() => {
-                  return props.model.children && props.model.children.length
-                })
-              })
-              
-              function toggle() {
-                state.open = !state.open
-              }
-              
-              function changeType() {
-                if (!state.isFolder) {
-                  props.model.children = []
-                  addChild()
-                  state.open = true
-                }
-              }
-              
-              function addChild() {
-                props.model.children.push({ name: 'new stuff' })
-              }
-              
-              return {
-                ...toRefs(state),
-                toggle,
-                changeType,
-                addChild
-              }
-            },
-          },
-        },
-        data: () => ({
-          treeData
-        }),
-        template: "\n  内容如下：\n  <tree-item class=\"item\" :model=\"treeData\"></tree-item>\n",
-      },
-      _props: null,
-      _container: null,
-      _context: [Circular],
-      _instance: null,
-      version: "3.2.41",
-      config: {
-        isNativeTag: (tag) => isHTMLTag(tag) || isSVGTag(tag),
-        performance: false,
-        globalProperties: {
-        },
-        optionMergeStrategies: {
-        },
-        errorHandler: undefined,
-        warnHandler: undefined,
-        compilerOptions: {
-        },
-      },
-      use: function(plugin, ...options) {
-        if (installedPlugins.has(plugin)) {
-          warn2(`Plugin has already been applied to target app.`);
-        } else if (plugin && isFunction(plugin.install)) {
-          installedPlugins.add(plugin);
-          plugin.install(app, ...options);
-        } else if (isFunction(plugin)) {
-          installedPlugins.add(plugin);
-          plugin(app, ...options);
-        } else if (true) {
-          warn2(`A plugin must either be a function or an object with an "install" function.`);
-        }
-        return app;
-      },
-      mixin: function(mixin) {
-        if (true) {
-          if (!context.mixins.includes(mixin)) {
-            context.mixins.push(mixin);
-          } else if (true) {
-            warn2("Mixin has already been applied to target app" + (mixin.name ? `: ${mixin.name}` : ""));
-          }
-        } else if (true) {
-          warn2("Mixins are only available in builds supporting Options API");
-        }
-        return app;
-      },
-      component: function(name, component) {
-        if (true) {
-          validateComponentName(name, context.config);
-        }
-        if (!component) {
-          return context.components[name];
-        }
-        if (context.components[name]) {
-          warn2(`Component "${name}" has already been registered in target app.`);
-        }
-        context.components[name] = component;
-        return app;
-      },
-      directive: function(name, directive) {
-        if (true) {
-          validateDirectiveName(name);
-        }
-        if (!directive) {
-          return context.directives[name];
-        }
-        if (context.directives[name]) {
-          warn2(`Directive "${name}" has already been registered in target app.`);
-        }
-        context.directives[name] = directive;
-        return app;
-      },
-      mount: (containerOrSelector) => {
-        const container = normalizeContainer(containerOrSelector);
-        if (!container)
-          return;
-        const component = app._component;
-        if (!isFunction(component) && !component.render && !component.template) {
-          component.template = container.innerHTML;
-          if (false) {
-            for (let i = 0; i < container.attributes.length; i++) {
-              const attr = container.attributes[i];
-              if (attr.name !== "v-cloak" && /^(v-|:|@)/.test(attr.name)) {
-                compatUtils5.warnDeprecation(DeprecationTypes5.GLOBAL_MOUNT_CONTAINER, null);
-                break;
-              }
-            }
-          }
-        }
-        container.innerHTML = "";
-        const proxy = mount(container, false, container instanceof SVGElement);
-        if (container instanceof Element) {
-          container.removeAttribute("v-cloak");
-          container.setAttribute("data-v-app", "");
-        }
-        return proxy;
-      },
-      unmount: function() {
-        if (isMounted) {
-          render2(null, app._container);
-          if (true) {
-            app._instance = null;
-            devtoolsUnmountApp(app);
-          }
-          delete app._container.__vue_app__;
-        } else if (true) {
-          warn2(`Cannot unmount an app that is not mounted.`);
-        }
-      },
-      provide: function(key, value) {
-        if (key in context.provides) {
-          warn2(`App already provides property with key "${String(key)}". It will be overwritten with the new value.`);
-        }
-        context.provides[key] = value;
-        return app;
-      },
-    },
-    config: {
-      isNativeTag: (tag) => isHTMLTag(tag) || isSVGTag(tag),
-      performance: false,
-      globalProperties: {
-      },
-      optionMergeStrategies: {
-      },
-      errorHandler: undefined,
-      warnHandler: undefined,
-      compilerOptions: {
-      },
-    },
-    mixins: [
-    ],
-    components: {
-    },
-    directives: {
-    },
-    provides: {
-    },
-    optionsCache: {
-    },
-    propsCache: {
-    },
-    emitsCache: {
-    },
-    reload: () => {
-      render2(cloneVNode(vnode), rootContainer, isSVG);
-    },
-  },
-  root: null,
-  next: null,
-  subTree: null,
-  effect: null,
-  update: null,
-  scope: {
-    detached: true,
-    active: true,
-    effects: [
-    ],
-    cleanups: [
-    ],
-    parent: undefined,
-  },
-  render: null,
-  proxy: null,
-  exposed: null,
-  exposeProxy: null,
-  withProxy: null,
-  provides: {
-  },
-  accessCache: null,
-  renderCache: [
-  ],
-  components: null,
-  directives: null,
-  propsOptions: [
-  ],
-  emitsOptions: null,
-  emit: null,
-  emitted: null,
-  propsDefaults: {
-  },
-  inheritAttrs: undefined,
-  ctx: {
-  },
-  data: {
-  },
-  props: {
-  },
-  attrs: {
-  },
-  slots: {
-  },
-  refs: {
-  },
-  setupState: {
-  },
-  setupContext: null,
-  suspense: null,
-  suspenseId: 0,
-  asyncDep: null,
-  asyncResolved: false,
-  isMounted: false,
-  isUnmounted: false,
-  isDeactivated: false,
-  bc: null,
-  c: null,
-  bm: null,
-  m: null,
-  bu: null,
-  u: null,
-  um: null,
-  bum: null,
-  da: null,
-  a: null,
-  rtg: null,
-  rtc: null,
-  ec: null,
-  sp: null,
-}
-```
-
-2. 第二步：调用 **`setupComponent`** 初始化组件
+2. 【第二步】：调用 **`setupComponent`** 确定组件的`render`函数
    - 初始化`props`、`slots`
-   - 调用`setup`如果`setup`存在
-   - 返回`setup`的内容，可以是响应式对象或渲染函数
-   - 最后如果当前实例没有`render`方法通过将`template`编译`compile`成`render`方法并返回；如果`setup`返回的是函数，会被当做`render`函数使用。然后将`render`函数赋值给组件实例的`render`属性
+   - 如果是`STATEFUL_COMPONENT`组件调用`setupStatefulComponent`
+   - 如果`setup`存在，调用`setup`得到`setupResult`，调用`setup`过程中会注册生命周期钩子的回调函数、创建响应式对象等
+   - 返回`setup`的内容`setupResult`，可以是响应式对象或渲染函数，如果是渲染函数直接赋值给当前实例的render属性(`instance.render`)
+   - 最后如果当前实例没有`render`方法通过将`template`编译`compile`成`render`方法并返回
 
 ```ts
-// 【setupComponent】
+// 【mountComponent的第二步】
 // resolve props and slots for setup context
 if (!(__COMPAT__ && compatMountInstance)) {
   if (__DEV__) {
@@ -1327,7 +776,9 @@ if (!(__COMPAT__ && compatMountInstance)) {
   }
 }
 
-//【setupComponent入参是当前组件实例instance，初始化有状态组件、props、slots】
+// 【packages/runtime-core/src/component.ts】
+// 【2.setupComponent】
+//【setupComponent入参是当前组件实例instance，初始化有状态组件、props、slots，确定组件render函数】
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
@@ -1335,12 +786,13 @@ export function setupComponent(
   isInSSRComponentSetup = isSSR
 
   const { props, children } = instance.vnode
-  // 【判断是否有状态组件】
+  // 【判断组件ShapeFlags是否是STATEFUL_COMPONENT】
   const isStateful = isStatefulComponent(instance)
+  // 【处理props和slots】
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
-  // 【有状态组件调用setupStatefulComponent初始化】
+  // 【STATEFUL_COMPONENT组件调用setupStatefulComponent初始化】
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -1348,7 +800,7 @@ export function setupComponent(
   return setupResult
 }
 
-// 【初始化有状态组件】
+// 【初始化STATEFUL_COMPONENT组件】
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -1545,6 +997,7 @@ export function finishComponentSetup(
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
+        // 【如果setup()返回的并非render函数，那就调用compile编译template生成render函数】
         Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
@@ -1594,15 +1047,18 @@ export function finishComponentSetup(
 }
 ```
 
-3. 第三步：调用 **`setupRenderEffect`** 设置组件渲染逻辑
-   - 定义`componentUpdateFn`方法供`effect.run()`方法调用，`componentUpdateFn`方法根据实例上的`isMounted`是否为true，走入首次挂载或更新分支逻辑
-     - `renderComponentRoot`方法生成`VNode`，其实调用的是第二步中得到的`render`方法（由用户自定义或者经过编译得到的`render`方法），然后`VNode`赋值给`subtree`属性
-     - `patch`方法进行`DOM`挂载
-     - 如果组件内还有子组件内容，就会继续循环递归调用上面的组件初始化加载过程
-   - `new ReactiveEffect`生成`render effect`实例，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该`render effect`调用`run`方法继而调用`componentUpdateFn`方法，如果是首次调用进入首次挂载分支，否则进入更新分支
+![vue](./assets/setupComponent1.png)
+![vue](./assets/setupComponent2.png)
+![vue](./assets/setupComponent3.png)
+![vue](./assets/setupComponent4.png)
+
+3. 【第三步】：调用 **`setupRenderEffect`** 设置组件渲染逻辑
+   - 构造`componentUpdateFn`方法，这期间`renderComponentRoot`生成组件内容的VNode，`patch`循环遍历进行DOM挂载，这两个方法执行之前会执行`beforeMount`/`beforeUpdate`生命周期钩子，这两个方法执行完成之后会执行`mounted`/`updated`生命周期钩子
+   - 调用`new ReactiveEffect`生成本组件对应的`render effect`，`componentUpdateFn`方法作为回调函数传入，响应式数据变化就会引起该`render effect`调用`run`方法继而调用`componentUpdateFn`方法，`componentUpdateFn`方法会根据实例上的`isMounted`是否为true，进入首次挂载分支，否则进入更新分支
+   - 定义`update`方法为`effect.run()`并调用`update`方法，继而调用`componentUpdateFn`回调
 
 ```ts
-// 【setupRenderEffect】
+// 【mountComponent的第三步】
 setupRenderEffect(
   instance,
   initialVNode,
@@ -1612,6 +1068,9 @@ setupRenderEffect(
   isSVG,
   optimized
 )
+
+// 【packages/runtime-core/src/renderer.ts】
+// 【3.setupRenderEffect】
 const setupRenderEffect: SetupRenderEffectFn = (
   instance,
   initialVNode,
@@ -1693,7 +1152,7 @@ const setupRenderEffect: SetupRenderEffectFn = (
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
-        //【1.renderComponentRoot生成根虚拟VNode赋值给subTree】
+        //【1.renderComponentRoot生成VNode赋值给subTree】
         const subTree = (instance.subTree = renderComponentRoot(instance))
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1914,16 +1373,23 @@ const setupRenderEffect: SetupRenderEffectFn = (
 }
 ```
 
+![vue](./assets/setupRenderEffect1.png)
+![vue](./assets/setupRenderEffect2.png)
+![vue](./assets/componentUpdateFn1.png)
+![vue](./assets/componentUpdateFn2.png)
+![vue](./assets/componentUpdateFn3.png)
+
 ### 组件更新
 
-**createVNode -> render(vnode) -> patch -> processComponent -> updateComponent**
+**【1】createVNode  【2】render(vnode) -> patch -> processComponent -> updateComponent**
 
 组件更新显然就走向`updateComponent`方法，如果是需要更新的情况，最终调用的其实就是`instance.update()`：
 
-- `shouldUpdateComponent`方法根据`patchFlag`等判断是否需要更新组件
-- 核心是执行`instance.update()`方法也就是对应`render effect`的`run`方法继而调用`componentUpdateFn`方法，进入更新分支
+- `shouldUpdateComponent()`方法根据`patchFlag`等判断是否需要更新组件
+- 核心是执行`instance.update()`方法也就是对应`render effect`的`run()`方法继而调用`componentUpdateFn()`方法，进入更新分支
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
   const instance = (n2.component = n1.component)!
   // 【需要更新组件的情况】
@@ -1963,12 +1429,31 @@ const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
 }
 ```
 
+![vue](./assets/componentUpdateFn4.png)
+![vue](./assets/componentUpdateFn5.png)
+
 ## 组件注册
 
 - 全局注册
-`createAppAPI`方法生成的App实例有`component`方法用于注册全局组件如下：
+
+`createAppAPI`方法生成的app实例有`component`方法用于注册全局组件如下：
 
 ```ts
+import { createApp } from 'vue'
+
+const app = createApp({})
+
+// register an options object
+app.component('my-component', {
+  /* ... */
+})
+
+// retrieve a registered component
+const MyComponent = app.component('my-component')
+```
+
+```ts
+// 【packages/runtime-core/src/apiCreateApp.ts】
 component(name: string, component?: Component): any {
     if (__DEV__) {
         validateComponentName(name, context.config)
@@ -1979,16 +1464,27 @@ component(name: string, component?: Component): any {
     if (__DEV__ && context.components[name]) {
         warn(`Component "${name}" has already been registered in target app.`)
     }
+    // 【全局注册的组件都挂在components属性中】
     context.components[name] = component
     return app
-},
+}
 ```
 
 - 局部注册
 
-局部组件通过`components`属性选项来进行注册如下：
+局部组件注册如下：
 
 ```ts
+// 方式一
+<script setup>
+import ComponentA from './ComponentA.vue'
+</script>
+
+<template>
+  <ComponentA />
+</template>
+
+// 方式二
 Vue.createApp({
   components: {
     TreeItem
@@ -1998,3 +1494,7 @@ Vue.createApp({
   })
 }).mount('#demo')
 ```
+
+## 总结
+
+![vue](./assets/vue3组件化.png)
