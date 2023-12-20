@@ -10,6 +10,12 @@
 - 引用透明就是指输入相同的参数永远会得到相同的输出，简单的说函数的返回值只受输入的影响。
 - 数据不可变主要是针对类型引用数据类型的入参，如果以一定要修改，最好的方式就是重新去生成一份数据。
 
+纯函数的意义在于：
+
+- 便于测试和优化：这个意义在实际项目开发中意义非常大，由于纯函数对于相同的输入永远会返回相同的结果，因此我们可以轻松断言函数的执行结果，同时也可以保证函数的优化不会影响其他代码的执行。这十分符合测试驱动开发 TDD（Test-Driven Development） 的思想，这样产生的代码往往健壮性更强。
+- 可缓存性：因为相同的输入总是可以返回相同的输出，因此，我们可以提前缓存函数的执行结果。
+- 更少的 Bug：使用纯函数意味着你的函数中不存在指向不明的 this，不存在对全局变量的引用，不存在对参数的修改，这些共享状态往往是绝大多数 bug 的源头。
+
 ```js
 const add = (a,b) => a + b;
 ```
@@ -28,6 +34,8 @@ const compose = function (f, g) {
     return f(g(x));
   };
 }
+
+const compose = (...fns) => (...args) => fns.reduceRight((val, fn) => fn.apply(null, [].concat(val)), args);
 ```
 
 ## 函数柯里化
@@ -49,6 +57,14 @@ function curry(func) {
       };
     }
   };
+}
+
+const curry = (fn, ...args) => {
+    if (args.length >= fn.length) {
+        return fn(...args)
+    } else {
+        return (...args2) => curry(fn, ...args, ...args2)
+    }
 }
 ```
 
@@ -79,6 +95,10 @@ export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 例如，`Array.prototype.map`，`Array.prototype.filter`，`Array.prototype.sort()` 和 `Array.prototype.reduce` 是语言中内置的一些高阶函数。
 
+## 不可变数据
+
 ## 参考资料
 
 [学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
+
+[An introduction to functional programming](https://codewords.recurse.com/issues/one/an-introduction-to-functional-programming)
