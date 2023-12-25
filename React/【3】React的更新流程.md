@@ -146,7 +146,7 @@ function dispatchSetState<S, A>(
 此处属于准备工作阶段：
 
 1. 确定`workInProgress`，`workInProgress`由全局唯一`root<FiberRootNode>`的`current`创建，首次挂载的话`workInProgress`其实就是一个单独的根节点，如果是更新的话其实就是当前页面渲染内容的`fiber`树；
-2. 调用`finishQueueingConcurrentUpdates`方法，如果有`update`任务与已有的`update`任务串起来形成闭环；
+2. 调用`finishQueueingConcurrentUpdates`方法，如果有`update`任务与已有的`update`任务串起来形成闭环，从根节点开始标记`lanes`和`childLanes`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -228,6 +228,7 @@ function beginWork(
     } else {
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
+      // 【通过lane判断当前节点是否有update任务】
       const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
         current,
         renderLanes,
@@ -240,7 +241,7 @@ function beginWork(
       ) {
         // No pending updates or context. Bail out now.
         didReceiveUpdate = false;
-        // 【复用current节点的内容，得到复用的节点直接返回】
+        // 【hasScheduledUpdateOrContext为false，表明节点上没有update任务，复用current节点的内容，得到复用的节点直接返回】
         return attemptEarlyBailoutIfNoScheduledUpdate(
           current,
           workInProgress,

@@ -166,6 +166,7 @@ dispatchSetState.bind(null, currentlyRenderingFiber, queue)
 2. 非render过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
 
 ```ts
+// 【packages/react-reconciler/src/ReactFiberHooks.js】
 function dispatchSetState<S, A>(
   fiber: Fiber,//【currentlyRenderingFiber】
   queue: UpdateQueue<S, A>,//【queue】

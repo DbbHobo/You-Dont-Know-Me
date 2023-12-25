@@ -602,7 +602,7 @@ export function enqueueUpdate<State>(
 
 ### schedule - 第一步：update任务优先级等相关等准备工作
 
-`updateContainer`方法最后会调用`scheduleUpdateOnFiber`，首先去处理一些优先级相关的内容（TODO）并安排`update`任务。这里涉及到React设计运行的一个全新特新，新版的API`createRoot`就是使用`Concurrency`模式，官网对`Concurrency`的描述如下：
+`updateContainer`方法最后会调用`scheduleUpdateOnFiber`，首先去处理一些优先级相关的内容（TODO）并安排`update`任务。这里涉及到React设计运行的一个全新特性，新版的API`createRoot`就是使用`Concurrency`模式，官网对`Concurrency`的描述如下：
 
 Concurrency is not a feature, per se. It’s a new behind-the-scenes mechanism that enables React to prepare multiple versions of your UI at the same time. React uses sophisticated techniques in its internal implementation, like priority queues and multiple buffering. But you won’t see those concepts anywhere in our public APIs.A key property of Concurrent React is that rendering is interruptible. When you first upgrade to React 18, before adding any concurrent features, updates are rendered the same as in previous versions of React — in a single, uninterrupted, synchronous transaction. With synchronous rendering, once an update starts rendering, nothing can interrupt it until the user can see the result on screen.
 
@@ -1016,6 +1016,8 @@ function unstable_scheduleCallback(
 ![react](./assets/scheduleCallback1.png)
 ![react](./assets/scheduleCallback2.png)
 
+---
+
 `scheduleUpdateOnFiber(root, current, lane, eventTime);` => `ensureRootIsScheduled(root, eventTime);` => `scheduleLegacySyncCallback` => `performSyncWorkOnRoot.bind(null, root)`入队
 
 `performSyncWorkOnRoot.bind(null, root)`是非常关键的一步，它又分为两个步骤完成挂载过程，它其实是一个同步任务不受`Scheduler`安排：
@@ -1083,6 +1085,8 @@ function performSyncWorkOnRoot(root: FiberRoot) {
 ![react](./assets/performSyncWorkOnRoot1.png)
 ![react](./assets/performSyncWorkOnRoot2.png)
 
+---
+
 `scheduleUpdateOnFiber(root, current, lane, eventTime);` => `ensureRootIsScheduled(root, eventTime);` => `scheduleCallback` => `performConcurrentWorkOnRoot.bind(null, root)`入队
 
 `performConcurrentWorkOnRoot.bind(null, root)`是一个`concurrent`任务，同样分为两个步骤完成挂载过程，接受`Scheduler`安排：
@@ -1100,6 +1104,17 @@ function performConcurrentWorkOnRoot(
 ): $FlowFixMe {
   // 【省略代码...】
 
+  // Determine the next lanes to work on, using the fields stored
+  // on the root.
+  let lanes = getNextLanes(
+    root,
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
+  );
+  if (lanes === NoLanes) {
+    // Defensive coding. This is never expected to happen.
+    return null;
+  }
+  
   // We disable time-slicing in some cases: if the work has been CPU-bound
   // for too long ("expired" work, to prevent starvation), or we're in
   // sync-updates-by-default mode.
