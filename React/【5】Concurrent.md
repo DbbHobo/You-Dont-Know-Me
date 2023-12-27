@@ -10,13 +10,13 @@
 
 - 可中断的渲染（Interruptible Rendering）： Concurrent Mode允许React在渲染过程中中断执行，以响应更高优先级的任务。这使得React可以更加灵活地响应用户输入和其他事件，而不会阻塞主线程。
 
-在React中的Concurrency模式其实就是给不同的任务不同优先级和运行时间，然后安排在合适的时机去执行任务。时间切片的本质是模拟实现`requestIdleCallback`。
+在React中的Concurrenc模式其实就是给不同的任务不同优先级和运行时间，然后安排在合适的时机去执行任务。时间切片的本质是模拟实现`requestIdleCallback`。
 
 `window.requestIdleCallback()` 方法插入一个函数，这个函数将在浏览器空闲时期被调用。这使开发者能够在主事件循环上执行后台和低优先级工作，而不会影响延迟关键事件，如动画和输入响应。函数一般会按先进先调用的顺序执行，然而，如果回调函数指定了执行超时时间timeout，则有可能为了在超时前执行函数而打乱执行顺序。
 
 ## 优先级Priority
 
-在`Concurrency`模式下，不同的任务有不同的优先级，例如：
+在`Concurrenc`模式下，不同的任务有不同的优先级，例如：
 
 - 过期任务或者同步任务使用同步优先级
 - 用户交互产生的更新（比如点击事件）使用高优先级
@@ -265,7 +265,7 @@ export function lanesToEventPriority(lanes: Lanes): EventPriority {
 }
 ```
 
-根据前文可知，`scheduleSyncCallback`或者`scheduleCallback`安排好任务之后在合适时机就进入任务的执行阶段，接下来看视图的更新任务`performConcurrentWorkOnRoot`，在开始正式的render之前，它会先做准备任务，从当节点开始往祖先节点标记`lanes`和`childLanes`字段直到根节点：
+根据前文可知，`scheduleSyncCallback`或者`scheduleCallback`安排好任务之后在合适时机就进入任务的执行阶段，接下来看视图的更新任务`performConcurrentWorkOnRoot`，在开始正式的render之前，它会先做准备工作，从当前节点开始往祖先节点标记`lanes`和`childLanes`字段直到根节点：
 
 `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack` => `finishQueueingConcurrentUpdates` => `markUpdateLaneFromFiberToRoot`
 
@@ -361,7 +361,7 @@ function markUpdateLaneFromFiberToRoot(
   let isHidden = false;
   let parent = sourceFiber.return;
   let node = sourceFiber;
-  // 【从当前节点开始往根节点去标记，所以说从当前节点直到根节点的ChildLane字段都是有值的，这个要用于后续的判断】
+  // 【从当前节点开始往根节点去标记，所以说从当前节点直到根节点的ChildLanes字段都是有值的，这个要用于后续的判断】
   while (parent !== null) {
     parent.childLanes = mergeLanes(parent.childLanes, lane);
     alternate = parent.alternate;
@@ -587,7 +587,7 @@ export function scheduleLegacySyncCallback(callback: SchedulerCallback) {
 }
 ```
 
-`scheduleCallback`方法由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrency`模式下以某个优先级异步调度一个callback函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如-1其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
+`scheduleCallback`方法由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrenc`模式下以某个优先级异步调度一个callback函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如-1其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
 
 - `IMMEDIATE_PRIORITY_TIMEOUT`: -1
 - `USER_BLOCKING_PRIORITY_TIMEOUT`: 250
