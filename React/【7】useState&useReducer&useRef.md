@@ -131,6 +131,11 @@ function mountState<S>(
   return [hook.memoizedState, dispatch];
 }
 
+function basicStateReducer<S>(state: S, action: BasicStateAction<S>): S {
+  // $FlowFixMe: Flow doesn't like mixed types
+  return typeof action === 'function' ? action(state) : action;
+}
+
 function mountWorkInProgressHook(): Hook {
   const hook: Hook = {
     memoizedState: null,
@@ -192,6 +197,7 @@ function dispatchSetState<S, A>(
   } else {
     // 【非render过程中】
     const alternate = fiber.alternate;
+    // 【fiber.lanes有值表示已有更新事件，就会跳过此步，因此调用两次setState只有第一次有效】
     if (
       fiber.lanes === NoLanes &&
       (alternate === null || alternate.lanes === NoLanes)
@@ -345,8 +351,8 @@ let workInProgressHook: Hook | null = null;
 ```
 
 1. 调用`updateWorkInProgressHook`方法更新`hook`实例，其实就是找到当前正在构造的`fiber`对应的`current fiber`上的`hook`状态去复用，调用了`dispatchSetState`之后`current fiber`上的`hook.queue.pending`会更新；
-2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`Update`任务，将其赋给`current hook`的`baseQueue`，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`Update`任务；
-3. 然后开始处理`current hook`的`baseQueue`，`baseQueue`是一个`Update`任务链表（`UpdateQueue`）会遍历每一个`Update`任务，获取`Update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`Update`任务；
+2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务，将其和`current hook`的`baseQueue`串起来，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务；
+3. 然后开始处理`current hook`的`baseQueue`，`baseQueue`是一个`update`任务链表（`UpdateQueue`）会遍历每一个`update`任务，根据`update`任务的`lane`优先级决定本轮是否要跳过，优先级低的会留在`baseQueue`等待下一轮处理，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务，循环终止条件是`update`为`null`或者`update`回到`first`；
 4. 更新`hook`的`memoizedState`、`baseState`、`baseQueue`、`queue.lastRenderedState`到最新状态；
 5. 最后返回`[hook.memoizedState, dispatch]`；
 
@@ -376,7 +382,7 @@ function updateReducer<S, I, A>(
       'Should have a queue. This is likely a bug in React. Please file an issue.',
     );
   }
-
+  // 【如果是setState调用的，reducer就是basicStateReducer】
   queue.lastRenderedReducer = reducer;
 
   const current: Hook = (currentHook: any);
@@ -429,6 +435,7 @@ function updateReducer<S, I, A>(
         ? !isSubsetOfLanes(getWorkInProgressRootRenderLanes(), updateLane)
         : !isSubsetOfLanes(renderLanes, updateLane);
 
+      // 【根据优先级判断是否要跳过这个update任务】
       if (shouldSkipUpdate) {
         // Priority is insufficient. Skip this update. If this is the first
         // skipped update, the previous update/state is the new base
@@ -739,7 +746,7 @@ function mountReducer<S, I, A>(
     pending: null,
     lanes: NoLanes,
     dispatch: null,
-    lastRenderedReducer: reducer,
+    lastRenderedReducer: reducer,//【由用户传入的reducer】
     lastRenderedState: (initialState: any),
   };
   hook.queue = queue;
@@ -805,15 +812,15 @@ function dispatchReducerAction<S, A>(
 内容在上面的 `useState` 原理中，用的是同样的方法 `updateReducer`。
 
 1. 调用`updateWorkInProgressHook`方法更新`hook`实例，其实就是找到当前正在构造的`fiber`对应的`current fiber`上的`hook`状态去复用，调用了`dispatchReducerAction`之后`current fiber`上的`hook.queue.pending`会更新；
-2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`Update`任务，将其赋给`current hook`的`baseQueue`，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`Update`任务；
-3. 然后开始处理`current hook`的`baseQueue`，`baseQueue`是一个`Update`任务链表（`UpdateQueue`）会遍历每一个`Update`任务，获取`Update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`Update`任务；
+2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务，将其和`current hook`的`baseQueue`串起来，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务；
+3. 然后开始处理`current hook`的`baseQueue`，`baseQueue`是一个`update`任务链表（`UpdateQueue`）会遍历每一个`update`任务，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务；
 4. 更新`hook`的`memoizedState`、`baseState`、`baseQueue`、`queue.lastRenderedState`到最新状态；
 5. 最后返回`[hook.memoizedState, dispatch]`；
 
 ![react](./assets/useReducer3.png)
 ![react](./assets/useReducer4.png)
 
-处理完当前`hook`的更新之后，会回到组件的`updateFuctionComponent`方法，此时`fiber`上的`memoizedState`也就是`hook`状态已经更新到最新状态并且返回了`nextChildren`（函数组件返回的JSX对应的`React-Element`），继而调用`reconcileChildren`继续处理子节点。可以看出来，`hook`是处理函数组件特殊的一环，为函数组件提供了更丰富的功能。
+处理完当前`hook`的更新之后，最后会回到组件的`updateFuctionComponent`方法，此时`fiber`上的`memoizedState`也就是`hook`状态已经更新到最新状态并且返回了`nextChildren`（函数组件返回的JSX对应的`React-Element`），继而调用`reconcileChildren`继续处理子节点。可以看出来，`hook`是处理函数组件特殊的一环，为函数组件提供了更丰富的功能。
 
 ![react](./assets/useReducer5.png)
 ![react](./assets/useReducer6.png)

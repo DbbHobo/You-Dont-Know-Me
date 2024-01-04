@@ -271,7 +271,8 @@ function mountEffect(
 - `workInProgressHook`：`workInProgress fiber`对应的`hook list`
 
 1. 首先构造一个空`Hook`对象作为全局唯一的 `workInProgressHook`，如果已有`hook`就用`next`链接，用例中已有一个`useState`对应的`Hook`，所以用`next`链接到其后；
-2. 然后调用`pushEffect`方法构造一个`Effect`对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`Effect`对象插入进去，`updateQueue`始终都是一个单向循环的链表，并存入`Hook`对象的`memoizedState`属性；
+2. 给当前`fiber`的`flags`添加`Passive`标志；
+3. 然后调用`pushEffect`方法构造一个`Effect`对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`Effect`对象插入进去，`updateQueue`始终都是一个单向循环的链表，并存入`Hook`对象的`memoizedState`属性；
 
 ```ts
 export type Hook = {
@@ -293,6 +294,30 @@ let workInProgressHook: Hook | null = null;// workInProgress fiber对应的hook 
 
 
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
+function mountEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  if (
+    __DEV__ &&
+    (currentlyRenderingFiber.mode & StrictEffectsMode) !== NoMode
+  ) {
+    mountEffectImpl(
+      MountPassiveDevEffect | PassiveEffect | PassiveStaticEffect,
+      HookPassive,
+      create,
+      deps,
+    );
+  } else {
+    mountEffectImpl(
+      PassiveEffect | PassiveStaticEffect,
+      HookPassive,
+      create,
+      deps,
+    );
+  }
+}
+
 function mountEffectImpl(
   fiberFlags: Flags,//【PassiveEffect】
   hookFlags: HookFlags,//【HookPassive】
@@ -558,7 +583,7 @@ function updateWorkInProgressHook(): Hook {
 
 ### fiber.updateQueue存储的effect list触发时机
 
-前文已知React会通过`scheduleSyncCallback`或者`scheduleCallback`去安排`update`任务，其中一种就是`performSyncWorkOnRoot`或者`performConcurrentWorkOnRoot`，这个任务是完成DOM挂载或更新的方法。而`useEffect`回调的触发在`flushPassiveEffects`任务中完成。那么`flushPassiveEffects`任务什么时候被`scheduleCallback`安排呢？其实是在`commit`过程中：
+前文已知React会通过`scheduleSyncCallback`或者`scheduleCallback`去安排`update`任务，其中一种就是`performSyncWorkOnRoot`或者`performConcurrentWorkOnRoot`，这个任务是完成DOM挂载或更新的方法。而`useEffect`回调的触发在`flushPassiveEffects`任务中完成。那么`flushPassiveEffects`任务什么时候被`scheduleCallback`安排呢？其实是在`commit`过程中，`commitBeforeMutationEffects`之前：
 
 ```ts
 function commitRootImpl(
@@ -640,7 +665,7 @@ function commitRootImpl(
       // the previous render and commit if we throttle the commit
       // with setTimeout
       pendingPassiveTransitions = transitions;
-      // 【---Scheduler安排flushPassiveEffects任务---】
+      // 【-----Scheduler安排flushPassiveEffects任务-----】
       scheduleCallback(NormalSchedulerPriority, () => {
         flushPassiveEffects();
         // This render triggered passive effects: release the root cache pool
@@ -1088,12 +1113,186 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
 }
 ```
 
+### `flushPassiveEffects`
+
+`flushPassiveEffects` => `flushPassiveEffectsImpl` => `commitPassiveMountEffects` => `recursivelyTraversePassiveMountEffects` => `commitPassiveMountOnFiber` => `commitHookPassiveMountEffects` => `commitHookEffectListMount`
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
+export function flushPassiveEffects(): boolean {
+  // Returns whether passive effects were flushed.
+  // TODO: Combine this check with the one in flushPassiveEFfectsImpl. We should
+  // probably just combine the two functions. I believe they were only separate
+  // in the first place because we used to wrap it with
+  // `Scheduler.runWithPriority`, which accepts a function. But now we track the
+  // priority within React itself, so we can mutate the variable directly.
+  if (rootWithPendingPassiveEffects !== null) {
+    // Cache the root since rootWithPendingPassiveEffects is cleared in
+    // flushPassiveEffectsImpl
+    const root = rootWithPendingPassiveEffects;
+    // Cache and clear the remaining lanes flag; it must be reset since this
+    // method can be called from various places, not always from commitRoot
+    // where the remaining lanes are known
+    const remainingLanes = pendingPassiveEffectsRemainingLanes;
+    pendingPassiveEffectsRemainingLanes = NoLanes;
+
+    const renderPriority = lanesToEventPriority(pendingPassiveEffectsLanes);
+    const priority = lowerEventPriority(DefaultEventPriority, renderPriority);
+    const prevTransition = ReactCurrentBatchConfig.transition;
+    const previousPriority = getCurrentUpdatePriority();
+
+    try {
+      ReactCurrentBatchConfig.transition = null;
+      setCurrentUpdatePriority(priority);
+      return flushPassiveEffectsImpl();
+    } finally {
+      setCurrentUpdatePriority(previousPriority);
+      ReactCurrentBatchConfig.transition = prevTransition;
+
+      // Once passive effects have run for the tree - giving components a
+      // chance to retain cache instances they use - release the pooled
+      // cache at the root (if there is one)
+      releaseRootPooledCache(root, remainingLanes);
+    }
+  }
+  return false;
+}
+
+
+function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
+  const updateQueue: FunctionComponentUpdateQueue | null =
+    (finishedWork.updateQueue: any);
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    // 【遍历effect list执行用户回调】
+    do {
+      if ((effect.tag & flags) === flags) {
+        if (enableSchedulingProfiler) {
+          if ((flags & HookPassive) !== NoHookEffect) {
+            markComponentPassiveEffectMountStarted(finishedWork);
+          } else if ((flags & HookLayout) !== NoHookEffect) {
+            markComponentLayoutEffectMountStarted(finishedWork);
+          }
+        }
+
+        // Mount
+        const create = effect.create;
+        if (__DEV__) {
+          if ((flags & HookInsertion) !== NoHookEffect) {
+            setIsRunningInsertionEffect(true);
+          }
+        }
+        effect.destroy = create();
+        if (__DEV__) {
+          if ((flags & HookInsertion) !== NoHookEffect) {
+            setIsRunningInsertionEffect(false);
+          }
+        }
+
+        if (enableSchedulingProfiler) {
+          if ((flags & HookPassive) !== NoHookEffect) {
+            markComponentPassiveEffectMountStopped();
+          } else if ((flags & HookLayout) !== NoHookEffect) {
+            markComponentLayoutEffectMountStopped();
+          }
+        }
+
+        if (__DEV__) {
+          const destroy = effect.destroy;
+          if (destroy !== undefined && typeof destroy !== 'function') {
+            let hookName;
+            if ((effect.tag & HookLayout) !== NoFlags) {
+              hookName = 'useLayoutEffect';
+            } else if ((effect.tag & HookInsertion) !== NoFlags) {
+              hookName = 'useInsertionEffect';
+            } else {
+              hookName = 'useEffect';
+            }
+            let addendum;
+            if (destroy === null) {
+              addendum =
+                ' You returned null. If your effect does not require clean ' +
+                'up, return undefined (or nothing).';
+            } else if (typeof destroy.then === 'function') {
+              addendum =
+                '\n\nIt looks like you wrote ' +
+                hookName +
+                '(async () => ...) or returned a Promise. ' +
+                'Instead, write the async function inside your effect ' +
+                'and call it immediately:\n\n' +
+                hookName +
+                '(() => {\n' +
+                '  async function fetchData() {\n' +
+                '    // You can await here\n' +
+                '    const response = await MyAPI.getData(someId);\n' +
+                '    // ...\n' +
+                '  }\n' +
+                '  fetchData();\n' +
+                `}, [someId]); // Or [] if effect doesn't need props or state\n\n` +
+                'Learn more about data fetching with Hooks: https://reactjs.org/link/hooks-data-fetching';
+            } else {
+              addendum = ' You returned: ' + destroy;
+            }
+            console.error(
+              '%s must not return anything besides a function, ' +
+                'which is used for clean-up.%s',
+              hookName,
+              addendum,
+            );
+          }
+        }
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
+}
+```
+
 ## uselayoutEffect
 
 useLayoutEffect is a version of useEffect that fires before the browser repaints the screen.
 
 - `useEffect`是异步调度，等页面渲染完成后再去执行，不会阻塞页面渲染。
-- `uselayoutEffect`是在`commit`阶段新的`DOM`准备完成，但还未渲染到屏幕前，同步执行。
+- `uselayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在DOM更新之后。
+
+`commitRoot` => `commitRootImpl` => `commitLayoutEffects` => `commitLayoutEffectsOnFiber` => `recursivelyTraverseLayoutEffects` => `commitLayoutEffectOnFiber` => `commitHooLayoutEffects` => `commitHookEffectListMount`
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberHooks.js】
+function mountLayoutEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  let fiberFlags: Flags = UpdateEffect | LayoutStaticEffect;
+  if (
+    __DEV__ &&
+    (currentlyRenderingFiber.mode & StrictEffectsMode) !== NoMode
+  ) {
+    fiberFlags |= MountLayoutDevEffect;
+  }
+  return mountEffectImpl(fiberFlags, HookLayout, create, deps);
+}
+
+function mountEffectImpl(
+  fiberFlags: Flags,
+  hookFlags: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const hook = mountWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  // 【flags标记】
+  currentlyRenderingFiber.flags |= fiberFlags;
+  hook.memoizedState = pushEffect(
+    HookHasEffect | hookFlags,
+    create,
+    undefined,
+    nextDeps,
+  );
+}
+```
 
 ## 总结
 

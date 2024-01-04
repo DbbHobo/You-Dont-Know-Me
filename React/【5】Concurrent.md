@@ -23,66 +23,6 @@
 - 网络请求产生的更新使用一般优先级
 - Suspense使用低优先级
 
-### Scheduler priority
-
-在给`performConcurrentWorkOnRoot`之类的任务安排入队之前首先先确定这个任务的优先级如下：
-
-```ts
-// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
-export type PriorityLevel = 0 | 1 | 2 | 3 | 4 | 5;
-
-// TODO: Use symbols?
-export const NoPriority = 0;
-export const ImmediatePriority = 1;
-export const UserBlockingPriority = 2;
-export const NormalPriority = 3;
-export const LowPriority = 4;
-export const IdlePriority = 5;
-
-let schedulerPriorityLevel;
-switch (lanesToEventPriority(nextLanes)) {
-  case DiscreteEventPriority:
-    schedulerPriorityLevel = ImmediateSchedulerPriority;
-    break;
-  case ContinuousEventPriority:
-    schedulerPriorityLevel = UserBlockingSchedulerPriority;
-    break;
-  case DefaultEventPriority:
-    schedulerPriorityLevel = NormalSchedulerPriority;
-    break;
-  case IdleEventPriority:
-    schedulerPriorityLevel = IdleSchedulerPriority;
-    break;
-  default:
-    schedulerPriorityLevel = NormalSchedulerPriority;
-    break;
-}
-// 【任务调度，第一个参数是任务优先级，第二个参数是具体任务】
-newCallbackNode = scheduleCallback(
-  schedulerPriorityLevel,
-  performConcurrentWorkOnRoot.bind(null, root),
-);
-
-// 【packages/react-reconciler/src/ReactEventPriorities.js】
-export function lanesToEventPriority(lanes: Lanes): EventPriority {
-  const lane = getHighestPriorityLane(lanes);
-  if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
-    return DiscreteEventPriority;
-  }
-  if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
-    return ContinuousEventPriority;
-  }
-  if (includesNonIdleWork(lane)) {
-    return DefaultEventPriority;
-  }
-  return IdleEventPriority;
-}
-// 【packages/react-reconciler/src/ReactFiberLane.js】
-export function getHighestPriorityLane(lanes: Lanes): Lane {
-  return lanes & -lanes;
-}
-```
-
 ### Lane priority
 
 我们知道在`fiber`节点上有`hook list`，然后对于`useState hook`之类的有一个`updateQueue`会在更新阶段调用各个任务。`lane`就是用于描述节点上不同的`update`任务优先级的。
@@ -124,7 +64,7 @@ function dispatchSetState<S, A>(
 }
 ```
 
-React中用用31位的二进制来标志lane优先级的高低：
+React中用用31位的二进制来标志`lane`优先级的高低：
 
 ```ts
 export const TotalLanes = 31;
@@ -145,7 +85,7 @@ export const SyncUpdateLanes: Lane = /*                */ 0b00000000000000000000
 // ...
 ```
 
-接下来看，`lanes`在`Update`任务具体的执行中的作用。前文已知更改state状态会调用`dispatchSetState`方法，构造`update`任务将`update`任务入队调度`update`任务，调度`update`任务`scheduleUpdateOnFiber` => `ensureRootIsScheduled`，可以看到`ensureRootIsScheduled`会取出`lane`字段进行判断根据是否有同步任务，没有的话从`lane`优先级映射到`Scheduler`优先级，分别进入`scheduleSyncCallback`或者`scheduleCallback`进一步安排`update`任务：
+接下来看，`lanes`在`Update`任务具体的执行中的作用。前文已知更改`state`状态会调用`dispatchSetState`方法，构造`update`任务将`update`任务入队调度`update`任务，调度`update`任务`scheduleUpdateOnFiber` => `ensureRootIsScheduled`，可以看到`ensureRootIsScheduled`会取出`lane`字段进行判断根据是否有同步任务，没有的话从`lane`优先级映射到`Scheduler`优先级，分别进入`scheduleSyncCallback`或者`scheduleCallback`进一步安排`update`任务：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -552,9 +492,69 @@ function checkScheduledUpdateOrContext(
 
 到此为止我们知道了在调度任务阶段会`lanes`判断是否同步任务以及将`lanes`映射到`Scheduler`优先级去进行任务的调度，在任务执行的render阶段`lanes`和`childLanes`字段要用于是否继续深入子节点更新的判断。
 
+### Scheduler priority
+
+在给`performConcurrentWorkOnRoot`之类的任务安排入队之前首先先确定这个任务的优先级如下：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
+export type PriorityLevel = 0 | 1 | 2 | 3 | 4 | 5;
+
+// TODO: Use symbols?
+export const NoPriority = 0;
+export const ImmediatePriority = 1;
+export const UserBlockingPriority = 2;
+export const NormalPriority = 3;
+export const LowPriority = 4;
+export const IdlePriority = 5;
+
+let schedulerPriorityLevel;
+switch (lanesToEventPriority(nextLanes)) {
+  case DiscreteEventPriority:
+    schedulerPriorityLevel = ImmediateSchedulerPriority;
+    break;
+  case ContinuousEventPriority:
+    schedulerPriorityLevel = UserBlockingSchedulerPriority;
+    break;
+  case DefaultEventPriority:
+    schedulerPriorityLevel = NormalSchedulerPriority;
+    break;
+  case IdleEventPriority:
+    schedulerPriorityLevel = IdleSchedulerPriority;
+    break;
+  default:
+    schedulerPriorityLevel = NormalSchedulerPriority;
+    break;
+}
+// 【任务调度，第一个参数是任务优先级，第二个参数是具体任务】
+newCallbackNode = scheduleCallback(
+  schedulerPriorityLevel,
+  performConcurrentWorkOnRoot.bind(null, root),
+);
+
+// 【packages/react-reconciler/src/ReactEventPriorities.js】
+export function lanesToEventPriority(lanes: Lanes): EventPriority {
+  const lane = getHighestPriorityLane(lanes);
+  if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
+    return DiscreteEventPriority;
+  }
+  if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
+    return ContinuousEventPriority;
+  }
+  if (includesNonIdleWork(lane)) {
+    return DefaultEventPriority;
+  }
+  return IdleEventPriority;
+}
+// 【packages/react-reconciler/src/ReactFiberLane.js】
+export function getHighestPriorityLane(lanes: Lanes): Lane {
+  return lanes & -lanes;
+}
+```
+
 ## 任务调度Scheduler  
 
-React中有如下方法可能触发更新，每次更新都会构造一个update任务，然后调用`scheduleLegacySyncCallback`或者`scheduleCallback`对任务进行调度。
+React中有如下方法可能触发更新，每次更新都会构造一个`update`任务，然后调用`scheduleLegacySyncCallback`或者`scheduleCallback`对任务进行调度。
 
 - `ReactDOM.render` —— HostRoot
 - `this.setState` —— ClassComponent
@@ -716,6 +716,8 @@ function unstable_scheduleCallback(
 }
 ```
 
+---
+
 `requestHostCallback`进入安排执行任务`flushWork`的过程，调用`schedulePerformWorkUntilDeadline`方法，`schedulePerformWorkUntilDeadline`通过三种方式调度异步任务`setImmediate`、`MessageChannel`、`setTimeout`，然后就会异步进入`performWorkUntilDeadline`：
 
 ```ts
@@ -763,7 +765,7 @@ if (typeof localSetImmediate === 'function') {
 }
 ```
 
-`performWorkUntilDeadline`进行一些判断工作后就进入到正式调用我们先前安排的callback（`flushWork`）任务：
+`performWorkUntilDeadline`进行一些判断工作后就进入到正式调用我们先前`在requestHostCallback`方法中安排的`scheduledHostCallback`也就是`callback`（`flushWork`）任务：
 
 ```ts
 const performWorkUntilDeadline = () => {
@@ -854,6 +856,7 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
 }
 
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
+  // 【当前时间】
   let currentTime = initialTime;
   advanceTimers(currentTime);
   // 【从taskQueue取出任务一一执行】
@@ -862,7 +865,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
   ) {
-
+    // 【时间切片：关键判断点，决定了是否暂停】
     if (
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
@@ -926,9 +929,56 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
     return false;
   }
 }
+
+function shouldYieldToHost(): boolean {
+  // 【当前时间-开始时间=已执行时长】
+  const timeElapsed = getCurrentTime() - startTime;
+  // 【frameInterval是5ms这是分配给每一个任务的时长，没超过也就不需要暂停，返回false】
+  if (timeElapsed < frameInterval) {
+    // The main thread has only been blocked for a really short amount of time;
+    // smaller than a single frame. Don't yield yet.
+    return false;
+  }
+
+  // The main thread has been blocked for a non-negligible amount of time. We
+  // may want to yield control of the main thread, so the browser can perform
+  // high priority tasks. The main ones are painting and user input. If there's
+  // a pending paint or a pending input, then we should yield. But if there's
+  // neither, then we can yield less often while remaining responsive. We'll
+  // eventually yield regardless, since there could be a pending paint that
+  // wasn't accompanied by a call to `requestPaint`, or other main thread tasks
+  // like network events.
+  if (enableIsInputPending) {
+    if (needsPaint) {
+      // There's a pending paint (signaled by `requestPaint`). Yield now.
+      return true;
+    }
+    if (timeElapsed < continuousInputInterval) {
+      // We haven't blocked the thread for that long. Only yield if there's a
+      // pending discrete input (e.g. click). It's OK if there's pending
+      // continuous input (e.g. mouseover).
+      if (isInputPending !== null) {
+        return isInputPending();
+      }
+    } else if (timeElapsed < maxInterval) {
+      // Yield if there's either a pending discrete or continuous input.
+      if (isInputPending !== null) {
+        return isInputPending(continuousOptions);
+      }
+    } else {
+      // We've blocked the thread for a long time. Even if there's no pending
+      // input, there may be some other scheduled work that we don't know about,
+      // like a network event. Yield now.
+      return true;
+    }
+  }
+
+  // `isInputPending` isn't available. Yield now.
+  return true;
+}
 ```
 
-`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是函数说明当前任务还没执行完，否则说明执行完了就把当前任务pop出来。例如最通常我们进行组件更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
+`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是函数说明当前任务还没执行完，需要在中断处继续执行，否则说明执行完了就把当前任务pop出来。`const continuationCallback = callback(didUserCallbackTimeout);`。例如最通常我们进行组件更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -940,15 +990,18 @@ const shouldTimeSlice =
 let exitStatus = shouldTimeSlice
   ? renderRootConcurrent(root, lanes)
   : renderRootSync(root, lanes);
+
+// 【！！！返回函数，performConcurrentWorkOnRoot本身，说明之前任务被打断了，需要继续执行】
 if (root.callbackNode === originalCallbackNode) {
   // The task node scheduled for this root is the same one that's
   // currently executed. Need to return a continuation.
   return performConcurrentWorkOnRoot.bind(null, root);
 }
 
-// 【renderRootConcurrent => workLoopConcurrent】
+// 【performConcurrentWorkOnRoot => renderRootConcurrent => workLoopConcurrent】
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
+  // 【shouldYield判断是否要暂停】
   while (workInProgress !== null && !shouldYield()) {
     // $FlowFixMe[incompatible-call] found when upgrading Flow
     performUnitOfWork(workInProgress);
@@ -1010,6 +1063,8 @@ function shouldYieldToHost(): boolean {
 3. `workLoop`根据任务执行的返回结果是否是函数确定当前任务是否执行完毕，任务是可打断的；
 
 ## 总结
+
+![react](./assets/Scheduler.png)
 
 1. 当fiber节点上有事件触发状态改变等，就会构造对应的update任务，update任务都会有一个lane字段表示优先级；
 2. 任务调度阶段，调度update任务的时候，会根据lane进行判断，是否同步，最后如果是异步任务取最高优先级的lane映射到Scheduler优先级继续进行task的调度；

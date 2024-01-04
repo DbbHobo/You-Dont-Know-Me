@@ -1,5 +1,204 @@
 # React 的初始化过程和挂载过程
 
+## React-Element
+
+在开启`render`、`commit`过程之前，`React`会首先使用`babel`将`JSX`转化为`createElement`方法，从而得到的是`React-Element`对象。
+
+- `$$typeof`: ReactElement的类型例如`REACT_ELEMENT_TYPE`、`REACT_CONTEXT_TYPE`、`REACT_PROVIDER_TYPE`等；
+- `type`: 可以是html节点类型等，取决于该元素本身；
+- `key`: key，初始值为null；
+- `props`: 子内容；
+- `_owner`: 父节点fiber；
+
+```ts
+const element = {
+  // This tag allows us to uniquely identify this as a React Element
+  $$typeof: REACT_ELEMENT_TYPE,
+
+  // Built-in properties that belong on the element
+  type: type,
+  key: key,
+  ref: ref,
+  props: props,
+
+  // Record the component responsible for creating this element.
+  _owner: owner,
+}
+```
+
+```ts
+// 【packages/react/src/ReactElement.js】
+/**
+ * Create and return a new ReactElement of the given type.
+ * See https://reactjs.org/docs/react-api.html#createelement
+ */
+export function createElement(type, config, children) {
+  let propName;
+
+  // Reserved names are extracted
+  const props = {};
+
+  let key = null;
+  let ref = null;
+  let self = null;
+  let source = null;
+
+  if (config != null) {
+    if (hasValidRef(config)) {
+      ref = config.ref;
+
+      if (__DEV__) {
+        warnIfStringRefCannotBeAutoConverted(config);
+      }
+    }
+    if (hasValidKey(config)) {
+      if (__DEV__) {
+        checkKeyStringCoercion(config.key);
+      }
+      key = '' + config.key;
+    }
+
+    self = config.__self === undefined ? null : config.__self;
+    source = config.__source === undefined ? null : config.__source;
+    // Remaining properties are added to a new props object
+    for (propName in config) {
+      if (
+        hasOwnProperty.call(config, propName) &&
+        !RESERVED_PROPS.hasOwnProperty(propName)
+      ) {
+        props[propName] = config[propName];
+      }
+    }
+  }
+
+  // Children can be more than one argument, and those are transferred onto
+  // the newly allocated props object.
+  const childrenLength = arguments.length - 2;
+  if (childrenLength === 1) {
+    props.children = children;
+  } else if (childrenLength > 1) {
+    const childArray = Array(childrenLength);
+    for (let i = 0; i < childrenLength; i++) {
+      childArray[i] = arguments[i + 2];
+    }
+    if (__DEV__) {
+      if (Object.freeze) {
+        Object.freeze(childArray);
+      }
+    }
+    props.children = childArray;
+  }
+
+  // Resolve default props
+  if (type && type.defaultProps) {
+    const defaultProps = type.defaultProps;
+    for (propName in defaultProps) {
+      if (props[propName] === undefined) {
+        props[propName] = defaultProps[propName];
+      }
+    }
+  }
+  if (__DEV__) {
+    if (key || ref) {
+      const displayName =
+        typeof type === 'function'
+          ? type.displayName || type.name || 'Unknown'
+          : type;
+      if (key) {
+        defineKeyPropWarningGetter(props, displayName);
+      }
+      if (ref) {
+        defineRefPropWarningGetter(props, displayName);
+      }
+    }
+  }
+  return ReactElement(
+    type,
+    key,
+    ref,
+    self,
+    source,
+    ReactCurrentOwner.current,
+    props,
+  );
+}
+/**
+ * Factory method to create a new React element. This no longer adheres to
+ * the class pattern, so do not use new to call it. Also, instanceof check
+ * will not work. Instead test $$typeof field against Symbol.for('react.element') to check
+ * if something is a React Element.
+ *
+ * @param {*} type
+ * @param {*} props
+ * @param {*} key
+ * @param {string|object} ref
+ * @param {*} owner
+ * @param {*} self A *temporary* helper to detect places where `this` is
+ * different from the `owner` when React.createElement is called, so that we
+ * can warn. We want to get rid of owner and replace string `ref`s with arrow
+ * functions, and as long as `this` and owner are the same, there will be no
+ * change in behavior.
+ * @param {*} source An annotation object (added by a transpiler or otherwise)
+ * indicating filename, line number, and/or other information.
+ * @internal
+ */
+function ReactElement(type, key, ref, self, source, owner, props) {
+  const element = {
+    // This tag allows us to uniquely identify this as a React Element
+    $$typeof: REACT_ELEMENT_TYPE,
+
+    // Built-in properties that belong on the element
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+
+    // Record the component responsible for creating this element.
+    _owner: owner,
+  };
+
+  if (__DEV__) {
+    // The validation flag is currently mutative. We put it on
+    // an external backing store so that we can freeze the whole object.
+    // This can be replaced with a WeakMap once they are implemented in
+    // commonly used development environments.
+    element._store = {};
+
+    // To make comparing ReactElements easier for testing purposes, we make
+    // the validation flag non-enumerable (where possible, which should
+    // include every environment we run tests in), so the test framework
+    // ignores it.
+    Object.defineProperty(element._store, 'validated', {
+      configurable: false,
+      enumerable: false,
+      writable: true,
+      value: false,
+    });
+    // self and source are DEV only properties.
+    Object.defineProperty(element, '_self', {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: self,
+    });
+    // Two elements created in two different places should be considered
+    // equal for testing purposes and therefore we hide it from enumeration.
+    Object.defineProperty(element, '_source', {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: source,
+    });
+    if (Object.freeze) {
+      Object.freeze(element.props);
+      Object.freeze(element);
+    }
+  }
+
+  return element;
+}
+```
+
 ## 旧 - render方法，创建FiberRootNode，进入updateContainer
 
 通常我们用初始化一个项目如下，可以看到引入了 `react-dom` 模块，调用了 `render` 方法：
@@ -181,7 +380,7 @@ root.render(<App />);
 
 使用旧版`render`方法可以看到会有告警，提示用户使用最新的 `createRoot` 方法，那我们看一下`createRoot`其中关键的两个步骤如下：
 
-1. 创建根容器的方法 `createContainer` 实际调用了 `createFiberRoot` 方法生成 `FiberRootNode`；
+1. 创建根容器的方法 `createContainer` 实际调用了 `createFiberRoot` 方法生成 `FiberRootNode` 全局唯一的节点；
 2. 将 `FiberRootNode` 实例传入 `ReactDOMRoot` 构造函数最终生成并返回 `ReactDOMRoot` 实例，它包含一个 `_internalRoot` 属性，存储的就是 `FiberRootNode` 实例
 
 `createRoot` => `createRootImpl` => `createContainer` => `createFiberRoot` => `return new ReactDOMRoot(root)`
@@ -293,7 +492,7 @@ export function createContainer(
 }
 ```
 
-`createFiberRoot`首先调用 `new FiberRootNode` 创建一个全局根 `FiberRootNode` 实例，首次渲染所以需要调用 `createHostRootFiber` 创建一个 `FiberNode` 给 `FiberRootNode` 的 `current` 属性赋值，作为此次渲染树的根节点。
+`createFiberRoot`首先调用 `new FiberRootNode` 创建一个全局根 `FiberRootNode` 实例，首次渲染所以需要调用 `createHostRootFiber` 创建一个 `FiberNode` 给 `FiberRootNode` 的 `current` 属性赋值，作为此次渲染树的根节点，它是一个`fiberNode`实例，tag为3表示`HostRoot`节点。
 
 ```ts
 export function createFiberRoot(
@@ -374,7 +573,7 @@ export function createFiberRoot(
 }
 ```
 
-`FiberRootNode` 构造函数如下：
+`FiberRootNode` 构造函数如下，：
 
 ```ts
 function FiberRootNode(
@@ -453,6 +652,17 @@ function FiberRootNode(
 
   // 【省略代码...】
 }
+
+export function createFiberRoot(
+  containerInfo: Container,
+  tag: RootTag,
+  // ...
+){}
+
+export type RootTag = 0 | 1;
+
+export const LegacyRoot = 0;
+export const ConcurrentRoot = 1;
 ```
 
 总结就是在用户调用 `createRoot` 方法之后，会生成一个全局唯一的根 `FiberRootNode` 实例，并将它放在 `ReactDOMRoot` 实例的 `_internalRoot` 属性上。
@@ -464,7 +674,7 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(<App />);
 ```
 
-可以看到第二步用户调用了 `render` 方法，这个 `render` 方法挂载在 `ReactDOMRoot` 原型对象上如下：
+可以看到第二步用户调用了 `render` 方法，这个 `render` 方法挂载在 `ReactDOMRoot` 原型对象上如下，随后和`legacy`模式一样进入`updateContainer`方法：
 
 ```ts
 // $FlowFixMe[prop-missing] found when upgrading Flow
@@ -610,7 +820,9 @@ In a concurrent render, this is not always the case. React may start rendering a
 
 [What is Concurrent React?](https://react.dev/blog/2022/03/29/react-v18#what-is-concurrent-react)
 
-`Concurrency`模式和原来的同步模式最大的不同点在于其是可打断的，有时间切片和优先级的概念，相当于渲染过程是可打断的，由框架去安排任务是否执行以及执行时机。
+#### 任务调度阶段
+
+`Concurrent`模式和原来的同步模式最大的不同点在于其是可打断的，有时间切片和优先级的概念，相当于渲染过程是可打断的，由框架去安排任务是否执行以及执行时机。
 
 1. `scheduleUpdateOnFiber`调用`ensureRootIsScheduled`；
 2. `ensureRootIsScheduled`根据一定的条件进入`scheduleSyncCallback`或者`scheduleCallback`，此处会确定任务的优先级；
@@ -885,7 +1097,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 ```
 
 1. `scheduleSyncCallback`安排同步任务；
-2. `scheduleCallback`根据优先级安排Concurrency任务；
+2. `scheduleCallback`根据优先级安排`Concurrent`任务；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberSyncTaskQueue.js】
@@ -1018,12 +1230,15 @@ function unstable_scheduleCallback(
 
 ---
 
+#### performSyncWorkOnRoot任务
+
 `scheduleUpdateOnFiber(root, current, lane, eventTime);` => `ensureRootIsScheduled(root, eventTime);` => `scheduleLegacySyncCallback` => `performSyncWorkOnRoot.bind(null, root)`入队
 
 `performSyncWorkOnRoot.bind(null, root)`是非常关键的一步，它又分为两个步骤完成挂载过程，它其实是一个同步任务不受`Scheduler`安排：
 
 1. `renderRootSync`方法进入**render过程**
-2. `commitRoot`方法进入**commit过程**
+2. **render过程**结束后`root.finishedWork = finishedWork;`表示`fiber`树构建完成并挂载在`finishedWork`属性上；
+3. `commitRoot`方法进入**commit过程**
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1087,12 +1302,15 @@ function performSyncWorkOnRoot(root: FiberRoot) {
 
 ---
 
+#### performConcurrentWorkOnRoot任务
+
 `scheduleUpdateOnFiber(root, current, lane, eventTime);` => `ensureRootIsScheduled(root, eventTime);` => `scheduleCallback` => `performConcurrentWorkOnRoot.bind(null, root)`入队
 
 `performConcurrentWorkOnRoot.bind(null, root)`是一个`concurrent`任务，同样分为两个步骤完成挂载过程，接受`Scheduler`安排：
 
 1. `renderRootSync`或`renderRootConcurrent`方法进入**render过程**
-2. `finishConcurrentRender`进入`commitRoot`方法继而进入**commit过程**
+2. **render过程**结束监测`exitStatus`状态如果已经完成fiber构建，那就`root.finishedWork = finishedWork;`表示`fiber`树构建完成并挂载在`finishedWork`属性上；
+3. `finishConcurrentRender`进入`commitRoot`方法继而进入**commit过程**
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1126,9 +1344,11 @@ function performConcurrentWorkOnRoot(
     !includesBlockingLane(root, lanes) &&
     !includesExpiredLane(root, lanes) &&
     (disableSchedulerTimeoutInWorkLoop || !didTimeout);
+    // 【shouldTimeSlice是否要用上时间分片功能】
   let exitStatus = shouldTimeSlice
     ? renderRootConcurrent(root, lanes)
     : renderRootSync(root, lanes);
+
   if (exitStatus !== RootInProgress) {
     if (exitStatus === RootErrored) {
       // 【省略代码...】
@@ -1298,7 +1518,13 @@ function finishConcurrentRender(
 
 到此为止，已经将`performSyncWorkOnRoot`或者`performConcurrentWorkOnRoot`安排进任务队列，那么什么时候执行呢？`performSyncWorkOnRoot`因为是同步任务所以会立即执行，而`performConcurrentWorkOnRoot`的触发要经过一系列判断，并且它的过程是可打断的。
 
-`scheduleCallback` => `unstable_scheduleCallback` => `performConcurrentWorkOnRoot`加入`TaskQueue` + `requestHostCallback(flushWork)` => `schedulePerformWorkUntilDeadline` => `messageChannel.postMessage()` => `performWorkUntilDeadline` => `workLoop` => 遍历`TaskQueue`执行任务 => `performConcurrentWorkOnRoot`
+---
+
+#### 任务处理入口
+
+现在`TimerQueue`队列里的任务是什么时候触发呢？通过调用`requestHostCallback(flushWork)`方法，这个方法会去安排任务队列的逐个执行：
+
+`scheduleCallback` => `unstable_scheduleCallback` => `performConcurrentWorkOnRoot`加入`TimerQueue` + `requestHostCallback(flushWork)` => `schedulePerformWorkUntilDeadline` => `messageChannel.postMessage()` => `performWorkUntilDeadline` => `workLoop` => 遍历`TimerQueue`执行任务 => `performConcurrentWorkOnRoot`
 
 ```ts
 // 【packages/scheduler/src/forks/Scheduler.js】
@@ -1357,16 +1583,17 @@ if (typeof localSetImmediate === 'function') {
 
 ### render - 第二步：React-Element转化为fiber过程
 
-`performSyncWorkOnRoot` => `renderRootSync`：
+`performSyncWorkOnRoot` => `renderRootSync` => `prepareFreshStack`+`workLoopSync`：
 
 1. `prepareFreshStack`
   
--  根据当前全局根`FiberRootNode`去调用`prepareFreshStack`创建`workInProgress`
--  调用`finishQueueingConcurrentUpdates`，（新版`ReactDOM.createRoot`）为`current fiber`树装载任务
+   -  根据当前全局根`FiberRootNode`去调用`prepareFreshStack`创建`workInProgress`；
+   -  调用`finishQueueingConcurrentUpdates`，（新版`ReactDOM.createRoot`）为`current fiber`树装载任务；
 
 2. `workLoopSync`
   
-- 调用`workLoopSync`循环处理`workInProgress`生成完整的`fiber`树，这个方法是同步的不可打断的
+   - 调用`workLoopSync`循环处理`workInProgress`生成完整的`fiber`树，这个方法是同步的不可打断的；
+   - 调用`finishQueueingConcurrentUpdates`，为`current fiber`树装载任务；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1460,12 +1687,187 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 
   return workInProgressRootExitStatus;
 }
+
+function workLoopSync() {
+  // Perform work without checking if we need to yield between fiber.
+  while (workInProgress !== null) {
+    performUnitOfWork(workInProgress);
+  }
+}
 ```
 
-如果是`performConcurrentWorkOnRoot`可能会走向`renderRootConcurrent`继而走向`workLoopConcurrent`方法，可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的可打断的。
+---
+
+`performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack`+`workLoopSync`/`workLoopConcurrent`：
+
+如果是`performConcurrentWorkOnRoot`可能会走向`renderRootConcurrent`继而走向`workLoopConcurrent`方法，可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
+function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
+  const prevExecutionContext = executionContext;
+  executionContext |= RenderContext;
+  const prevDispatcher = pushDispatcher(root.containerInfo);
+  const prevCacheDispatcher = pushCacheDispatcher();
+
+  // If the root or lanes have changed, throw out the existing stack
+  // and prepare a fresh one. Otherwise we'll continue where we left off.
+  if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
+    // 【省略代码...】
+
+    workInProgressTransitions = getTransitionsForLanes(root, lanes);
+    resetRenderTimer();
+    prepareFreshStack(root, lanes);
+  }
+
+  // 【省略代码...】
+
+  outer: do {
+    try {
+      if (
+        workInProgressSuspendedReason !== NotSuspended &&
+        workInProgress !== null
+      ) {
+        // The work loop is suspended. We need to either unwind the stack or
+        // replay the suspended component.
+        const unitOfWork = workInProgress;
+        const thrownValue = workInProgressThrownValue;
+        switch (workInProgressSuspendedReason) {
+          case SuspendedOnError: {
+            // Unwind then continue with the normal work loop.
+            workInProgressSuspendedReason = NotSuspended;
+            workInProgressThrownValue = null;
+            unwindSuspendedUnitOfWork(unitOfWork, thrownValue);
+            break;
+          }
+          case SuspendedOnData: {
+            const thenable: Thenable<mixed> = (thrownValue: any);
+            if (isThenableResolved(thenable)) {
+              // The data resolved. Try rendering the component again.
+              workInProgressSuspendedReason = NotSuspended;
+              workInProgressThrownValue = null;
+              replaySuspendedUnitOfWork(unitOfWork);
+              break;
+            }
+            // The work loop is suspended on data. We should wait for it to
+            // resolve before continuing to render.
+            // TODO: Handle the case where the promise resolves synchronously.
+            // Usually this is handled when we instrument the promise to add a
+            // `status` field, but if the promise already has a status, we won't
+            // have added a listener until right here.
+            const onResolution = () => {
+              // Check if the root is still suspended on this promise.
+              if (
+                workInProgressSuspendedReason === SuspendedOnData &&
+                workInProgressRoot === root
+              ) {
+                // Mark the root as ready to continue rendering.
+                workInProgressSuspendedReason = SuspendedAndReadyToContinue;
+              }
+              // Ensure the root is scheduled. We should do this even if we're
+              // currently working on a different root, so that we resume
+              // rendering later.
+              ensureRootIsScheduled(root, now());
+            };
+            thenable.then(onResolution, onResolution);
+            break outer;
+          }
+          case SuspendedOnImmediate: {
+            // If this fiber just suspended, it's possible the data is already
+            // cached. Yield to the main thread to give it a chance to ping. If
+            // it does, we can retry immediately without unwinding the stack.
+            workInProgressSuspendedReason = SuspendedAndReadyToContinue;
+            break outer;
+          }
+          case SuspendedAndReadyToContinue: {
+            const thenable: Thenable<mixed> = (thrownValue: any);
+            if (isThenableResolved(thenable)) {
+              // The data resolved. Try rendering the component again.
+              workInProgressSuspendedReason = NotSuspended;
+              workInProgressThrownValue = null;
+              replaySuspendedUnitOfWork(unitOfWork);
+            } else {
+              // Otherwise, unwind then continue with the normal work loop.
+              workInProgressSuspendedReason = NotSuspended;
+              workInProgressThrownValue = null;
+              unwindSuspendedUnitOfWork(unitOfWork, thrownValue);
+            }
+            break;
+          }
+          case SuspendedOnDeprecatedThrowPromise: {
+            // Suspended by an old implementation that uses the `throw promise`
+            // pattern. The newer replaying behavior can cause subtle issues
+            // like infinite ping loops. So we maintain the old behavior and
+            // always unwind.
+            workInProgressSuspendedReason = NotSuspended;
+            workInProgressThrownValue = null;
+            unwindSuspendedUnitOfWork(unitOfWork, thrownValue);
+            break;
+          }
+          case SuspendedOnHydration: {
+            // Selective hydration. An update flowed into a dehydrated tree.
+            // Interrupt the current render so the work loop can switch to the
+            // hydration lane.
+            resetWorkInProgressStack();
+            workInProgressRootExitStatus = RootDidNotComplete;
+            break outer;
+          }
+          default: {
+            throw new Error(
+              'Unexpected SuspendedReason. This is a bug in React.',
+            );
+          }
+        }
+      }
+
+      if (__DEV__ && ReactCurrentActQueue.current !== null) {
+        // `act` special case: If we're inside an `act` scope, don't consult
+        // `shouldYield`. Always keep working until the render is complete.
+        // This is not just an optimization: in a unit test environment, we
+        // can't trust the result of `shouldYield`, because the host I/O is
+        // likely mocked.
+        workLoopSync();
+      } else {
+        workLoopConcurrent();
+      }
+      break;
+    } catch (thrownValue) {
+      handleThrow(root, thrownValue);
+    }
+  } while (true);
+  resetContextDependencies();
+
+  popDispatcher(prevDispatcher);
+  popCacheDispatcher(prevCacheDispatcher);
+  executionContext = prevExecutionContext;
+
+  // 【省略代码...】
+
+  // Check if the tree has completed.
+  if (workInProgress !== null) {
+    // Still work remaining.
+    if (enableSchedulingProfiler) {
+      markRenderYielded();
+    }
+    return RootInProgress;
+  } else {
+    // Completed the tree.
+    if (enableSchedulingProfiler) {
+      markRenderStopped();
+    }
+
+    // Set this to null to indicate there's no in-progress render.
+    workInProgressRoot = null;
+    workInProgressRootRenderLanes = NoLanes;
+
+    // It's safe to process the queue now that the render phase is complete.
+    finishQueueingConcurrentUpdates();
+
+    // Return the final exit status.
+    return workInProgressRootExitStatus;
+  }
+}
+
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
   while (workInProgress !== null && !shouldYield()) {
@@ -1647,7 +2049,7 @@ function workLoopSync() {
 
 `performUnitOfWork` => `beginWork` / `completeWork`
 
-因为是深度优先遍历，所以会先一步步顺着子节点检查 `next` 节点是否存在，存在就调用 `beginWork`，直到最底部的节点调用完，此时调用 `completeUnitOfWork` 去寻找是否存在 `sibling` 兄弟节点，若找到顺着兄弟节点去深度调用`beginWork`，若找不到就回到上一层节点，重复这样的过程，直到遍历完所有节点。
+因为是深度优先遍历，所以会先一步步顺着子节点检查 `next` 节点是否存在，存在就调用 `beginWork`，直到最底部的节点调用完，此时调用 `completeUnitOfWork` 先处理当前节点然后去寻找是否存在 `sibling` 兄弟节点，若找到继续调用`beginWork`/`completeUnitOfWork`，若找不到就回到上一层节点，重复这样的过程，直到遍历完所有节点。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1712,10 +2114,12 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 2. 根据 `tag` 类型进入不同的 `update` 方法，首次渲染会进入`updateHostRoot`方法；
 3. 进入`reconcileChildren`方法，首次挂载会创建`fiber`节点，是更新的话会进入常说的`diff`算法；
 4. 从tag为3的`root fiber node`根节点开始，进入它的`beginWork`、`updateHostRoot`、`reconcileChildren`过程解析出来`ƒ App()`对应的`fiber node`，然后进入`ƒ App()`对应的`fiber node`的`beginWork`、`mountIndeterminateComponent`、`reconcileChildren`过程解析出来`div`对应的`fiber node`，直到解析完所有节点；
+5. `ƒ App()`之后是`div`对应的`beginWork`、`updateHostComponent`、`reconcileChildren`，div有两个子节点会进入`reconcileChildrenArray`，这个方法会逐一生成该层节点的`fiber node`并用`sibling`属性串联起来，最后返回`first fiber node`；
 
 `beginWork` => `updateHostRoot` => `reconcileChildren` => `mountChildFibers`/`reconcileChildFibers` => `createChildReconciler`
 
 ```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -2808,7 +3212,7 @@ function createFiber(
 ![react](./assets/beginWork6.png)
 ![react](./assets/beginWork7.png)
 
-`fiber node`节点的`tag`有以下类型值，通常3代表HostRoot，也就是根节点，在后续调试过程中可以看到几次类型判断中从3开始又到3结束：
+`fiber node`节点的`tag`有以下类型值，通常3代表`HostRoot`，也就是根节点，在后续调试过程中可以看到几次类型判断中从3开始又到3结束：
 
 ```ts
 export const FunctionComponent = 0;
@@ -2842,7 +3246,9 @@ export const HostSingleton = 27;
 
 ##### `completeWork`通过fiber节点生成对应DOM
 
-`completeUnitOfWork`根据`completeWork`方法返回是否存在需要处理的`next`节点（是否存在sibling），若有继续处理，若无就回溯到上一层
+`beginWork`深入执行直到树底，此时再没有子节点，就会调用树底这个节点的`completeUnitOfWork`方法。
+
+`completeUnitOfWork`根据`completeWork`方法返回是否存在需要处理的`next`节点（是否存在sibling），若有继续处理，若无就回溯到上一层。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -3175,7 +3581,7 @@ function FiberNode(
 ) {
   // Instance
   this.tag = tag;//【节点类型】
-  this.key = key;//【节点key】
+  this.key = key;//【节点key，diff过程会使用】
   this.elementType = null;// 【节点的元素类型】
   this.type = null;// 【对于组件，它指向构造函数；对于DOM元素，它指定HTML tag】
   this.stateNode = null;//【DOM节点】
@@ -3189,11 +3595,11 @@ function FiberNode(
   this.ref = null;
   this.refCleanup = null;
 
-  this.pendingProps = pendingProps;// 【本次渲染需要使用的 props】
+  this.pendingProps = pendingProps;// 【本次渲染需要使用的 props，从`ReactElement`对象传入的 props，用于和`fiber.memoizedProps`比较可以得出属性是否变动】
   this.memoizedProps = null;// 【上次渲染使用的 props】
   this.updateQueue = null;// 【用于状态更新、回调函数、DOM更新的队列】
   this.memoizedState = null;// 【上次渲染后的 state 状态，单向循环effect链表】
-  this.dependencies = null;// 【本次渲染需要使用的 props】
+  this.dependencies = null;// 【本节点依赖的context等】
 
   this.mode = mode;
 
@@ -3202,8 +3608,8 @@ function FiberNode(
   this.subtreeFlags = NoFlags; // 【当前子树的副作用】
   this.deletions = null;// 【要删除的子 fiber】
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
+  this.lanes = NoLanes;//【本节点更新优先级】
+  this.childLanes = NoLanes;//【子节点更新优先级，决定是否要提前退出更新流程】
 
   this.alternate = null;【// 【指向 workInProgress fiber/current fiber 树中对应的节点，是双向的】
 
@@ -3246,6 +3652,34 @@ function FiberNode(
     }
   }
 }
+
+export const FunctionComponent = 0;
+export const ClassComponent = 1;
+export const IndeterminateComponent = 2; // Before we know whether it is function or class
+export const HostRoot = 3; // Root of a host tree. Could be nested inside another node.
+export const HostPortal = 4; // A subtree. Could be an entry point to a different renderer.
+export const HostComponent = 5;
+export const HostText = 6;
+export const Fragment = 7;
+export const Mode = 8;
+export const ContextConsumer = 9;
+export const ContextProvider = 10;
+export const ForwardRef = 11;
+export const Profiler = 12;
+export const SuspenseComponent = 13;
+export const MemoComponent = 14;
+export const SimpleMemoComponent = 15;
+export const LazyComponent = 16;
+export const IncompleteClassComponent = 17;
+export const DehydratedFragment = 18;
+export const SuspenseListComponent = 19;
+export const ScopeComponent = 21;
+export const OffscreenComponent = 22;
+export const LegacyHiddenComponent = 23;
+export const CacheComponent = 24;
+export const TracingMarkerComponent = 25;
+export const HostHoistable = 26;
+export const HostSingleton = 27;
 ```
 
 ### commit - 第三步：根据fiber进行DOM操作和处理副作用过程
@@ -3630,7 +4064,7 @@ function commitRootImpl(
 
 ![react](./assets/commitRootImpl.png)
 
-1. 前序`commitBeforeMutationEffects`期间会执行执行`getSnapshotBeforeUpdate`生命周期函数，这期间主要是做mutation前的准备工作，比如给container清空内容等等
+1. 前序`commitBeforeMutationEffects`期间会执行执行`getSnapshotBeforeUpdate`生命周期函数，这期间主要是做`mutation`前的准备工作，比如给`container`清空内容等等
 
 关键：`commitBeforeMutationEffectsOnFiber`
 
@@ -3800,7 +4234,7 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
 ![react](./assets/commitBeforeMutationEffects1.png)
 ![react](./assets/commitBeforeMutationEffects2.png)
 
-2. 中序`commitMutationEffects(root, finishedWork, lanes)`此方法调用完成时也就是 `DOM` 渲染完成的过程，首先进入`commitMutationEffectsOnFiber`方法，然后根据tag类型进入不同的处理方法，比如`HostRoot`/`HostComponent`类型的节点会先调用`recursivelyTraverseMutationEffects`遍历，`subtreeFlags`是`MutationMask`的节点就是需要mutation的节点然后深入调用`commitMutationEffectsOnFiber`，继而调用`commitReconciliationEffects`，在`commitReconciliationEffects`方法中会根据`fiber node`的`flags`类型进行合适的DOM操作：
+2. 中序`commitMutationEffects(root, finishedWork, lanes)`此方法调用完成时也就是 `DOM` 渲染完成的过程，首先进入`commitMutationEffectsOnFiber`方法，然后根据tag类型进入不同的处理方法，比如`HostRoot`/`HostComponent`类型的节点会先调用`recursivelyTraverseMutationEffects`遍历，`subtreeFlags`是`MutationMask`的节点就是需要mutation的节点然后深入调用`commitMutationEffectsOnFiber`，继而调用`commitReconciliationEffects`，在`commitReconciliationEffects`方法中会根据`fiber node`的`flags`类型进行合适的DOM操作
 
 关键：`commitMutationEffectsOnFiber` => `recursivelyTraverseMutationEffects` + `commitReconciliationEffects`
 
@@ -4452,6 +4886,18 @@ function recursivelyTraverseLayoutEffects(
 ![react](./assets/commitLayoutEffects1.png)
 ![react](./assets/commitLayoutEffects2.png)
 
+1. commitBeforeMutationEffects
+
+   - dom 变化之前, 主要处理副作用队列中带有`Snapshot`,`Passive`标记的fiber节点.
+
+2. commitMutationEffects
+  
+   - dom 变化阶段。 主要处理副作用队列中带有`Placement`, `Update`, `Deletion`, `Hydrating`标记的fiber节点.
+
+3. commitLayoutEffects
+  
+   - dom 变化后, 主要处理副作用队列中带有`Update` | `Callback`标记的fiber节点.
+
 #### Update
 
 `commitMutationEffectsOnFiber`，在这一步中会根据节点 `tag` 分类调用不同方法然后进入 `recursivelyTraverseMutationEffects` 和 `commitReconciliationEffects` 方法，实际的DOM操作（添加或者更新操作）就在这个方法中，我们来看其中文本节点和根节点的情况：
@@ -4835,11 +5281,11 @@ switch (parentFiber.tag) {
 
 ## 总结
 
-1. 新版、旧版初始化过程首先都会创建`fiberRootNode`作为一个全局唯一的根节点，它的`current`属性永远指向屏幕上渲染的`fiber`树，首次渲染的话它仅包含一个空的`fiber node`，更新的话就是上一次构建的`fiber`树；
-2. 创建完`fiberRootNode`之后都会进入`updateContainer`方法，旧版在此时安排`update`任务到`current`树的`updateQueue`中，首次渲染`update`任务中包含的就是用户传入的例如`<App />`；
+1. 新版、旧版初始化过程首先都会创建`fiberRootNode`作为一个**全局唯一**的根节点，`tag`根据是`Concurrent`模式或`legacy`模式为`1`或者`0`，它的`current`属性永远指向屏幕上渲染的`fiber`树，首次渲染的话它仅包含一个空的`fiber node`，`tag`为`3`表示`HostRoot`类型，更新的话就是上一次构建的`fiber`树，无论是`current tree`还是`workInProgress tree`都有这样一个`tag`为3的`HostRoot`根节点`fiber node`；
+2. 创建完`fiberRootNode<FiberRoot>`和`fiber node<Fiber:HostRoot>`之后都会进入`updateContainer`方法，旧版在此时安排`update`任务到`current`树的`updateQueue`中，首次渲染`update`任务中包含的就是用户传入的例如`<App />`；
 3. `updateContainer`进入`scheduleUpdateOnFiber`进行任务以及优先级等安排工作，进入`scheduleSyncCallback`同步任务安排或者`scheduleCallback`的`Concurrency`任务安排，旧版最终会调用`performSyncWorkOnRoot.bind(null, root)`，新版会调用`performConcurrentWorkOnRoot.bind(null, root)`；
 4. `performSyncWorkOnRoot.bind(null, root)`/`performConcurrentWorkOnRoot.bind(null, root)`都会进入两个关键步骤，一个是**render过程**`renderRootSync`，一个是**commit过程**`commitRoot`；
-5. `render`过程（`renderRootSync`）主要是深度遍历节点调用`beginWork`生成`fiber node`并且标识合适的`flags`，当到达底部节点时会去调用`completeUnitOfWork`生成`DOM`，然后检查是否存在`sibling`，存在就继续调用`beginWork`，不存在就回到上层节点继续调用`completeUnitOfWork`，重复此过程，直到完成`fiber`树构建，此时`DOM`也已构建；
+5. `render`过程（`renderRootSync`）主要是深度遍历节点调用`beginWork`生成`fiber node`并且标识合适的`flags`，当到达底部节点时会去调用`completeUnitOfWork`生成`DOM`，然后检查是否存在`sibling`，存在就继续调用`beginWork`/`completeUnitOfWork`，不存在就回到上层节点继续调用`completeUnitOfWork`，重复此过程，直到完成`fiber`树构建，此时`DOM`也已构建；
 6. `commit`过程（`commitRoot`）主要有三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，`commitMutationEffects`是`mutation`过程也就是将`fiber`树反映到`DOM`渲染的过程，另外两个方法分别是前置和后置的处理工作；
 
 ![react](./assets/mount.png)
