@@ -422,11 +422,12 @@ Didact.render(element, container)
 - Scheduler：调度器，用来调度任务执行顺序，让浏览器的每一帧优先执行高优先级的任务
 - effect：渲染、更新过程中的副作用
 
-## React Fiber
+## 总结
 
-![react](./assets/React.fiber.png)
+![react](./assets/react_flow.png)
 
 ## 参考资料
 
 [build-your-own-react](https://pomb.us/build-your-own-react/)
 [React技术揭秘](https://react.iamkasong.com/preparation/file.html#%E9%A1%B6%E5%B1%82%E7%9B%AE%E5%BD%95)
+[React 应用的宏观包结构(web 开发)](https://7km.top/main/macro-structure#%E5%AE%8F%E8%A7%82%E6%80%BB%E8%A7%88)

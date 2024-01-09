@@ -665,6 +665,7 @@ function commitRootImpl(
       // the previous render and commit if we throttle the commit
       // with setTimeout
       pendingPassiveTransitions = transitions;
+
       // 【-----Scheduler安排flushPassiveEffects任务-----】
       scheduleCallback(NormalSchedulerPriority, () => {
         flushPassiveEffects();
@@ -761,6 +762,20 @@ function commitRootImpl(
   // Always call this before exiting `commitRoot`, to ensure that any
   // additional work on this root is scheduled.
   ensureRootIsScheduled(root, now());
+
+  // 【省略代码...】
+
+  // If the passive effects are the result of a discrete render, flush them
+  // synchronously at the end of the current task so that the result is
+  // immediately observable. Otherwise, we assume that they are not
+  // order-dependent and do not need to be observed by external systems, so we
+  // can wait until after paint.
+  // TODO: We can optimize this by not scheduling the callback earlier. Since we
+  // currently schedule the callback in multiple places, will wait until those
+  // are consolidated.
+  if (includesSyncLane(pendingPassiveEffectsLanes) && root.tag !== LegacyRoot) {
+    flushPassiveEffects();
+  }
 
   // 【省略代码...】
 
@@ -1250,9 +1265,15 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 }
 ```
 
+## useEffect深度探究
+
+
+
 ## uselayoutEffect
 
 useLayoutEffect is a version of useEffect that fires before the browser repaints the screen.
+
+If your Effect wasn’t caused by an interaction (like a click), React will generally let the browser paint the updated screen first before running your Effect. If your Effect is doing something visual (for example, positioning a tooltip), and the delay is noticeable (for example, it flickers), replace useEffect with useLayoutEffect.
 
 - `useEffect`是异步调度，等页面渲染完成后再去执行，不会阻塞页面渲染。
 - `uselayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在DOM更新之后。
