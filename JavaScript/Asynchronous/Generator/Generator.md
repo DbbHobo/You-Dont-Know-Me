@@ -2,7 +2,7 @@
 
 ## Generator定义
 
-`Generator` 函数是一个状态机，封装了多个内部状态。
+`Generator` 函数是一个状态机，封装了多个内部状态。`Generator` 是隐藏类 `Iterator` 的子类。
 
 执行 `Generator` 函数会返回一个遍历器对象，也就是说，`Generator` 函数除了状态机，还是一个遍历器对象生成函数。返回的遍历器对象，可以依次遍历 `Generator` 函数内部的每一个状态。
 
@@ -36,7 +36,9 @@ hw.next()
 
 ### Generator.prototype.next()
 
-`yield`表达式本身没有返回值，或者说总是返回`undefined`，`Generator` 函数的`next`方法可以带一个参数，该参数就会被当作**上一个yield表达式的返回值**。`Generator` 函数通过`next`方法的参数，就有办法在 `Generator` 函数开始运行之后，继续向函数体内部注入值。也就是说，可以在 `Generator` 函数运行的不同阶段，从外部向内部注入不同的值，从而调整函数行为。
+`yield`表达式本身没有返回值，或者说总是返回`undefined`，`Generator` 函数的`next`方法可以带一个参数，该参数就会被当作**上一个yield表达式的返回值**。
+
+`Generator` 函数通过`next`方法的参数，就有办法在 `Generator` 函数开始运行之后，继续向函数体内部注入值。也就是说，可以在 `Generator` 函数运行的不同阶段，从外部向内部注入不同的值，从而调整函数行为。
 
 ```js
 function* foo(x) {

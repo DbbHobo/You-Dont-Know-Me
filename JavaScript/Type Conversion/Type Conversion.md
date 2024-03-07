@@ -6,7 +6,7 @@ JavaScript 对象转换成基本类型值是一个称为“类型转换”或“
 
 表达式中需要基本类型值：当您使用一个对象作为表达式的一部分，例如进行算术运算或字符串拼接时，JavaScript 将尝试将对象转换为基本类型值。
 
-使用特定的强制类型转换函数：JavaScript 提供了一些函数，如parseInt()、parseFloat()和String()，可以将对象显式转换为基本类型值。
+使用特定的强制类型转换函数：JavaScript 提供了一些函数，如`parseInt()`、`parseFloat()`和`String()`，可以将对象显式转换为基本类型值。
 
 ## 基本类型值转布尔值
 
@@ -77,7 +77,7 @@ console.log(String(1)) // 1
 
 ## 对象转基本类型值
 
-对象到字符串和对象到数字的转换都是通过调用待转换对象的一个方法来完成的。而 `JavaScript` 对象有两个不同的方法来执行转换，一个是 `toString`，一个是 `valueOf`。注意这个跟上面所说的 `ToString` 和 `ToNumber` 是不同的，这两个方法是真实暴露出来的方法。对象在转换基本类型时，首先会调用 `valueOf` 然后调用 `toString`。
+对象到字符串和对象到数字的转换都是通过调用待转换对象的一个方法来完成的。而 `JavaScript` 对象有两个不同的方法来执行转换，一个是 `valueOf`，一个是 `toString`。注意这个跟上面所说的 `ToString` 和 `ToNumber` 是不同的，这两个方法是真实暴露出来的方法。对象在转换基本类型时，首先会调用 `valueOf` 然后调用 `toString`。
 
 在对象转换成基本类型值的过程中，JavaScript 遵循一组规则，通常会按照以下顺序进行尝试：
 
@@ -197,13 +197,66 @@ undefined == false // false
 - 如果是对象，就通过 `ToPrimitive` 转换对象
 - 如果是字符串，就通过 `unicode` 字符索引来比较
 
+一些特殊情况：
+
 ```js
-console.log([] == ![]); //true
-console.log(false == []); //true
+"0" == null; // false
+"0" == undefined; // false
+"0" == false; // true -- 晕！
+"0" == NaN; // false
+"0" == 0; // true
+"0" == ""; // false
+false == null; // false
+false == undefined; // false
+false == NaN; // false
+false == 0; // true -- 晕！
+false == ""; // true -- 晕！
+false == []; // true -- 晕！
+false == {}; // false
+"" == null; // false
+"" == undefined; // false
+"" == NaN; // false
+"" == 0; // true -- 晕！
+"" == []; // true -- 晕！
+"" == {}; // false
+0 == null; // false
+0 == undefined; // false
+0 == NaN; // false
+0 == []; // true -- 晕！
+0 == {}; // false
+[] == ![]; //true
+false == []; //true
 ```
 
-## 参考资料
+## 总结
 
-[JavaScript 深入之头疼的类型转换(上)](https://github.com/mqyqingfeng/Blog/issues/159)
+四则运算符隐式转换准则：
+
+- 当一侧为 `String` 类型，被识别为字符串拼接，并会优先将另一侧转换为字符串类型（`ToString`）。
+- 当一侧为 `Number` 类型，另一侧为基本类型，则将基本类型转换为 `Number` 类型（`ToNumber`）。
+- 当一侧为 `Number` 类型，另一侧为引用类型，将引用类型和 `Number` 类型转换成字符串后拼接（`ToString`）。
+
+`==`比较隐式转换准则：
+
+1. 字符串和数字之间的相等比较
+(1) 如果 Type(x) 是数字， Type(y) 是字符串，则返回 x == ToNumber(y) 的结果。
+(2) 如果 Type(x) 是字符串， Type(y) 是数字，则返回 ToNumber(x) == y 的结果。
+
+2. 其他类型和布尔类型之间的相等比较
+(1) 如果 Type(x) 是布尔类型，则返回 ToNumber(x) == y 的结果；
+(2) 如果 Type(y) 是布尔类型，则返回 x == ToNumber(y) 的结果。
+
+3. null 和 undefined 之间的相等比较
+(1) 如果 x 为 null， y 为 undefined，则结果为 true。
+(2) 如果 x 为 undefined， y 为 null，则结果为 true。
+
+4. 对象和非对象之间的相等比较
+(1) 如果 Type(x) 是字符串或数字， Type(y) 是对象，则返回 x == ToPrimitive(y) 的结果；
+(2) 如果 Type(x) 是对象， Type(y) 是字符串或数字，则返回 ToPromitive(x) == y 的结果。
+
+• 如果两边的值中有 true 或者 false，千万不要使用 ==。
+• 如果两边的值中有 []、 "" 或者 0，尽量不要使用 ==。
+
+## 参考资料
 
 [JavaScript 深入之头疼的类型转换(上)](https://github.com/mqyqingfeng/Blog/issues/159)

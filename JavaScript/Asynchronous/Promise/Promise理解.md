@@ -5,7 +5,7 @@
 ```js
 new Promise( function(resolve, reject) {...} /* executor */  );
 // executor是带有 resolve 和 reject 两个参数的函数 。
-// Promise构造函数执行时立即调用executor 函数， resolve 和 reject 两个函数作为参数传递给executor
+// Promise构造函数执行时立即调用 executor 函数， resolve 和 reject 两个函数作为参数传递给executor
 // （executor 函数在Promise构造函数返回所建promise实例对象前被调用）。
 // resolve 和 reject 函数被调用时，分别将promise的状态改为fulfilled（完成）或rejected（失败）。
 ```
@@ -66,7 +66,7 @@ Promise.prototype.finally = function (callback) {
 
 ### Promise.all()
 
-`Promise.all(iterable)`方法：`Promise.all()`方法接受一个数组作为参数，都是 `Promise` 实例，如果不是，就会先调用 `Promise.resolve()` 方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 `Promise` 实例，然后并行执行异步任务，并且在所有异步操作执行完后才执行回调。
+`Promise.all()`方法接受一组 `Promise` 实例作为参数，如果不是，就会先调用 `Promise.resolve()` 方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 `Iterator` 接口，且返回的每个成员都是 `Promise` 实例，然后并行执行异步任务，并且在所有异步操作执行完后才执行回调。
 
 `Promise.all().then()`结果中数组的顺序和`Promise.all()`接收到的数组顺序一致。
 
@@ -74,12 +74,23 @@ Promise.prototype.finally = function (callback) {
 
 `Promise.all()`方法接受一个**数组**作为参数，p1、p2、p3都是 `Promise` 实例，如果不是，就会先调用下面讲到的`Promise.resolve`方法，将参数转为 `Promise` 实例，再进一步处理。另外，`Promise.all()`方法的参数可以不是数组，但必须具有 Iterator 接口，且返回的每个成员都是 `Promise` 实例。如果作为参数的`Promise`实例，自己定义了`catch`方法，那么它一旦被 `rejected`，并不会触发`Promise.all()`的`catch`方法。
 
-p的状态由p1、p2、p3决定，分成两种情况：
--（1）只有p1、p2、p3的状态都变成`fulfilled`，p的状态才会变成`fulfilled`，此时p1、p2、p3的**返回值组成一个数组**，传递给p的回调函数。
--（2）只要p1、p2、p3之中有一个被`rejected`，p的状态就变成`rejected`，此时**第一个被reject的实例的返回值**，会传递给p的回调函数。
-
 ```js
+// p的状态由p1、p2、p3决定，分成两种情况：
+// -（1）只有p1、p2、p3的状态都变成`fulfilled`，p的状态才会变成`fulfilled`，此时p1、p2、p3的**返回值组成一个数组**，传递给p的回调函数。
+// -（2）只要p1、p2、p3之中有一个被`rejected`，p的状态就变成`rejected`，此时**第一个被reject的实例的返回值**，会传递给p的回调函数。
 const p = Promise.all([p1, p2, p3]);
+
+const promise1 = Promise.resolve(3);
+const promise2 = 42;
+const promise3 = new Promise((resolve, reject) => {
+  setTimeout(resolve, 100, 'foo');
+});
+
+Promise.all([promise1, promise2, promise3]).then((values) => {
+  console.log(values);
+});
+// Expected output: Array [3, 42, "foo"]
+
 ```
 
 ### Promise.allSettled()
@@ -89,29 +100,67 @@ const p = Promise.all([p1, p2, p3]);
 返回结果是一个数组，该数组的每个成员都是一个对象，每个对象都有`status`属性，该属性的值只可能是字符串`fulfilled`或字符串`rejected`。`fulfilled`时，对象有`value`属性，`rejected`时有`reason`属性，对应两种状态的返回值。
 
 ```js
-[
-  { status: 'fulfilled', value: 1 },
-  { status: 'rejected', reason: -1 }
-]
+const promise1 = Promise.resolve(3);
+const promise2 = new Promise((resolve, reject) =>
+  setTimeout(reject, 100, 'foo'),
+);
+const promises = [promise1, promise2];
+
+Promise.allSettled(promises).then((results) =>
+  console.log(results)
+);
+
+// Expected output:
+// [
+//   { status: 'fulfilled', value: 3 },
+//   { status: 'rejected', reason: "foo" }
+// ]
 ```
 
 ### Promise.race()
 
-`Promise.race(iterable)`方法：`Promise.race()`方法接受一个数组作为参数，只要入参 `Promise` 实例之中有一个实例率先改变状态，`race` 方法返回的 `Promise` 的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给 `race` 方法返回的 `Promise` 的回调函数。
-
-只要p1、p2、p3之中有一个实例率先改变状态，p的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给p的回调函数。
+`Promise.race()` 方法接受一个数组作为参数，只要入参 `Promise` 实例之中有一个实例率先改变状态，`race` 方法返回的 `Promise` 的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给 `race` 方法返回的 `Promise` 的回调函数。
 
 ```js
+// 只要p1、p2、p3之中有一个实例率先改变状态，p的状态就跟着改变。那个率先改变的 `Promise` 实例的返回值，就传递给p的回调函数。
 const p = Promise.race([p1, p2, p3]);
+
+const promise1 = new Promise((resolve, reject) => {
+  setTimeout(resolve, 500, 'one');
+});
+
+const promise2 = new Promise((resolve, reject) => {
+  setTimeout(resolve, 100, 'two');
+});
+
+Promise.race([promise1, promise2]).then((value) => {
+  console.log(value);
+  // Both resolve, but promise2 is faster
+});
+// Expected output: "two"
 ```
 
 ### Promise.any()
 
-`Promise.any()` 接收一个由 `Promise` 所组成的可迭代对象，该方法会返回一个新的 `promise`，一旦可迭代对象内的任意一个 `promise` 变成了兑现状态，那么由该方法所返回的 `promise` 就会变成兑现状态，并且它的兑现值就是可迭代对象内的首先兑现的 `promise` 的兑现值。如果可迭代对象内的 `promise` 最终都没有兑现（即所有 `promise` 都被拒绝了），那么该方法所返回的 `promise` 就会变成拒绝状态，并且它的拒因会是一个 AggregateError 实例，这是 Error 的子类，用于把单一的错误集合在一起。
+`Promise.any()` 方法接收一个由 `Promise` 所组成的可迭代对象，该方法会返回一个新的 `promise`，一旦可迭代对象内的任意一个 `promise` 变成了兑现状态，那么由该方法所返回的 `promise` 就会变成兑现状态，并且它的兑现值就是可迭代对象内的首先兑现的 `promise` 的兑现值。如果可迭代对象内的 `promise` 最终都没有兑现（即所有 `promise` 都被拒绝了），那么该方法所返回的 `promise` 就会变成拒绝状态，并且它的拒因会是一个 `AggregateError` 实例，这是 `Error` 的子类，用于把单一的错误集合在一起。
+
+只要有一个`fullfilled`就变成`fullfilled`状态，全部`rejected`则变成`rejected`状态。
+
+```js
+const promise1 = Promise.reject(0);
+const promise2 = new Promise((resolve) => setTimeout(resolve, 100, 'quick'));
+const promise3 = new Promise((resolve) => setTimeout(resolve, 500, 'slow'));
+
+const promises = [promise1, promise2, promise3];
+
+Promise.any(promises).then((value) => console.log(value));
+
+// Expected output: "quick"
+```
 
 ### Promise.resolve()
 
-`Promise.resolve(value)`方法：可以将现有对象转为 `Promise` 对象。`Promise.resolve(x)` 可以看作是 `new Promise(resolve => resolve(x))` 的简写，可以用于快速封装字面量对象或其他对象，将其封装成 `Promise` 实例。
+`Promise.resolve(value)`方法：可以将现有对象转为 `Promise` 实例，其状态为已完成。`Promise.resolve(x)` 可以看作是 `new Promise(resolve => resolve(x))` 的简写，可以用于快速封装字面量对象或其他对象，将其封装成 `Promise` 实例。
 
 ```js
 Promise.resolve("foo");

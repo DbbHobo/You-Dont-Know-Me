@@ -20,7 +20,7 @@ let f = function () {
 
 要理解 JavaScript 中的 `this` 其实也很简单，按接下来几种方式去解析理解会发现 `this` 其实很简单。`new` 的方式优先级最高，接下来是 `call`/`apply`/`bind` 这些函数，然后是 `obj.foo()` 这种对象的方法调用方式，最后是 `foo` 这种直接函数调用方式，同时，箭头函数的 `this` 一旦被绑定，就不会再被任何方式所改变。
 
-`this` 是在**运行时**进行绑定的， 并不是在编写时绑定， 它的上下文取决于**函数调用**时的各种条件。 `this` 的绑定和函数声明的位置没有任何关系， 取决于函数的调用方式。
+`this` 是在**运行时**进行绑定的，并不是在编写时绑定，它的上下文取决于**函数调用**时的各种条件。`this` 的绑定和函数声明的位置没有任何关系， 取决于函数的调用方式。分析 `this` 指向最重要的是要分析调用栈（就是为了到达当前执行位置所调用的所有函数）。
 
 ### new 绑定
 
@@ -35,7 +35,7 @@ console.log(bar.a); // 2
 
 ### 独立函数调用
 
-时刻记住，引用数据类型的值是按引用访问的。
+直接使用不带任何修饰的函数引用进行调用的，因此只能使用默认绑定，无法应用其他规则。
 
 ```js
 function foo() {
@@ -46,6 +46,8 @@ foo(); // 2
 ```
 
 ### 隐式绑定
+
+隐式绑定需要观察调用位置是否有上下文对象， 或者说是否被某个对象拥有或者包含。
 
 ```js
 function foo() {
@@ -111,6 +113,8 @@ setTimeout(o.fn, 1000); // 0
 
 ### 显式绑定
 
+call/apply/bind
+
 ```js
 function foo() {
   console.log(this.a);
@@ -139,8 +143,8 @@ var obj = {
 
 ### 基本的判断流程
 
-1. 函数是否在 `new` 中调用（`new` 绑定） ？ 如果是的话 `this` 绑定的是新创建的对象。
-2. 函数是否通过 `call`、 `apply`（显式绑定）或者硬绑定调用 ？ 如果是的话，`this` 绑定的是指定的对象。
+1. 函数是否在 `new` 中调用 ？ 如果是的话 `this` 绑定的是新创建的对象。
+2. 函数是否通过 `call`、 `apply`（显式绑定）或者硬绑定`bind`调用 ？ 如果是的话，`this` 绑定的是指定的对象。
 3. 函数是否在某个上下文对象中调用（隐式绑定） ？ 如果是的话，`this` 绑定的是那个上下文对象。
 4. 如果都不是的话，使用默认绑定。如果在严格模式下，就绑定到 `undefined`，否则绑定到全局对象。
 
@@ -219,6 +223,64 @@ var inviteEmployee1 = invite.bind(employee1);
 var inviteEmployee2 = invite.bind(employee2);
 inviteEmployee1("Hello", "How are you?"); // Hello John Rodson, How are you?
 inviteEmployee2("Hello", "How are you?"); // Hello Jimmy Baily, How are you?
+```
+
+```js
+Function.prototype.fakeCall = function (context = window, ...args) {
+  context.fn = this;
+  console.log(context);
+  let res = context.fn(...args);
+  delete context.fn;
+  return res;
+};
+Function.prototype.fakeApply = function (context = window, args) {
+  context.fn = this;
+  console.log(context);
+  let res = context.fn(...args);
+  delete context.fn;
+  return res;
+};
+Function.prototype.fakeBind = function (context = window, ...args1) {
+  let originalFn = this;
+
+  function fn(...args2) {
+    // 使用new关键字调用时，this将指向实例化的对象
+    if (this instanceof fn) {
+      return new originalFn(...args1, ...args2);
+    }
+
+    // 在新函数中使用apply将this和参数传递给原始函数
+    return originalFn.apply(context, args1.concat(args2));
+  }
+  fn.prototype = Object.create(originalFn.prototype); //保证原函数的原型对象上的属性不丢失
+
+  return fn;
+};
+
+let callText = 'Im from global!';
+let callTestObj1 = {
+  callText: 'Im from call111!',
+};
+let callTestObj2 = {
+  callText: 'Im from call222!',
+};
+let callTestObj3 = {
+  callText: 'Im from call333!',
+};
+const callTestFn = function (...args) {
+  console.log(this.callText, ...args);
+};
+callTestFn.fakeCall(callTestObj1, 'next1', 'next2');
+callTestFn.fakeApply(callTestObj2, ['next3', 'next4']);
+let bindFn = callTestFn.fakeBind(callTestObj3, ['next5', 'next6']);
+bindFn();
+
+
+// {callText: "Im from call111!", fn: ƒ}
+// Im from call111! next1 next2
+// {callText: "Im from call222!", fn: ƒ}
+// Im from call222! next3 next4
+// Im from call333!["next5", "next6"]
 ```
 
 ## 参考资料
