@@ -134,6 +134,34 @@ history.back();
 history.forward();
 ```
 
+## window
+
+`window` 对象表示一个包含 `DOM` 文档的窗口，其 `document` 属性指向窗口中载入的 `DOM` 文档。代表了脚本正在运行的窗口的 `window` 全局变量，被暴露给 `Javascript` 代码。
+
+本接口从 `EventTarget` 接口继承属性。
+
+`window` => `Window` => `EventTarget`
+
+## EventTarget
+
+`EventTarget` 接口由可以接收事件、并且可以创建侦听器的对象实现。换句话说，任何事件目标都会实现与该接口有关的这三个方法。
+
+`Element` 及其子项、`document` 和 `window` 是最常见的事件目标，但其他对象也可以是事件目标。比如 `XMLHttpRequest`、`AudioNode` 和 `AudioContext` 等等。
+
+- `EventTarget.addEventListener()`
+
+在 `EventTarget` 上注册特定事件类型的事件处理程序。
+
+- `EventTarget.removeEventListener()`
+
+`EventTarget` 中删除事件侦听器。
+
+- `EventTarget.dispatchEvent()`
+
+将事件分派到此 `EventTarget`。
+
 ## 参考资料
 
 [window.location Cheatsheet](https://dev.to/samanthaming/window-location-cheatsheet-4edl)
+[EventTarget](https://developer.mozilla.org/zh-CN/docs/Web/API/EventTarget)
+[Window](https://developer.mozilla.org/zh-CN/docs/Web/API/Window)
