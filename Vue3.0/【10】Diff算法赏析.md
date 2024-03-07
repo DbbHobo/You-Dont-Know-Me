@@ -761,7 +761,8 @@ const patchKeyedChildren = (
 ## React的diff算法
 
 关键词：**与最大索引比较**
-【TODO：看一下react的diff算法】
+React的VNode节点组织结构不同于Vue，兄弟节点并非放在数组中，而是用sibling指针串联。同层比较的时候只能从前往后比较。细节见React源码解读。
+<!-- 【TODO：看一下react的diff算法】 -->
 
 ## diff算法的比较和分析
 

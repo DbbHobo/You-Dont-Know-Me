@@ -132,7 +132,7 @@ export class ComputedRefImpl<T> {
 ![computed](./assets/computed3.png)
 ![computed](./assets/computed4.png)
 
-可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行，如果`_dirty`变量就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
+可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`获取最新值。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行（比如`template`模板中使用了`computed`值会计算一遍），如果`_dirty`为false就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
 
 1. 依赖值改变
 2. 引起派发更新
@@ -543,7 +543,7 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  // 【根据用户传入的flush值定义scheduler调度函数，pre->sysc->post，加入job队列】
+  // 【根据用户传入的flush值定义scheduler调度函数，sync->pre->post，加入job队列】
   let scheduler: EffectScheduler
   if (flush === 'sync') {
     scheduler = job as any // the scheduler function gets called directly
@@ -556,7 +556,7 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  // 【实例化一个watch effect】
+  // 【实例化一个watch effect,run方法里会回调getter，scheduler方法根据用户配置插入不同时机的任务队列】
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {
@@ -566,7 +566,8 @@ function doWatch(
 
   //【首次执行】
   // initial run
-  if (cb) {//有回调函数
+  if (cb) {
+    //【有回调函数】
     if (immediate) {//【immediate为true，watch创建时立即执行回调】
       job()
     } else {//【不立即执行回调，仅获取初始值】
@@ -598,7 +599,7 @@ function doWatch(
 
 ## computed() 和 watch() 异同
 
-1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是相当于构造一个ref对象直接包装 `triggerRefValue` 这个依赖收集方法。
+1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是相当于构造一个`ref`对象直接包装 `triggerRefValue` 这个依赖收集方法。
 2. `computed`用`_dirty`参数（默认true）判断是否需要执行对应`effect`实例的`run`方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。
 
 ![watch、computed](./assets/Vue3的watch和computed.png)

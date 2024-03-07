@@ -611,7 +611,7 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 
 ### 组件挂载、更新的回调componentUpdateFn
 
-前文中讲到在 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
+前文中讲到在 `componentUpdateFn` 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
 
 1. `renderComponentRoot`生成最新的`VNode`
 2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`
@@ -637,7 +637,7 @@ const componentUpdateFn = () => {
 
         //【...省略】
 
-        //【2.递归调用patch进行VNode对比然后挂载】
+        //【2.深度调用patch进行VNode对比然后挂载】
         patch(
           null,
           subTree,
@@ -683,7 +683,7 @@ const componentUpdateFn = () => {
 
       //【...省略】
 
-      //【2.递归执行patch进行挂载更新DOM】
+      //【2.深度执行patch进行挂载更新DOM】
       patch(
         prevTree,
         nextTree,
@@ -701,7 +701,7 @@ const componentUpdateFn = () => {
 
 ## Patch方法前置条件生成VNode
 
-前文中讲到组件挂载过程的第三步调用 **`setupRenderEffect`** 设置组件渲染逻辑，就会调用`renderComponentRoot`生成VNode。`renderComponentRoot`的核心是调用`render`方法，而`render`方法其实是件组件挂载过程的第二步生成，要么是`setup`返回的渲染函数要么是将`template`编译`compile`成的`render`方法。
+前文中讲到组件挂载过程的第三步调用 **`setupRenderEffect`** 设置组件渲染逻辑，就会调用`renderComponentRoot`生成VNode。`renderComponentRoot`的核心是调用`render`方法，而`render`方法其实是件组件挂载过程的第二步生成，要么是`setup`返回的渲染函数要么是将`template`编译`compile`成的`render`方法。`render`方法的核心就是将`template`转化成`VNode`。
 
 ```ts
 export function renderComponentRoot(
@@ -1496,7 +1496,7 @@ const mountChildren: MountChildrenFn = (
 
 ### `patchBlockChildren()`
 
-当存在`dynamicChildren`时且当前`block`的`patchFlag`是`STABLE_FRAGMENT`调用，相当于跳过本层的对比，继续去看子节点，继续执行`patch`方法进入递归循环：
+当存在`dynamicChildren`时且当前`block`的`patchFlag`是`STABLE_FRAGMENT`调用，相当于跳过本层的对比，继续去看子节点，继续执行`patch`方法进入更深层次的解析：
 
 ```ts
 //【oldChildren/newChildren分别是新旧VNode的dynamicChildren】

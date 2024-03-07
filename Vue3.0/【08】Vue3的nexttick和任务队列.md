@@ -132,7 +132,7 @@ function triggerEffect(
 
 对`EffectScheduler`实例的使用有如下场景：
 
-- 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段构造了一个`scheduler`，调用`queueJob`把当前任务加入任务队列：
+- 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段构造了一个`scheduler`，调用`queueJob`把当前任务加入主任务队列：
 
 ```ts
 // 【定义一个名叫update的SchedulerJob类型job】
@@ -216,7 +216,7 @@ const effect = new ReactiveEffect(getter, scheduler)
 
 ### 入队 `queueJob()` => `queueFlush()`
 
-该方法负责维护主任务队列，接受一个函数作为参数，为待入队任务，会将任务 `push` 到 `queue` 队列中，会判断是否唯一。会在当前宏任务执行结束后，清空队列。
+该方法负责维护**主任务队列**，接受一个函数作为参数，为待入队任务，会将任务 `push` 到 `queue` 队列中，会判断是否唯一。会在当前宏任务执行结束后，清空队列。
 
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
@@ -253,7 +253,7 @@ export function queueJob(job: SchedulerJob) {
 
 ### 入队 `queuePostFlushCb()` => `queueFlush()`
 
-该方法负责维护后置任务队列，会将任务 `push` 到 `pendingPostFlushCbs` 队列中。会紧接着主任务队列执行结束后，清空队列。
+该方法负责维护**后置任务队列**，会将任务 `push` 到 `pendingPostFlushCbs` 队列中。会紧接着主任务队列执行结束后，清空队列。
 
 ```ts
 const pendingPostFlushCbs: SchedulerJob[] = []
@@ -340,10 +340,10 @@ export function flushPreFlushCbs(
 
 该方法负责处理执行队列任务，主要逻辑如下：
 
-1. 根据id给主队列中的任务进行排序
+1. 根据`id`给主队列中的任务进行排序
 2. 遍历执行主队列任务
 3. 执行完毕后清空并重置队列
-4. 执行后置队列任务
+4. 调用`flushPostFlushCbs`去执行后置队列任务
 5. 检查是否有在执行过程中加入主任务队列的任务，继续全部执行掉
 
 ```ts
