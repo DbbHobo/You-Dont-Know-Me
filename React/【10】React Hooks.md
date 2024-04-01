@@ -468,8 +468,8 @@ const HooksDispatcherOnRerender: Dispatcher = {
 
 `fiber`节点上有两个和`Hook`相关的属性：
 
-- `memoizedState`：存储`fiber`对应的`Hook List`
-- `updateQueue`：存储变动事件，例如`state`改变引起的视图改变、`effect`实例等
+- `memoizedState`：存储`fiber`节点对应的`Hook List`，可以理解为`hook`链表，所有`hook`用`next`连接
+- `updateQueue`：存储`fiber`节点对应的变动事件，例如`state`改变引起的视图改变、`effect`实例等
 
 ```ts
 // 【使用hook时生成】
@@ -482,12 +482,12 @@ export type Hook = {
 };
 
 // 【调用useEffect时生成，加入Fiber的updateQueue】
-export type Effect = {
-  tag: HookFlags,//effect类型
-  create: () => (() => void) | void,//用户传入useEffect的回调函数
-  destroy: (() => void) | void,//用户传入useEffect的return的回调函数
-  deps: Array<mixed> | void | null,//用户传入useEffect的依赖数据
-  next: Effect,//链接的下一个hook
+export   type Effect = {
+  tag: HookFlags,//effect类型-HookHasEffect/HookPassive/HookLayout
+  create: () => (() => void) | void,//用户传入hook的回调函数
+  destroy: (() => void) | void,//用户传入hook的return的回调函数
+  deps: Array<mixed> | void | null,//用户传入hook的依赖数据
+  next: Effect,//链接的下一个effect实例
 };
 
 // 【由Update组成的队列】
@@ -663,7 +663,7 @@ export type Fiber = {
 
 ## Hook 通用方法
 
-每一个`hook`在`mount`和`rerender`过程中都会经历两个方法，`mountWorkInProgressHook`和`updateWorkInProgressHook`，前者用于创建`hook`，后者用于更新`hook`。
+每一个`hook`在`mount`和`rerender`过程中都会经历两个方法，`mountWorkInProgressHook`和`updateWorkInProgressHook`，前者用于创建`hook`，后者用于找到对应`hook`。
 
 ### mountWorkInProgressHook
 

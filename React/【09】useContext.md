@@ -291,7 +291,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
 }
 ```
 
-## Context 原理
+## useContext 原理
 
 ### Provider
 
@@ -299,7 +299,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
 
 在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`ThemeContext.Provider`的类型是`ContextProvider`，所以就会进入`updateContextProvider`方法：
 
-1. 首先调用`pushProvider()`方法更新值，并将新值和fiber入栈`valueStack`、`fiberStack`；
+1. 首先调用`pushProvider()`方法更新值，并将新值和`fiber`入栈`valueStack`、`fiberStack`；
 2. 如果新旧值（`pendingProps.value`和`memoizedProps.value`）没有变化，提前退出，如果有变化调用`propagateContextChange()`；
 3. 继续处理子节点`reconcileChildren()`；
 
@@ -312,12 +312,64 @@ function beginWork() {
   }
 }
 
+export type ReactProvider<T> = {
+  $$typeof: symbol | number,
+  type: ReactProviderType<T>,
+  key: null | string,
+  ref: null,
+  props: {
+    value: T,
+    children?: ReactNodeList,
+    ...
+  },
+  ...
+};
+
+export type ReactProviderType<T> = {
+  $$typeof: symbol | number,
+  _context: ReactContext<T>,
+  ...
+};
+
+export type ReactConsumer<T> = {
+  $$typeof: symbol | number,
+  type: ReactContext<T>,
+  key: null | string,
+  ref: null,
+  props: {
+    children: (value: T) => ReactNodeList,
+    ...
+  },
+  ...
+};
+
+export type ReactContext<T> = {
+  $$typeof: symbol | number,
+  Consumer: ReactContext<T>,
+  Provider: ReactProviderType<T>,
+  _currentValue: T,
+  _currentValue2: T,
+  _threadCount: number,
+  // DEV only
+  _currentRenderer?: Object | null,
+  _currentRenderer2?: Object | null,
+  // This value may be added by application code
+  // to improve DEV tooling display names
+  displayName?: string,
+
+  // only used by ServerContext
+  _defaultValue: T,
+  _globalName: string,
+  ...
+};
+
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function updateContextProvider(
   current: Fiber | null,
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
+  
   const providerType: ReactProviderType<any> = workInProgress.type;
   const context: ReactContext<any> = providerType._context;
 
@@ -344,6 +396,7 @@ function updateContextProvider(
           oldProps.children === newProps.children &&
           !hasLegacyContextChanged()
         ) {
+          // 【Context内容无变动&子内容无变动就跳过子内容的rerender】
           return bailoutOnAlreadyFinishedWork(
             current,
             workInProgress,
@@ -353,7 +406,7 @@ function updateContextProvider(
       } else {
         // The context value changed. Search for matching consumers and schedule
         // them to update.
-        // 【Provider数据更新，逐一标志Consumer组件】
+        // 【Provider告知Context数据更新，逐一标志Consumer组件】
         propagateContextChange(workInProgress, context, renderLanes);
       }
     }
@@ -362,6 +415,155 @@ function updateContextProvider(
   const newChildren = newProps.children;
   reconcileChildren(current, workInProgress, newChildren, renderLanes);
   return workInProgress.child;
+}
+
+// 【packages/react-reconciler/src/ReactFiberNewContext.js】
+export function propagateContextChange<T>(
+  workInProgress: Fiber,
+  context: ReactContext<T>,
+  renderLanes: Lanes,
+): void {
+  if (enableLazyContextPropagation) {
+    // TODO: This path is only used by Cache components. Update
+    // lazilyPropagateParentContextChanges to look for Cache components so they
+    // can take advantage of lazy propagation.
+    const forcePropagateEntireTree = true;
+    propagateContextChanges(
+      workInProgress,
+      [context],
+      renderLanes,
+      forcePropagateEntireTree,
+    );
+  } else {
+    propagateContextChange_eager(workInProgress, context, renderLanes);
+  }
+}
+
+function propagateContextChanges<T>(
+  workInProgress: Fiber,
+  contexts: Array<any>,
+  renderLanes: Lanes,
+  forcePropagateEntireTree: boolean,
+): void {
+  // Only used by lazy implementation
+  if (!enableLazyContextPropagation) {
+    return;
+  }
+  let fiber = workInProgress.child;
+  if (fiber !== null) {
+    // Set the return pointer of the child to the work-in-progress fiber.
+    fiber.return = workInProgress;
+  }
+  while (fiber !== null) {
+    let nextFiber;
+
+    // Visit this fiber.
+    const list = fiber.dependencies;
+    if (list !== null) {
+      nextFiber = fiber.child;
+
+      let dep = list.firstContext;
+      findChangedDep: while (dep !== null) {
+        // Assigning these to constants to help Flow
+        const dependency = dep;
+        const consumer = fiber;
+        findContext: for (let i = 0; i < contexts.length; i++) {
+          const context: ReactContext<T> = contexts[i];
+          // Check if the context matches.
+          // TODO: Compare selected values to bail out early.
+          if (dependency.context === context) {
+            // Match! Schedule an update on this fiber.
+
+            // In the lazy implementation, don't mark a dirty flag on the
+            // dependency itself. Not all changes are propagated, so we can't
+            // rely on the propagation function alone to determine whether
+            // something has changed; the consumer will check. In the future, we
+            // could add back a dirty flag as an optimization to avoid double
+            // checking, but until we have selectors it's not really worth
+            // the trouble.
+            consumer.lanes = mergeLanes(consumer.lanes, renderLanes);
+            const alternate = consumer.alternate;
+            if (alternate !== null) {
+              alternate.lanes = mergeLanes(alternate.lanes, renderLanes);
+            }
+            scheduleContextWorkOnParentPath(
+              consumer.return,
+              renderLanes,
+              workInProgress,
+            );
+
+            if (!forcePropagateEntireTree) {
+              // During lazy propagation, when we find a match, we can defer
+              // propagating changes to the children, because we're going to
+              // visit them during render. We should continue propagating the
+              // siblings, though
+              nextFiber = null;
+            }
+
+            // Since we already found a match, we can stop traversing the
+            // dependency list.
+            break findChangedDep;
+          }
+        }
+        dep = dependency.next;
+      }
+    } else if (fiber.tag === DehydratedFragment) {
+      // If a dehydrated suspense boundary is in this subtree, we don't know
+      // if it will have any context consumers in it. The best we can do is
+      // mark it as having updates.
+      const parentSuspense = fiber.return;
+
+      if (parentSuspense === null) {
+        throw new Error(
+          'We just came from a parent so we must have had a parent. This is a bug in React.',
+        );
+      }
+
+      parentSuspense.lanes = mergeLanes(parentSuspense.lanes, renderLanes);
+      const alternate = parentSuspense.alternate;
+      if (alternate !== null) {
+        alternate.lanes = mergeLanes(alternate.lanes, renderLanes);
+      }
+      // This is intentionally passing this fiber as the parent
+      // because we want to schedule this fiber as having work
+      // on its children. We'll use the childLanes on
+      // this fiber to indicate that a context has changed.
+      scheduleContextWorkOnParentPath(
+        parentSuspense,
+        renderLanes,
+        workInProgress,
+      );
+      nextFiber = null;
+    } else {
+      // Traverse down.
+      nextFiber = fiber.child;
+    }
+
+    if (nextFiber !== null) {
+      // Set the return pointer of the child to the work-in-progress fiber.
+      nextFiber.return = fiber;
+    } else {
+      // No child. Traverse to next sibling.
+      nextFiber = fiber;
+      while (nextFiber !== null) {
+        if (nextFiber === workInProgress) {
+          // We're back to the root of this subtree. Exit.
+          nextFiber = null;
+          break;
+        }
+        const sibling = nextFiber.sibling;
+        if (sibling !== null) {
+          // Set the return pointer of the sibling to the work-in-progress fiber.
+          sibling.return = nextFiber.return;
+          nextFiber = sibling;
+          break;
+        }
+        // No more siblings. Traverse up.
+        nextFiber = nextFiber.return;
+      }
+    }
+    fiber = nextFiber;
+  }
 }
 ```
 
@@ -386,6 +588,7 @@ export function pushProvider<T>(
     push(valueCursor, context._currentValue, providerFiber);
     // 【context._currentValue更新为最新值】
     context._currentValue = nextValue;
+
     if (__DEV__) {
       push(rendererCursorDEV, context._currentRenderer, providerFiber);
 
@@ -426,7 +629,7 @@ export function pushProvider<T>(
 
 ![react](./assets/useContext2.png)
 
-`pushProvider`用到的辅助函数`push`如下：
+`pushProvider`用到的辅助函数`push`如下，这里的`cursor`就是前面传入的`valueCursor`：
 
 1. `cursor.current`入栈`valueStack`；
 2. `fiber`入栈`fiberStack`；
@@ -475,9 +678,9 @@ function completeWork() {
 
 ![react](./assets/useContext6.png)
 
-`popProvider`仍然处理的是由`createContext`创建的`context`，因为render解析过程从上至下，没有下的时候去找兄弟节点，然后返回上再去找兄弟节点，根据这个特性，当回到当前`provider`节点进行`completeWork`时说明子节点已经全部处理完了，该消费当前`context`的已经消费结束（`consumer`永远消费离自己最近的`provider`提供的数据），因此需要调用`popProvider`将当前栈顶清空，然后继续回祖先节点处理：
+`popProvider`仍然处理的是由`createContext`创建的`context`，因为`render`解析过程从上至下，没有下一层的时候去找兄弟节点，然后返回上一层再去找兄弟节点，根据这个特性，当回到当前`provider`节点进行`completeWork`时说明子节点已经全部处理完了，该消费当前`context`的已经消费结束（`consumer`永远消费离自己最近的`provider`提供的数据），因此需要调用`popProvider`将当前栈顶清空，然后继续回祖先节点处理：
 
-1. `valueStack`和`fiberStack`；
+1. 处理`valueStack`和`fiberStack`；
 2. 更新`context._currentValue`到最新值；
 
 ```ts
@@ -567,11 +770,11 @@ function pop<T>(cursor: StackCursor<T>, fiber: Fiber): void {
 
 ### Consumer
 
-`Consumer`组件消费`context`可以通过`MyContext.Consumer`就是JSX的方式也可以通过`React.useContext`。
+`Consumer`组件消费`context`可以通过`MyContext.Consumer`就是JSX的方式也可以通过`React.useContext`就是hook的方式消费。
 
 #### Consumer通过hook方式消费
 
-使用hook方式消费时，在组件构造阶段会调用`renderWithHooks`方法，就会执行`React.useContext(ThemeContext)`从而进入`readContext`方法，本例中最终会读取`ThemeContext`这个前面创建的`context`对象所保存的值。
+使用hook方式消费时，在组件`beginWork`阶段（`mountIndeterminateComponent`/`updateFunctionComponent`）会调用`renderWithHooks`方法，就会执行`React.useContext(ThemeContext)`其实就是`readContext`方法，本例中最终会读取`ThemeContext`这个前面创建的`context`对象所保存的值。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -597,18 +800,8 @@ function mountIndeterminateComponent(
   }
   if (__DEV__) {
     // 【省略代码...】
-    ReactCurrentOwner.current = workInProgress;
-    value = renderWithHooks(
-      null,
-      workInProgress,
-      Component,
-      props,
-      context,
-      renderLanes,
-    );
-    hasId = checkDidRenderIdHook();
-    setIsRendering(false);
   } else {
+    // 【renderWithHooks】
     value = renderWithHooks(
       null,
       workInProgress,
@@ -673,12 +866,70 @@ function mountIndeterminateComponent(
     return workInProgress.child;
   }
 }
+
+function updateFunctionComponent(
+  current: null | Fiber,
+  workInProgress: Fiber,
+  Component: any,
+  nextProps: any,
+  renderLanes: Lanes,
+) {
+  // 【省略代码...】
+
+  let context;
+  if (!disableLegacyContext) {
+    const unmaskedContext = getUnmaskedContext(workInProgress, Component, true);
+    context = getMaskedContext(workInProgress, unmaskedContext);
+  }
+
+  let nextChildren;
+  let hasId;
+  prepareToReadContext(workInProgress, renderLanes);
+  if (enableSchedulingProfiler) {
+    markComponentRenderStarted(workInProgress);
+  }
+  if (__DEV__) {
+    // 【省略代码...】
+  } else {
+    // 【renderWithHooks】
+    nextChildren = renderWithHooks(
+      current,
+      workInProgress,
+      Component,
+      nextProps,
+      context,
+      renderLanes,
+    );
+    hasId = checkDidRenderIdHook();
+  }
+  if (enableSchedulingProfiler) {
+    markComponentRenderStopped();
+  }
+
+  if (current !== null && !didReceiveUpdate) {
+    bailoutHooks(current, workInProgress, renderLanes);
+    return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+  }
+
+  if (getIsHydrating() && hasId) {
+    pushMaterializedTreeId(workInProgress);
+  }
+
+  // React DevTools reads this flag.
+  workInProgress.flags |= PerformedWork;
+  reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  return workInProgress.child;
+}
 ```
 
-`readcontext`方法并不复杂，只是读取`context._currentValue`里的值：
+`readcontext`方法并不复杂，只是读取`context._currentValue`里的值，处理节点对应`dependencies`也是用next的串联关系（一个`consumer`可以使用多个`context`内容），最后返回`context`最新值：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
+let currentlyRenderingFiber: Fiber | null = null;
+let lastContextDependency: ContextDependency<mixed> | null = null;
+let lastFullyObservedContext: ReactContext<any> | null = null;
+
 export function readContext<T>(context: ReactContext<T>): T {
   if (__DEV__) {
     // This warning would fire if you read context inside a Hook like useMemo.
@@ -723,7 +974,9 @@ function readContextForConsumer<T>(
       }
 
       // This is the first dependency for this component. Create a new list.
+      // 【首个Context】
       lastContextDependency = contextItem;
+      // 【consumer这个fiber的dependencies属性把用到的Context串上去】
       consumer.dependencies = {
         lanes: NoLanes,
         firstContext: contextItem,
@@ -733,6 +986,7 @@ function readContextForConsumer<T>(
       }
     } else {
       // Append a new context item.
+      // 【Context list】
       lastContextDependency = lastContextDependency.next = contextItem;
     }
   }
@@ -754,6 +1008,7 @@ function updateContextConsumer(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
+  // 【获取context】
   let context: ReactContext<any> = workInProgress.type;
   // The logic below for Context differs depending on PROD or DEV mode. In
   // DEV mode, we create a separate object for Context.Consumer that acts
@@ -786,6 +1041,7 @@ function updateContextConsumer(
   // 【省略代码...】
 
   prepareToReadContext(workInProgress, renderLanes);
+  // 【readContext通过context获取最新值】
   const newValue = readContext(context);
   if (enableSchedulingProfiler) {
     markComponentRenderStarted(workInProgress);
@@ -797,6 +1053,7 @@ function updateContextConsumer(
     newChildren = render(newValue);
     setIsRendering(false);
   } else {
+    // 【获取newChildren】
     newChildren = render(newValue);
   }
   if (enableSchedulingProfiler) {
@@ -814,7 +1071,7 @@ function updateContextConsumer(
 
 #### prepareToReadContext
 
-在所有的组件处理方法中，例如`mountIndeterminateComponent`(通过hook消费)和`updateContextConsumer`（通过JSX语法消费）中都会调用`prepareToReadContext`做读取`context`之前的准备工作：
+在所有的组件处理方法中，例如`mountIndeterminateComponent`(通过hook消费)和`updateContextConsumer`（通过JSX语法消费）中都会调用`prepareToReadContext`做读取`context`之前的准备工作，获取当前`fiber`节点的`dependencies`并重置为`null`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
@@ -825,7 +1082,7 @@ export function prepareToReadContext(
   currentlyRenderingFiber = workInProgress;
   lastContextDependency = null;
   lastFullyObservedContext = null;
-
+  // 【dependencies存储了使用的Context】
   const dependencies = workInProgress.dependencies;
   if (dependencies !== null) {
     if (enableLazyContextPropagation) {
@@ -894,6 +1151,7 @@ function propagateContextChange_eager<T>(
     let nextFiber;
 
     // Visit this fiber.
+    // 【依次检查fiber.dependencies】
     const list = fiber.dependencies;
     if (list !== null) {
       nextFiber = fiber.child;
@@ -936,7 +1194,7 @@ function propagateContextChange_eager<T>(
           if (alternate !== null) {
             alternate.lanes = mergeLanes(alternate.lanes, renderLanes);
           }
-          // 【给当前fiber上的所有组件节点标记childLanes】
+          // 【给当前fiber上的直到Provider所在组件的祖先节点标记childLanes】
           scheduleContextWorkOnParentPath(
             fiber.return,
             renderLanes,
@@ -954,6 +1212,7 @@ function propagateContextChange_eager<T>(
       }
     } else if (fiber.tag === ContextProvider) {
       // Don't scan deeper if this is a matching provider
+      // 【到Provider就不再往下，因为是另外一套context了】
       nextFiber = fiber.type === workInProgress.type ? null : fiber.child;
     } else if (fiber.tag === DehydratedFragment) {
       // If a dehydrated suspense boundary is in this subtree, we don't know
@@ -1151,8 +1410,8 @@ function propagateContextChanges<T>(
 
 1. 调用`createContext`创建一个`context`对象，里面包含`Provider`和`Consumer`信息以及数据信息`_currentValue`，`Provider`对应类型是`REACT_PROVIDER_TYPE`，`Consumer`对应类型是`REACT_CONTEXT_TYPE`；
 2. `beginWork`阶段首先遇到`REACT_PROVIDER_TYPE`类型的`Provider`组件，调用`updateContextProvider`=>`pushProvider()`，将数据和当前fiber入栈；
-3. `beginWork`阶段接着深入子节点遇到`REACT_CONTEXT_TYPE`类型的`Consumer`组件或者调用了`useContext`的`Consumer`组件，前者进入`updateContextConsumer`方法继而进入`readContext`方法，后者直接调用`readContext`方法，方法会读取`context._currentValue`里的值，也就是我们说的`Consumer`组件消费`Provider`组件提供的数据；
+3. `beginWork`阶段接着深入子节点遇到`REACT_CONTEXT_TYPE`类型的`Consumer`组件或者调用了`useContext`的`Consumer`组件，前者进入`updateContextConsumer`方法继而进入`readContext`方法，后者直接调用`readContext`方法，方法会读取`context._currentValue`里的值并且更新`fiber`对应的`dependencies list`，也就是我们说的`Consumer`组件消费`Provider`组件提供的数据；
 4. 子组件消费完之后回到`Provider`组件的`completeWork`阶段，继而调用`popProvider`出栈，这一操作是为了保证所有的`Consumer`组件永远消费的是离自己最近的`Provider`组件提供的数据；
-5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧context数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`childLanes`属性用于后续更新这些组件；
+5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧`context`数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`Consumer`组件的祖先节点`childLanes`属性用于后续更新这些组件；
 
 ![react](./assets/useContext.png)

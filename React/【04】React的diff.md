@@ -44,7 +44,7 @@ function FiberNode(
   this.key = key;//【节点key】
   this.elementType = null;// 【节点的元素类型】
   this.type = null;// 【对于组件，它指向构造函数；对于DOM元素，它指定HTML tag】
-  this.stateNode = null;//【DOM节点】
+  this.stateNode = null;//【对应DOM】
 
   // Fiber
   this.return = null;//【父fiber】
@@ -57,9 +57,9 @@ function FiberNode(
 
   this.pendingProps = pendingProps;// 【本次渲染需要使用的 props】
   this.memoizedProps = null;// 【上次渲染使用的 props】
-  this.updateQueue = null;// 【用于状态更新、回调函数、DOM更新的队列】
+  this.updateQueue = null;// 【用于状态更新、回调函数、DOM更新的任务队列】
   this.memoizedState = null;// 【上次渲染后的 state 状态】
-  this.dependencies = null;// 【本次渲染需要使用的 props】
+  this.dependencies = null;// 【】
 
   this.mode = mode;
 
@@ -68,8 +68,8 @@ function FiberNode(
   this.subtreeFlags = NoFlags; // 【当前子树的副作用】
   this.deletions = null;// 【要删除的子 fiber】
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
+  this.lanes = NoLanes;//【调度的优先级】
+  this.childLanes = NoLanes;//【子树的调度的优先级】
 
   this.alternate = null;【// 【指向 workInProgress fiber/current fiber 树中对应的节点，是双向的】
 
@@ -118,15 +118,17 @@ function FiberNode(
 
 前文可知，JSX到DOM的呈现大致有如下三个的过程：
 
-1. `Scheduler`：进行任务优先级安排的过程
+1. `Scheduler`：按优先级进行任务调度的过程
 2. `Render`：由`React-Element`构造`fiber`树的过程
-3. `Commit`：`fiber`树到`DOM`渲染的过程
+3. `Commit`：由`fiber`树到`DOM`渲染的过程
 
 在`render`过程中，有两个重要的过程是`beginWork`和`completeWork`，会根据`tag`不同进入不同的方法。
 
 `root` =>  `ƒ App()` => `div` => `h2` => `a` => `h2` => `b` => `h2` => `e` => `h2` => `f` => `h2` => `c`
 
 `updateHostRoot` => `updateFunctionComponent` => `updateHostComponent` => `updateHostComponent` => `updateHostText` ...
+
+我们调试diff过程的用例如下：
 
 ```html
 <html>
@@ -172,6 +174,246 @@ length: 5
 [[Prototype]]: Array(0)
 ```
 
+`updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`也就是diff过程的入口
+
+`updateFunctionComponent`/`updateHostComponent` => `reconcileChildren` => `reconcileChildFibers`(`createChildReconciler`) => `reconcileChildFibersImpl` => `reconcileSingleElement`/`reconcileChildrenArray`
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+export function reconcileChildren(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  nextChildren: any,
+  renderLanes: Lanes,
+) {
+  if (current === null) {
+    // 【首次挂载】
+    // If this is a fresh new component that hasn't been rendered yet, we
+    // won't update its child set by applying minimal side-effects. Instead,
+    // we will add them all to the child before it gets rendered. That means
+    // we can optimize this reconciliation pass by not tracking side-effects.
+    workInProgress.child = mountChildFibers(
+      workInProgress,
+      null,
+      nextChildren,
+      renderLanes,
+    );
+  } else {
+    // 【更新】
+    // If the current child is the same as the work in progress, it means that
+    // we haven't yet started any work on these children. Therefore, we use
+    // the clone algorithm to create a copy of all the current children.
+
+    // If we had any progressed work already, that is invalid at this point so
+    // let's throw it out.
+    workInProgress.child = reconcileChildFibers(
+      workInProgress,
+      current.child,
+      nextChildren,
+      renderLanes,
+    );
+  }
+}
+
+// 【packages/react-reconciler/src/ReactChildFiber.js】
+export const reconcileChildFibers: ChildReconciler =
+  createChildReconciler(true);
+export const mountChildFibers: ChildReconciler = createChildReconciler(false);
+
+// This wrapper function exists because I expect to clone the code in each path
+// to be able to optimize each path individually by branching early. This needs
+// a compiler or we can do it manually. Helpers that don't need this branching
+// live outside of this function.
+function createChildReconciler(
+  shouldTrackSideEffects: boolean,
+): ChildReconciler {
+
+  // 【省略代码...】
+  function reconcileChildrenArray(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildren: Array<any>,
+    lanes: Lanes,
+  ): Fiber | null {
+    // 【省略代码...】
+  }
+  function reconcileSingleElement(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    element: ReactElement,
+    lanes: Lanes,
+  ): Fiber {
+    // 【省略代码...】
+  }
+  
+  // This API will tag the children with the side-effect of the reconciliation
+  // itself. They will be added to the side-effect list as we pass through the
+  // children and the parent.
+  function reconcileChildFibersImpl(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    // This function is not recursive.
+    // If the top level item is an array, we treat it as a set of children,
+    // not as a fragment. Nested arrays on the other hand will be treated as
+    // fragment nodes. Recursion happens at the normal flow.
+
+    // Handle top level unkeyed fragments as if they were arrays.
+    // This leads to an ambiguity between <>{[...]}</> and <>...</>.
+    // We treat the ambiguous cases above the same.
+    // TODO: Let's use recursion like we do for Usable nodes?
+    const isUnkeyedTopLevelFragment =
+      typeof newChild === 'object' &&
+      newChild !== null &&
+      newChild.type === REACT_FRAGMENT_TYPE &&
+      newChild.key === null;
+    if (isUnkeyedTopLevelFragment) {
+      newChild = newChild.props.children;
+    }
+
+    // Handle object types
+    if (typeof newChild === 'object' && newChild !== null) {
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE:
+          return placeSingleChild(
+            reconcileSingleElement(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              lanes,
+            ),
+          );
+        case REACT_PORTAL_TYPE:
+          return placeSingleChild(
+            reconcileSinglePortal(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              lanes,
+            ),
+          );
+        case REACT_LAZY_TYPE:
+          const payload = newChild._payload;
+          const init = newChild._init;
+          // TODO: This function is supposed to be non-recursive.
+          return reconcileChildFibers(
+            returnFiber,
+            currentFirstChild,
+            init(payload),
+            lanes,
+          );
+      }
+
+      if (isArray(newChild)) {
+        return reconcileChildrenArray(
+          returnFiber,
+          currentFirstChild,
+          newChild,
+          lanes,
+        );
+      }
+
+      if (getIteratorFn(newChild)) {
+        return reconcileChildrenIterator(
+          returnFiber,
+          currentFirstChild,
+          newChild,
+          lanes,
+        );
+      }
+
+      // Usables are a valid React node type. When React encounters a Usable in
+      // a child position, it unwraps it using the same algorithm as `use`. For
+      // example, for promises, React will throw an exception to unwind the
+      // stack, then replay the component once the promise resolves.
+      //
+      // A difference from `use` is that React will keep unwrapping the value
+      // until it reaches a non-Usable type.
+      //
+      // e.g. Usable<Usable<Usable<T>>> should resolve to T
+      //
+      // The structure is a bit unfortunate. Ideally, we shouldn't need to
+      // replay the entire begin phase of the parent fiber in order to reconcile
+      // the children again. This would require a somewhat significant refactor,
+      // because reconcilation happens deep within the begin phase, and
+      // depending on the type of work, not always at the end. We should
+      // consider as an future improvement.
+      if (typeof newChild.then === 'function') {
+        const thenable: Thenable<any> = (newChild: any);
+        return reconcileChildFibersImpl(
+          returnFiber,
+          currentFirstChild,
+          unwrapThenable(thenable),
+          lanes,
+        );
+      }
+
+      if (
+        newChild.$$typeof === REACT_CONTEXT_TYPE ||
+        newChild.$$typeof === REACT_SERVER_CONTEXT_TYPE
+      ) {
+        const context: ReactContext<mixed> = (newChild: any);
+        return reconcileChildFibersImpl(
+          returnFiber,
+          currentFirstChild,
+          readContextDuringReconcilation(returnFiber, context, lanes),
+          lanes,
+        );
+      }
+
+      throwOnInvalidObjectType(returnFiber, newChild);
+    }
+
+    if (
+      (typeof newChild === 'string' && newChild !== '') ||
+      typeof newChild === 'number'
+    ) {
+      return placeSingleChild(
+        reconcileSingleTextNode(
+          returnFiber,
+          currentFirstChild,
+          '' + newChild,
+          lanes,
+        ),
+      );
+    }
+
+    if (__DEV__) {
+      if (typeof newChild === 'function') {
+        warnOnFunctionType(returnFiber);
+      }
+    }
+
+    // Remaining cases are all treated as empty.
+    return deleteRemainingChildren(returnFiber, currentFirstChild);
+  }
+
+  function reconcileChildFibers(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    // This indirection only exists so we can reset `thenableState` at the end.
+    // It should get inlined by Closure.
+    thenableIndexCounter = 0;
+    const firstChildFiber = reconcileChildFibersImpl(
+      returnFiber,
+      currentFirstChild,
+      newChild,
+      lanes,
+    );
+    thenableState = null;
+    // Don't bother to reset `thenableIndexCounter` to 0 because it always gets
+    // set at the beginning.
+    return firstChildFiber;
+  }
+  return reconcileChildFibers;
+}
+```
+
 ### 单节点diff
 
 ```ts
@@ -188,6 +430,7 @@ function reconcileSingleElement(
   while (child !== null) {
     // TODO: If key === null and child.key === null, then this only applies to
     // the first item in the list.
+    // 【ReactElement的key和现在渲染的节点的key、type作对比】
     if (child.key === key) {
       const elementType = element.type;
       if (elementType === REACT_FRAGMENT_TYPE) {
@@ -232,6 +475,7 @@ function reconcileSingleElement(
       deleteRemainingChildren(returnFiber, child);
       break;
     } else {
+      // 【key不相同直接删除旧节点】
       deleteChild(returnFiber, child);
     }
     child = child.sibling;
@@ -348,6 +592,7 @@ function reconcileChildrenArray(
     previousNewFiber = newFiber;
     oldFiber = nextOldFiber;
   }
+
   // 【新节点已经遍历结束，删除剩余的旧节点】
   if (newIdx === newChildren.length) {
     // We've reached the end of the new children. We can delete the rest.
@@ -358,6 +603,7 @@ function reconcileChildrenArray(
     }
     return resultingFirstChild;
   }
+
   // 【旧节点已经遍历结束，剩下的新节点作为新创建的】
   if (oldFiber === null) {
     // If we don't have any more existing children we can choose a fast path
@@ -382,6 +628,7 @@ function reconcileChildrenArray(
     }
     return resultingFirstChild;
   }
+  
   // 【新旧节点都没遍历完】
   // Add all children to a key map for quick lookups.
   const existingChildren = mapRemainingChildren(returnFiber, oldFiber);

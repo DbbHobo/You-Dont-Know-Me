@@ -415,12 +415,12 @@ Didact.render(element, container)
 
 ## 关键词
 
-- fiberRootNode：全局唯一根节点
-- rootFiber：用户写的页面结构所对应的fiber树的根节点
-- fiberNode：用来表示React-Element的数据结构
-- Reconciler：协调器，构建fiber数据结构相关，根据最新状态构建新的 fiber 树，与之前的 fiber 树进行 diff 对比，对 fiber 节点标记不同的副作用
-- Scheduler：调度器，用来调度任务执行顺序，让浏览器的每一帧优先执行高优先级的任务
-- effect：渲染、更新过程中的副作用
+- `fiberRootNode`：全局唯一根节点
+- `rootFiber`：`fiber`树的根节点
+- `fiberNode`：用来表示`React-Element`的数据结构
+- `Reconciler`：协调器，构建`fiber`数据结构相关，根据最新状态构建新的 `fiber` 树，与之前的 `fiber` 树进行 `diff` 对比，对 `fiber` 节点标记不同的副作用
+- `Scheduler`：调度器，用来调度任务执行顺序，让浏览器的每一帧优先执行高优先级的任务
+- `effect`：渲染、更新过程中的副作用
 
 ## 总结
 
@@ -429,5 +429,7 @@ Didact.render(element, container)
 ## 参考资料
 
 [build-your-own-react](https://pomb.us/build-your-own-react/)
+
 [React技术揭秘](https://react.iamkasong.com/preparation/file.html#%E9%A1%B6%E5%B1%82%E7%9B%AE%E5%BD%95)
+
 [React 应用的宏观包结构(web 开发)](https://7km.top/main/macro-structure#%E5%AE%8F%E8%A7%82%E6%80%BB%E8%A7%88)
