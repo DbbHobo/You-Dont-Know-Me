@@ -135,6 +135,90 @@ By attaching this flag to the `npm install` command, we will only install packag
 
 Just like how as boy and girl scouts we didn't bring lemon squeezers to our lemonade booth, we shouldn't bring `devDependencies` to production!
 
+#### npm 模块安装install机制
+
+1. 发出npm install命令
+2. 查询node_modules目录之中是否已经存在指定模块
+
+  - 若存在，不再重新安装
+  - 若不存在
+    - npm 向 registry 查询模块压缩包的网址
+    - 下载压缩包，存放在根目录下的.npm目录里
+    - 解压压缩包到当前项目的node_modules目录
+
+#### npm 实现原理
+
+输入 `npm install` 命令并敲下回车后，会经历如下几个阶段（以 npm 5.5.1 为例）：
+
+1. 执行工程自身 `preinstall`
+
+当前 npm 工程如果定义了 `preinstall` 钩子此时会被执行。
+
+2. 确定首层依赖模块
+
+首先需要做的是确定工程中的首层依赖，也就是 `dependencies` 和 `devDependencies` 属性中直接指定的模块（假设此时没有添加 npm install 参数）。
+
+工程本身是整棵依赖树的根节点，每个首层依赖模块都是根节点下面的一棵子树，npm 会开启多进程从每个首层依赖模块开始逐步寻找更深层级的节点。
+
+3. 获取模块
+
+获取模块是一个递归的过程，分为以下几步：
+
+获取模块信息。在下载一个模块之前，首先要确定其版本，这是因为 `package.json` 中往往是 semantic version（semver，语义化版本）。此时如果版本描述文件（npm-shrinkwrap.json 或 package-lock.json）中有该模块信息直接拿即可，如果没有则从仓库获取。如 `packaeg.json` 中某个包的版本是 ^1.1.0，npm 就会去仓库中获取符合 1.x.x 形式的最新版本。
+
+获取模块实体。上一步会获取到模块的压缩包地址（resolved 字段），npm 会用此地址检查本地缓存，缓存中有就直接拿，如果没有则从仓库下载。
+
+查找该模块依赖，如果有依赖则回到第1步，如果没有则停止。
+
+4. 模块扁平化（dedupe）
+
+上一步获取到的是一棵完整的依赖树，其中可能包含大量重复模块。比如 A 模块依赖于 loadsh，B 模块同样依赖于 lodash。在 npm3 以前会严格按照依赖树的结构进行安装，因此会造成模块冗余。
+
+从 npm3 开始默认加入了一个 dedupe 的过程。它会遍历所有节点，逐个将模块放在根节点下面，也就是 node-modules 的第一层。当发现有重复模块时，则将其丢弃。
+
+这里需要对重复模块进行一个定义，它指的是模块名相同且 semver 兼容。每个 semver 都对应一段版本允许范围，如果两个模块的版本允许范围存在交集，那么就可以得到一个兼容版本，而不必版本号完全一致，这可以使更多冗余模块在 dedupe 过程中被去掉。
+
+比如 node-modules 下 foo 模块依赖 lodash@^1.0.0，bar 模块依赖 lodash@^1.1.0，则 ^1.1.0 为兼容版本。
+
+而当 foo 依赖 lodash@^2.0.0，bar 依赖 lodash@^1.1.0，则依据 semver 的规则，二者不存在兼容版本。会将一个版本放在 node_modules 中，另一个仍保留在依赖树里。
+
+举个例子，假设一个依赖树原本是这样：
+
+node_modules
+-- foo
+---- lodash@version1
+
+-- bar
+---- lodash@version2
+
+假设 version1 和 version2 是兼容版本，则经过 dedupe 会成为下面的形式：
+
+node_modules
+-- foo
+
+-- bar
+
+-- lodash（保留的版本为兼容版本）
+
+假设 version1 和 version2 为非兼容版本，则后面的版本保留在依赖树中：
+
+node_modules
+-- foo
+-- lodash@version1
+
+-- bar
+---- lodash@version2
+
+5. 安装模块
+
+这一步将会更新工程中的 `node_modules`，并执行模块中的生命周期函数（按照 `preinstall`、`install`、`postinstall` 的顺序）。
+
+6. 执行工程自身生命周期
+
+当前 npm 工程如果定义了钩子此时会被执行（按照 `install`、`postinstall`、`prepublish`、`prepare` 的顺序）。
+
+最后一步是生成或更新版本描述文件，`npm install` 过程完成。
+
 ### npm publish
 
 Sending a package to our `npmjs.com` fulfillment centre is super easy as we only need to run `npm publish`. The tricky part, which is not specific to npm package authors, is determining the version of the package.
@@ -198,7 +282,7 @@ npm unlink
 
 `npm` 在功能上比较全面，适用于大多数项目。
 
-`npm3` 使用的是扁平化依赖来进行包管理。所有的依赖都被拍平到`node_modules`目录下，不再有很深层次的嵌套关系。这样在安装新的包时，根据 `node require` 机制，会不停往上级的`node_modules`当中去找，如果找到相同版本的包就不会重新安装，解决了大量包重复安装的问题，而且依赖层级也不会太深。但这样的管理方式也会存在以下问题：
+`npm3` 使用的是**扁平化依赖**来进行包管理。所有的依赖都被拍平到`node_modules`目录下，不再有很深层次的嵌套关系。这样在安装新的包时，根据 `node require` 机制，会不停往上级的`node_modules`当中去找，如果找到相同版本的包就不会重新安装，解决了大量包重复安装的问题，而且依赖层级也不会太深。但这样的管理方式也会存在以下问题：
 
 1. 依赖结构的不确定性，有时候两个包依赖了同一个另外的包，会根据在`package.json`中的位置确定到底如何处理在`node_modules`里的结构，这也是为什么会出现`package-lock.json`的原因
 2. 扁平化算法本身的复杂性很高，耗时较长
@@ -232,31 +316,31 @@ npm unlink
 
 `pnpm`不会重复安装同一个包。用 `npm`/`yarn` 的时候，如果 100 个项目都依赖 `lodash`，那么 `lodash` 很可能就被安装了 100 次，磁盘中就有 100 个地方写入了这部分代码。但在使用 `pnpm` 只会安装一次，磁盘中只有一个地方写入，后面再次使用都会直接使用 `hardlink` **硬链接**。即使一个包的不同版本，`pnpm` 也会极大程度地复用之前版本的代码。举个例子，比如 `lodash` 有 100 个文件，更新版本之后多了一个文件，那么磁盘当中并不会重新写入 101 个文件，而是保留原来的 100 个文件的 `hardlink`，仅仅写入那一个新增的文件。
 
-硬链接（Hard Links）：
+- 硬链接（Hard Links）：
 
 `pnpm`使用硬链接来存储依赖项，这与`npm`和`Yarn`不同。在传统的工具中，每个项目都有自己的`node_modules`目录，依赖项会被完全复制到每个项目中，占用大量磁盘空间。而`pnpm`使用硬链接，将依赖项存储在一个公共的位置，并在项目之间共享，从而显著减少了磁盘空间的使用。
 
-版本控制（Version Control）：
+- 版本控制（Version Control）：
 
 `pnpm`使用一个称为`pnpm-lock.yaml`的锁文件来管理项目的依赖版本。这个锁文件与`npm`的`package-lock.json`和`Yarn`的`yarn.lock`类似，但具有一些不同之处。`pnpm`的锁文件记录了每个依赖项的确切位置（路径）以及其哈希值，以确保在多个项目之间共享的依赖项的一致性。
 
-全局依赖（Global Dependencies）：
+- 全局依赖（Global Dependencies）：
 
 与`npm`和`Yarn`不同，`pnpm`不推荐使用全局安装依赖项。`pnpm`鼓励将依赖项安装在每个项目的本地`node_modules`目录中，以确保项目的依赖项版本隔离。
 
-并发安装（Concurrent Installation）：
+- 并发安装（Concurrent Installation）：
 
 `pnpm`支持并发安装依赖项，这意味着它可以更快地安装项目的依赖项，特别是在多核处理器上。
 
-自动清理（Automatic Cleanup）：
+- 自动清理（Automatic Cleanup）：
 
 `pnpm`具有自动清理功能，会删除项目中未使用的依赖项，以减少磁盘占用。这可以通过运行`pnpm prune`命令来手动触发，或者它会在安装新依赖项时自动执行。
 
-快速开发（Fast Development Workflow）：
+- 快速开发（Fast Development Workflow）：
 
 `pnpm`通过使用硬链接和智能缓存机制，支持快速的开发工作流程。在开发过程中，只需重新链接已更改的依赖项，而不必重新安装整个依赖树。
 
-插件系统（Plugin System）：
+- 插件系统（Plugin System）：
 
 `pnpm`具有可扩展的插件系统，允许开发人员编写自定义插件以扩展其功能。
 
@@ -276,19 +360,9 @@ npm unlink
 
 硬链接（Hard Link）和软连接（Symbolic Link，也称为符号链接或symlink）是在计算机文件系统中用来创建文件链接的两种不同方法，它们有一些重要的区别：
 
-### 硬链接（Hard Link）
-
-硬链接是一个文件系统中的多个文件名，它们指向相同的数据块（inode）。换句话说，**硬链接是实际文件数据的多个入口**。
-
-删除原始文件不会影响硬链接，因为硬链接和原始文件共享相同的数据块，只有当所有链接都被删除时，才会释放磁盘空间。
-
-硬链接不能跨越文件系统边界创建，因为它们必须指向相同文件系统的inode。
-
-硬链接通常不支持目录，只能链接文件。
-
 ### inode
 
-`inode`（索引节点）是在类`Unix`文件系统中的一个关键概念，用于管理和存储文件的元数据信息。每个文件和目录在文件系统中都有一个相关联的`inode`，这个`inode`包含了有关文件或目录的重要信息，但不包括文件内容本身。
+`inode`（索引节点）是在类 `Unix` 文件系统中的一个关键概念，用于管理和存储文件的元数据信息。每个文件和目录在文件系统中都有一个相关联的`inode`，这个`inode`包含了有关文件或目录的重要信息，但不包括文件内容本身。
 
 `inode`通常包含以下元数据信息：
 
@@ -302,7 +376,17 @@ npm unlink
 
 `inode`的使用允许文件系统有效地管理文件和目录，因为它可以帮助文件系统快速查找和访问文件的元数据，而不需要扫描整个文件系统。每当创建一个新文件或目录时，文件系统都会分配一个新的`inode`，并在其数据结构中填写相关信息。
 
-总之，`inode`是文件系统中用于存储文件和目录的元数据信息的数据结构，它们对于文件系统的正常运行和性能至关重要。
+总之，`inode` 是文件系统中用于存储文件和目录的元数据信息的数据结构，它们对于文件系统的正常运行和性能至关重要。
+
+### 硬链接（Hard Link）
+
+硬链接是一个文件系统中的多个文件名，它们指向相同的数据块（`inode`）。换句话说，**硬链接是实际文件数据的多个入口**。
+
+删除原始文件不会影响硬链接，因为硬链接和原始文件共享相同的数据块，只有当所有链接都被删除时，才会释放磁盘空间。
+
+硬链接不能跨越文件系统边界创建，因为它们必须指向相同文件系统的`inode`。
+
+硬链接通常不支持目录，只能链接文件。
 
 ### 软连接（Symbolic Link，symlink）
 

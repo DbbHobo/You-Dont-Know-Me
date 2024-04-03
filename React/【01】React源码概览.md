@@ -433,3 +433,7 @@ Didact.render(element, container)
 [React技术揭秘](https://react.iamkasong.com/preparation/file.html#%E9%A1%B6%E5%B1%82%E7%9B%AE%E5%BD%95)
 
 [React 应用的宏观包结构(web 开发)](https://7km.top/main/macro-structure#%E5%AE%8F%E8%A7%82%E6%80%BB%E8%A7%88)
+
+[A look inside React Fiber](https://makersden.io/blog/look-inside-fiber)
+
+[React-Fiber-Architecture](https://github.com/SaeedMalikx/React-Fiber-Architecture)
