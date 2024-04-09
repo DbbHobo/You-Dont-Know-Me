@@ -270,6 +270,15 @@ npm unlink
 
 硬连接就是同一个文件的不同引用，而软链接是新建一个文件，文件内容指向另一个路径。当然，这俩链接使用起来是差不多的。
 
+## 常用命令
+
+```text
+//查看npm全局安装的包位置
+npm root -g
+//查看pnpm全局安装的包位置
+pnpm store path
+```
+
 ## npm npx yarn pnpm
 
 `npm`, `npx`, `yarn` 和 `pnpm` 都是 `JavaScript` 生态系统中用于管理包依赖和运行脚本的工具。它们在功能和使用方式上有一些区别：

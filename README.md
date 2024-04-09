@@ -89,6 +89,7 @@ React
 - [ ] useMemo & useCallback
 - [ ] Hooks
 - [ ] useContext
+- [ ] Suspense
 
 Typescript
 

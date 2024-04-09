@@ -28,7 +28,7 @@ git commit -m <message>
 
 ---
 
-## Git 历史相关
+## Git 历史记录相关
 
 ### 查看提交历史
 
@@ -47,6 +47,12 @@ git reflog
 
 ```git
 git blame <file>
+```
+
+### 查看之前的某次提交
+
+```git
+git checkout <commit>
 ```
 
 ### 丢弃工作区的修改-回到本地修改以前
@@ -79,6 +85,13 @@ git reset --mixed HEAD^
 git reset HEAD^
 <!-- 删除工作空间改动代码，撤销commit，撤销git add .  -->
 git reset --hard HEAD^
+```
+
+### 恢复到之前的某次提交
+
+```git
+git checkout <commit> <file>
+git checkout <commit> .
 ```
 
 ---
@@ -178,7 +191,7 @@ git stash pop
 ### 复制一个特定的提交(commit)到当前分支
 
 ```git
-git cherry-pick 4c805e2
+git cherry-pick <commit>
 ```
 
 ### 丢弃一个没有被合并过的分支
@@ -254,6 +267,16 @@ git merge
 //和主分支上的提交还是线性关系提交，顺序清晰
 git rebase 
 ```
+
+### 多人协作准则
+
+在实际开发中，我们应该按照几个基本原则进行分支管理：
+
+- `master`分支应该是非常稳定的，也就是仅用来发布新版本，平时不能在上面干活；
+
+- 干活都在`dev`分支上，也就是说，`dev`分支是不稳定的，到某个时候，比如1.0版本发布时，再把`dev`分支合并到`master`上，在`master`分支发布1.0版本；
+
+- 你和你的小伙伴们每个人都在`dev`分支上干活，每个人都有自己的分支，时不时地往`dev`分支上合并就可以了；
 
 ## Git标签
 
