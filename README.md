@@ -124,12 +124,12 @@ Webpack
 
 ---
 
-**Do not stand at my grave and weep**
+Do not stand at my grave and weep
 
-**I am a thousand winds that blow**
+I am a thousand winds that blow
 
-**I am the diamond glints of snow**
+I am the diamond glints of snow
 
-**I am the sunlight on ripened grain**
+I am the sunlight on ripened grain
 
-**I am the gentle autumn's rain**
+I am the gentle autumn's rain
