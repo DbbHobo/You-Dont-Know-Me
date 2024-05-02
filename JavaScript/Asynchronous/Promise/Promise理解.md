@@ -4,10 +4,10 @@
 
 ```js
 new Promise( function(resolve, reject) {...} /* executor */  );
-// executor是带有 resolve 和 reject 两个参数的函数 。
+// executor是带有 resolve 和 reject 两个参数的函数
 // Promise构造函数执行时立即调用 executor 函数， resolve 和 reject 两个函数作为参数传递给executor
-// （executor 函数在Promise构造函数返回所建promise实例对象前被调用）。
-// resolve 和 reject 函数被调用时，分别将promise的状态改为fulfilled（完成）或rejected（失败）。
+// executor 函数在Promise构造函数返回所建promise实例对象前被调用
+// resolve 和 reject 函数被调用时，分别将promise的状态改为fulfilled（完成）或rejected（失败）
 ```
 
 `Promise`，简单说就是一个容器，里面保存着某个未来才会结束的事件（通常是一个异步操作）的结果。从语法上说，`Promise` 是一个对象，从它可以获取异步操作的消息。`Promise` 提供统一的 API，各种异步操作都可以用同样的方法进行处理。`Promise` 构造函数接受一个函数作为参数，该函数的两个参数分别是 **resolve** 和 **reject**。它们是两个函数，由 JavaScript 引擎提供，不用自己部署。

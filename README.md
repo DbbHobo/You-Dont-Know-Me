@@ -14,15 +14,21 @@ Article
 
 Browser
 
-- [ ] BOM、DOM
-- [ ] 跨域
-- [ ] 事件机制
-- [ ] 浏览器缓存
-- [ ] 浏览器本地存储
-- [ ] 渲染机制、重绘、回流
-- [ ] EventLoop 事件循环、宏任务、微任务
+- [ ] BOM
+- [ ] DOM
 - [ ] WebWorkers
-- [ ] XMLHttpRequest对象
+- [ ] 浏览器本地存储
+- [ ] 浏览器缓存理解
+- [ ] 浏览器跨域机制
+- [ ] 浏览器渲染机制、重绘、回流
+- [ ] 事件机制
+- [ ] EventLoop 事件循环理解
+- [ ] PWA
+- [ ] V8引擎
+- [ ] Web APIs
+  - [ ] XMLHttpRequest
+  - [ ] Timer
+  - [ ] MutationObserver
 
 Css
 
@@ -74,6 +80,8 @@ Project
 - [ ] JSBridge
 - [ ] Linux常用命令
 - [ ] Npm
+
+Python
 
 Questions
 

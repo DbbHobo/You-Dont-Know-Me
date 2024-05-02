@@ -97,6 +97,32 @@ export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 ## 不可变数据
 
+## 函数缓存
+
+函数缓存，就是将函数运算过的结果进行缓存，本质上就是用空间（缓存存储）换时间（计算过程），常用于缓存数据计算结果和缓存对象。
+
+- 对于昂贵的函数调用，执行复杂计算的函数
+- 对于具有有限且高度重复输入范围的函数
+- 对于具有重复输入值的递归函数
+- 对于纯函数，即每次使用特定输入调用时返回相同输出的函数
+
+```js
+const memoize = function (func, content) {
+  let cache = Object.create(null)
+  content = content || this
+  return (...key) => {
+    if (!cache[key]) {
+      cache[key] = func.apply(content, key)
+    }
+    return cache[key]
+  }
+}
+
+const calc = memoize(add)
+const num1 = calc(100,200)
+const num2 = calc(100,200) // 缓存得到的结果
+```
+
 ## 参考资料
 
 [学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)

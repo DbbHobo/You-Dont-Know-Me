@@ -109,3 +109,5 @@ JavaScript 代码运行时，会产生一个全局的上下文环境（context�
 ## 参考资料
 
 [Generator 函数的异步应用](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/generator-async#%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5)
+
+[JavaScript Visualized: Generators and Iterators](https://dev.to/lydiahallie/javascript-visualized-generators-and-iterators-e36)
