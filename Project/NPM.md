@@ -358,8 +358,8 @@ pnpm store path
 `pnpm` 的命令与 `npm` 类似，如 `pnpm install` 和 `pnpm start`。
 
 安装依赖包到 dependencies ：`pnpm add <pkg>`
-安装依赖包到devDependencies：`pnpm add -D <pkg>`
-安装依赖包到optionalDependencies：`pnpm add -O <pkg>`
+安装依赖包到 devDependencies：`pnpm add -D <pkg>`
+安装依赖包到 optionalDependencies：`pnpm add -O <pkg>`
 全局安装依赖包：`pnpm add -g xxx`
 安装项目全部依赖：`pnpm install`，别名`pnpm i`
 更新依赖包：`pnpm update`，别名`pnpm up`
