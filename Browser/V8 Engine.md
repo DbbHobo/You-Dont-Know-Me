@@ -14,14 +14,15 @@ V8 中执行一段 JS 代码的整个过程如下:
 
 1. 首先通过词法分析和语法分析生成 AST
 2. 将 AST 转换为字节码
-3. 由解释器逐行执行字节码，遇到热点代码启动编译器进行编译，生成对应的机器码, 以优化执行效率
+3. 字节码会进行一定优化压缩字节码数量
+4. 由解释器逐行执行字节码，遇到热点代码启动编译器进行编译，生成对应的机器码, 以优化执行效率
 
 ## 编译器和解释器
 
 1. 在编译型语⾔的编译过程中，编译器⾸先会依次对源代码进⾏词法分析、语法分析，⽣成抽象语法树（AST），然后是优化代码，最后再⽣成处理器能够理解的机器码。如果编译成功，将会⽣成⼀个可执⾏的⽂件。但如果编译过程发⽣了语法或者其他的错误，那么编译器就会抛出异常，最后的⼆进制⽂件也不会⽣成成功。
 2. 在解释型语⾔的解释过程中，同样解释器也会对源代码进⾏词法分析、语法分析，并⽣成抽象语法树（AST），不过它会再基于抽象语法树⽣成字节码，最后再根据字节码来执⾏程序、输出结果。
 
-![browser](../assets/js-engine-pipeline.svg)
+![browser](./assets/js-engine-pipeline.svg)
 
 ## JavaScript 内存管理
 
@@ -169,6 +170,8 @@ enum AllocationSpace {
 
 ## 参考资料
 
+[What is V8?](https://v8.dev/)
+
 [JavaScript engine fundamentals: Shapes and Inline Caches](https://mathiasbynens.be/notes/shapes-ics)
 
 [Understanding V8’s Bytecode](https://medium.com/dailyjs/understanding-v8s-bytecode-317d46c94775)
@@ -176,3 +179,5 @@ enum AllocationSpace {
 [内存管理-MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Memory_Management)
 
 [Garbage collection](https://javascript.info/garbage-collection)
+
+[JavaScript Visualized: the JavaScript Engine](https://dev.to/lydiahallie/javascript-visualized-the-javascript-engine-4cdf)

@@ -10,6 +10,58 @@ HTML 元素通过元素节点表示，特性（attribute）通过**特性节点*
 
 `div` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
 
+HTML 元素类的总体继承关系如下：
+
+![browser](./assets/html-dom-hierarchy.svg)
+
+因此，元素继承其所有祖先的属性和方法。例如，考虑 `<a>` 元素，在 `DOM` 中由类型为 `HTMLAnchorElement` 的对象表示。元素包括了该类文档中，`Anchor` 特定的属性和方法。但也包括 `HTMLElement`、`Element` 以及 `Node` 定义的内容，最后是 `EventTarget` 定义的内容。
+
+每一层级都定义了元素实用性的一个关键方面。从 `Node` 开始，该元素继承了有关该元素能否被另一个元素包含，以及自身包含其他元素的概念。特别重要的是从 `EventTarget` 继承的：接收和处理事件（如鼠标点击、播放和暂停事件等）的能力。
+
+## HTMLElement
+
+`HTMLElement` 接口表示所有的 `HTML` 元素。一些 `HTML` 元素直接实现了 `HTMLElement` 接口，其他的间接实现 `HTMLElement` 接口。
+
+- `HTMLElement.offsetTop`
+
+只读属性，它返回当前元素相对于其 `offsetParent` 元素的顶部内边距的距离。
+
+- `HTMLElement.offsetLeft`
+
+只读属性，返回当前元素左上角相对于 `HTMLElement.offsetParent` 节点的左边界偏移的像素值。
+
+## Element
+
+`Element` 是最通用的基类，`Document` 中的所有元素对象（即表示元素的对象）都继承自它。它只具有各种元素共有的方法和属性。
+
+- `Element.scrollTop`
+
+可以获取或设置一个元素的内容垂直滚动的像素数。
+
+- `Element.scrollLeft`
+
+可以读取或设置元素滚动条到元素左边的距离。
+
+- `Element.clientTop`
+
+一个元素顶部边框的宽度（以像素表示）。不包括顶部外边距或内边距。`clientTop` 是只读的。
+
+- `Element.clientLeft`
+
+表示一个元素的左边框的宽度，以像素表示。如果元素的文本方向是从右向左（RTL, right-to-left），并且由于内容溢出导致左边出现了一个垂直滚动条，则该属性包括滚动条的宽度。`clientLeft` 不包括左外边距和左内边距。`clientLeft` 是只读的。
+
+- `Element.getBoundingClientRect()`
+
+返回一个 `DOMRect` 对象，其提供了元素的大小及其相对于视口的位置。
+
+## Node
+
+`Node` 是一个接口，各种类型的 `DOM API` 对象会从这个接口继承。它允许我们使用相似的方式对待这些不同类型的对象；比如，继承同一组方法，或者用同样的方式测试。
+
+以下接口都从 `Node` 继承其方法和属性：
+
+`Document`, `Element`, `Attr`, `CharacterData` (which Text, Comment, and CDATASection inherit), `ProcessingInstruction`, `DocumentFragment`, `DocumentType`等
+
 ## EventTarget
 
 `EventTarget` 接口由可以接收事件、并且可以创建侦听器的对象实现。换句话说，任何事件目标都会实现与该接口有关的这三个方法。
@@ -17,13 +69,23 @@ HTML 元素通过元素节点表示，特性（attribute）通过**特性节点*
 `Element` 及其子项、`document` 和 `window` 是最常见的事件目标，但其他对象也可以是事件目标。比如 `XMLHttpRequest`、`AudioNode` 和 `AudioContext` 等等。
 
 - `EventTarget.addEventListener()`
-在 EventTarget 上注册特定事件类型的事件处理程序。
+
+在 `EventTarget` 上注册特定事件类型的事件处理程序。
+
+常见监听事件有：
+
+  * DOMContentLoaded
+  * scroll
+  * paste
+  * fullscreenchange
 
 - `EventTarget.removeEventListener()`
-EventTarget 中删除事件侦听器。
+
+`EventTarget` 中删除事件侦听器。
 
 - `EventTarget.dispatchEvent()`
-将事件分派到此 EventTarget。
+
+将事件分派到此 `EventTarget`。
 
 ### 浏览器中的事件
 
@@ -167,7 +229,13 @@ bindEvent(p1, "click", function (e) {
 
 如果我们在 p1 div1 body 中都绑定了事件，它是会根据 DOM 的结构来冒泡，从下到上挨个执行的。但是我们使用 `e.stopPropagation()`就可以阻止冒泡。
 
-## 获取 DOM 节点(查找)
+## Document
+
+`Document` 接口描述了任何类型的文档的通用属性与方法。
+
+`Document` => `Node` => `EventTarget` => `Object`
+
+### 获取 DOM 节点(查找)
 
 最常用的 DOM API 就是获取节点，其中常用的获取方法如下面代码示例：
 
@@ -187,7 +255,7 @@ var containerList = document.getElementsByClassName("container"); // 集合
 var pList = document.querySelectorAll("p"); // 集合
 ```
 
-## DOM 树操作(插入、删除)
+### DOM 树操作(插入、删除)
 
 - 新增节点
 
@@ -226,9 +294,60 @@ var child = div1.childNodes;
 div1.removeChild(child[0]);
 ```
 
+## Window
+
+`window` 对象表示一个包含 `DOM` 文档的窗口，其 `document` 属性指向窗口中载入的 `DOM` 文档。代表了脚本正在运行的窗口的 `window` 全局变量，被暴露给 Javascript 代码。
+
+`Window` => `EventTarget` => `Object`
+
+## attribute & property
+
+全局属性是所有 `HTML` 元素共有的属性；它们可以用于所有元素，即使属性可能对某些元素不起作用。
+
+- accesskey
+- autocapitalize
+- autofocus
+- class
+- contenteditable
+- data-*
+- dir
+- draggable
+- enterkeyhint
+- exportparts
+- hidden
+- id
+- inert
+- inputmode
+- is
+- itemid
+- itemprop
+- itemref
+- itemscope
+- itemtype
+- lang
+- nonce
+- part
+- popover
+- slot
+- spellcheck
+- style
+- tabindex
+- title
+- translate
+- 事件处理器属性：onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
+
+<!-- TODO -->
+
 ## 参考资料
 
 [HTMLElement](https://developer.mozilla.org/zh-CN/docs/Web/API/HTMLElement)
+
 [Element](https://developer.mozilla.org/zh-CN/docs/Web/API/Element)
+
 [Node](https://developer.mozilla.org/zh-CN/docs/Web/API/Node)
+
 [EventTarget](https://developer.mozilla.org/zh-CN/docs/Web/API/EventTarget)
+
+[Document](https://developer.mozilla.org/zh-CN/docs/Web/API/Document)
+
+[Window](https://developer.mozilla.org/zh-CN/docs/Web/API/Window)

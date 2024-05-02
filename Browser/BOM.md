@@ -2,7 +2,7 @@
 
 The BOM (Browser Object Model) consists of the objects navigator, history, screen, location and document which are children of window.
 
-`BOM` 为JavaScript提供了一种控制浏览器行为的"方法"。从根本上讲， `BOM` 只处理浏览器窗口和框架；但人们习惯上也把所有针对浏览器的 `JavaScript` 扩展算作 `BOM` 的一部分。
+`BOM` 为JavaScript提供了一种控制浏览器行为的"方法"。从根本上讲， `BOM` 只处理浏览器窗口和框架，但人们习惯上也把所有针对浏览器的 `JavaScript` 扩展算作 `BOM` 的一部分。
 
 BOM（浏览器对象模型）是浏览器本身的一些信息的设置和获取，例如获取浏览器的宽度、高度，设置让浏览器跳转到哪个地址等等。
 
@@ -114,7 +114,7 @@ window.location.assign('url')
                .toString()
 ```
 
-![BOM](../assets/BOM.png)
+![BOM](./assets/BOM.png)
 
 ```js
 // 例如当前网址是 https://leetcode-cn.com/problemset/all/?difficulty=%E7%AE%80%E5%8D%95#some
@@ -163,5 +163,7 @@ history.forward();
 ## 参考资料
 
 [window.location Cheatsheet](https://dev.to/samanthaming/window-location-cheatsheet-4edl)
+
 [EventTarget](https://developer.mozilla.org/zh-CN/docs/Web/API/EventTarget)
+
 [Window](https://developer.mozilla.org/zh-CN/docs/Web/API/Window)
