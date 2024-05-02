@@ -48,7 +48,6 @@ module.exports = {
     filename: "[name].js", //打包后输出文件的文件名
     chunkFilename: '[name].js',
   },
-
   optimization: {
     runtimeChunk: "single",
     splitChunks: {
@@ -95,4 +94,5 @@ module.exports = {
 ## 参考资料
 
 [What are module, chunk and bundle in webpack?](https://stackoverflow.com/questions/42523436/what-are-module-chunk-and-bundle-in-webpack)
+
 [Day 8 of #100DaysOfCode: The relationship between bundle, chunk, and modules for Webpack?](https://dev.to/jenhsuan/day-8-of-100daysofcode-the-relationship-between-bundle-chunk-and-modules-for-webpack-3hni)
