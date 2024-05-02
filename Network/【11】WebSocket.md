@@ -20,26 +20,26 @@
 
 ## WebSocket 的静态方法
 
-- close()
-- error()
-- message()
-- open()
+- `close()`
+- `error()`
+- `message()`
+- `open()`
 
 ## WebSocket的实例属性
 
-- binaryType
-- bufferedAmount
-- extensions
-- protocol
-- readyState
-- url
+- `binaryType`
+- `bufferedAmount`
+- `extensions`
+- `protocol`
+- `readyState`
+- `url`
 
 ## WebSocket的实例方法
 
-- onclose()
-- onerror()
-- onmessage()
-- onopen()
+- `onclose()`
+- `onerror()`
+- `onmessage()`
+- `onopen()`
 
 ## 参考资料
 

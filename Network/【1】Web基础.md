@@ -88,4 +88,5 @@ data:[<mediatype>][;base64],<data>
 ## 参考资料
 
 《图解HTTP》
+
 [Data URL](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Basics_of_HTTP/Data_URLs)

@@ -173,6 +173,9 @@ Set-Cookie: id=a3fWa; Max-Age=604800;
 ## 参考资料
 
 [HTTP Cookie](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Cookies)
+
 [浏览器系列之 Cookie 和 SameSite 属性](https://github.com/mqyqingfeng/Blog/issues/157)
+
 [傻傻分不清之 Cookie、Session、Token、JWT](https://juejin.cn/post/6844904034181070861)
+
 [Session vs Token Based Authentication](https://www.geeksforgeeks.org/session-vs-token-based-authentication/)

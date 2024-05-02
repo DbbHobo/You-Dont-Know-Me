@@ -21,15 +21,13 @@
 如何防御？
 
 1. 最普遍的做法是转义输入输出的内容，对于引号，尖括号，斜杠进行**转义**。
-
 2. `CSP` 的主要目标是减少和报告 `XSS` 攻击。`XSS` 攻击利用了浏览器对于从服务器所获取的内容的信任。恶意脚本在受害者的浏览器中得以运行，因为浏览器信任其内容来源，即使有的时候这些脚本并非来自于它本该来的地方。`CSP` 通过指定有效域——即浏览器认可的可执行脚本的有效来源——使服务器管理者有能力减少或消除 `XSS` 攻击所依赖的载体。一个 `CSP` 兼容的浏览器将会仅执行从白名单域获取到的脚本文件，忽略所有的其他脚本（包括内联脚本和 `HTML` 的事件处理属性）。
-
 3. 作为一种终极防护形式，始终不允许执行脚本的站点可以选择全面禁止脚本执行。
 4. 设置 `Cookie` 的 `HttpOnly` 属性后，`JavaScript` 便无法读取 `Cookie` 的值。这样也能很好的防范 `XSS` 攻击。
 
 ### 跨站点请求伪造 CSRF
 
-跨站点请求伪造（Cross-Site Request Forgeries， CSRF） 攻击是指攻击者通过设置好的陷阱， 强制对已完成认证的用户进行非预期的个人信息或设定信息等某些状态更新， 属于被动攻击。
+跨站点请求伪造（Cross-Site Request Forgeries， CSRF） 攻击是指攻击者通过设置好的陷阱，强制对已完成认证的用户进行非预期的个人信息或设定信息等某些状态更新， 属于被动攻击。
 
 一个典型的 `CSRF` 攻击有着如下的流程：
 
@@ -132,35 +130,43 @@ sha256(sha1(md5(salt + password + slat)));
 ## Web 安全
 
 ### CSP
+
 内容安全策略（`CSP`）是一个额外的安全层，用于检测并削弱某些特定类型的攻击，包括跨站脚本（XSS）和数据注入攻击等。无论是数据盗取、网站内容污染还是恶意软件分发，这些攻击都是主要的手段。
 
 `CSP` 被设计成完全向后兼容（除 CSP2 在向后兼容有明确提及的不一致; 更多细节查看这里 章节 1.1）。不支持 `CSP` 的浏览器也能与实现了 `CSP` 的服务器正常工作，反之亦然：不支持 `CSP` 的浏览器只会忽略它，如常运行，默认为网页内容使用标准的同源策略。如果网站不提供 `CSP` 标头，浏览器也使用标准的同源策略。
 
 为使 `CSP` 可用，你需要配置你的网络服务器返回 `Content-Security-Policy` `HTTP` 标头（有时你会看到 `X-Content-Security-Policy` 标头，但那是旧版本，并且你无须再如此指定它）。
 
-```
+```text
 Content-Security-Policy: default-src 'self'; img-src *; media-src media1.com media2.com; script-src userscripts.example.com
 ```
 
 在这个例子中，各种内容默认仅允许从文档所在的源获取，但存在如下例外：
-- 图片可以从任何地方加载 (注意“`*`”通配符)。
-- 多媒体文件仅允许从 `media1.com` 和 `media2.com` 加载（不允许从这些站点的子域名）。
-- 可运行脚本仅允许来自于 `userscripts.example.com`。
+
+- 图片可以从任何地方加载 (注意“`*`”通配符)
+- 多媒体文件仅允许从 `media1.com` 和 `media2.com` 加载（不允许从这些站点的子域名）
+- 可运行脚本仅允许来自于 `userscripts.example.com`
 
 ### Strict-Transport-Security
+
 `HTTP Strict-Transport-Security`（通常简称为 `HSTS`）响应标头用来通知浏览器应该只通过 `HTTPS` 访问该站点，并且以后使用 `HTTP` 访问该站点的所有尝试都应自动重定向到 `HTTPS`。
 
 如果一个网站接受 `HTTP` 的请求，然后重定向到 `HTTPS`，用户可能在开始重定向前，通过没有加密的方式与服务器通信，比如，用户输入 `http://foo.com` 或者仅是输入 `foo.com`。这样为中间人攻击创造了机会。可以利用重定向将用户引导至恶意站点，而不是原始站的安全版本。
 
 网站通过 `HTTP Strict Transport Security` 标头通知浏览器，这个网站禁止使用 `HTTP` 方式加载，并且浏览器应该自动把所有尝试使用 `HTTP` 的请求自动替换为 `HTTPS` 请求。
-```
+
+```text
 Strict-Transport-Security: max-age=<expire-time>
 Strict-Transport-Security: max-age=<expire-time>; includeSubDomains
 Strict-Transport-Security: max-age=<expire-time>; includeSubDomains; preload
 ```
 
 ## 参考资料
+
 《图解HTTP》
+
 [解读 HTTP1/HTTP2/HTTP3](https://juejin.cn/post/6995109407545622542)
+
 [内容安全策略（CSP）](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CSP)
+
 [Strict-Transport-Security](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Strict-Transport-Security)
