@@ -1260,3 +1260,5 @@ function shouldYieldToHost(): boolean {
 [How React Scheduler works internally?](https://jser.dev/react/2022/03/16/how-react-scheduler-works/)
 
 [What are Lanes in React source code?](https://jser.dev/react/2022/03/26/lanes-in-react)
+
+[How React 18 Improves Application Performance](https://vercel.com/blog/how-react-18-improves-application-performance)

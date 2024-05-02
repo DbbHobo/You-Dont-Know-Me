@@ -11,7 +11,7 @@ export type Source = {
 };
 
 export type ReactElement = {
-  $$typeof: any,
+  $$typeof: any,//【通常用Symbol，出于安全考虑？这样不会给任何自主创建的“ReactElement”对象给渲染上】
   type: any,
   key: any,
   ref: any,
