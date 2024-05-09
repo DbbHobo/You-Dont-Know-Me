@@ -24,7 +24,7 @@ Browser
 - [ ] 事件机制
 - [ ] EventLoop 事件循环理解
 - [ ] PWA
-- [ ] V8引擎
+- [ ] V8 引擎
 - [ ] Web APIs
   - [ ] XMLHttpRequest
   - [ ] Timer
@@ -40,14 +40,17 @@ Css
 JavaScript
 
 - [ ] 数据类型、类型判断、类型转换、typeof、instanceof
-- [ ] 常用数据类型 Array Object String Function Map Set Proxy Reflect Symbol Date Reg等
-- [ ] 同步、异步、Promise、Generator、async、await
+- [ ] 常用数据结构 Array Object String Function Map Set Proxy Reflect Symbol Date Reg等
+- [ ] 同步、异步、Promise、Generator、Async、Await
 - [ ] 原型链、继承、new、this、闭包、call、apply、bind
 - [ ] 浅拷贝、深拷贝
 - [ ] JavaScript 垃圾回收机制
-- [ ] 模块化 CommonJs、ES6 Module、AMD、CMD
+- [ ] 模块化 ES6 Module、CommonJs、AMD、CMD
 - [ ] 防抖、节流
 - [ ] JavaScript 设计模式
+- [ ] 位运算
+- [ ] 函数式编程
+- [ ] Error
 
 Network
 
@@ -76,7 +79,7 @@ Project
 - [ ] 项目优化经验
 - [ ] ES6实践
 - [ ] Git常用命令
-- [ ] HTTP 头部
+- [ ] HTTP Headers
 - [ ] JSBridge
 - [ ] Linux常用命令
 - [ ] Npm
@@ -95,9 +98,10 @@ React
 - [ ] useState & useReducer & useRef
 - [ ] useEffect
 - [ ] useMemo & useCallback
-- [ ] Hooks
-- [ ] useContext
+- [ ] useContext & useLayoutEffect
+- [ ] React Hooks
 - [ ] Suspense
+- [ ] useTransition
 
 Typescript
 
@@ -119,16 +123,22 @@ Vue2 & Vue3
 - [ ] 组件化
 - [ ] 生命周期
 - [ ] 路由原理
+- [ ] 编译
 
 Webpack
 
-- [ ] Webpack 原理
-- [ ] Module 模块概念
+- [ ] Webpack 基础
+- [ ] Resolve
 - [ ] Loader 转换器
 - [ ] Plugin 插件
-- [ ] Hot Reload 热更新原理
 - [ ] Webpack 优化
 - [ ] Webpack 工作流程
+- [ ] Module 模块概念
+- [ ] Hot Reload 热更新原理
+
+front-end-handbook-2024
+
+[front-end-handbook-2024](https://frontendmasters.com/guides/front-end-handbook/2024/)
 
 ---
 
