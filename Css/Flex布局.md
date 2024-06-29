@@ -2,7 +2,7 @@
 
 ## Flex 所有属性
 
-| 容器上的属性    | 项目上的属性 |
+| 容器上的属性      | 项目上的属性   |
 | --------------- | ------------ |
 | display:flex    | flex-grow    |
 | flex-direction  | flex-shrink  |
@@ -14,15 +14,15 @@
 
 - 容器上
 
-flex-flow 是 flex-direction 和 flex-wrap 的缩写。
+`flex-flow` 是 `flex-direction` 和 `flex-wrap` 的缩写。
 
-align-content 和 align-items 的差异在于 align-content 针对的是多行、换行的情况。
+`align-content` 和 `align-items` 的差异在于 `align-content` 针对的是多行、换行的情况。
 
 - 项目上
 
-flex 是 flex-grow, flex-shrink 和 flex-basis 的缩写。
+`flex` 是 `flex-grow`, `flex-shrink` 和 `flex-basis` 的缩写。
 
-flex-basis 指定了 flex 元素在主轴方向上的初始大小。
+`flex-basis` 指定了 `flex` 元素在主轴方向上的初始大小。
 
 ## Flex 属性含义
 
@@ -31,5 +31,7 @@ flex-basis 指定了 flex 元素在主轴方向上的初始大小。
 ## Flex 空间分布
 
 ![flex](./assets/flex2.png)
+
+## 参考资料
 
 [A Complete Guide to Flexbox](https://css-tricks.com/snippets/css/a-guide-to-flexbox/)

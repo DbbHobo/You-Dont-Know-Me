@@ -24,6 +24,14 @@ git add <file>
 
 ```git
 git commit -m <message>
+
+// 修改最近提交的便捷方法。 它让您将暂存的变更与先前的提交合并，而不是创建一个全新的提交。 
+git add <file_name>
+git commit --amend
+// 它还可以用于在不更改快照的情况下简单地编辑先前的提交消息。
+git commit --amend -m "New commit message"
+// 合并最新的提交与之前的提交
+git commit --amend --no-edit
 ```
 
 ---
@@ -59,8 +67,10 @@ git checkout <commit>
 
 ```git
 git checkout -- <file>
-git checkout HEAD <file>
 git checkout -- .
+git checkout HEAD <file>
+git checkout HEAD^
+git checkout HEAD~<num>
 ```
 
 ### 丢弃暂存区的修改-回到 add 以前
@@ -97,6 +107,20 @@ git checkout <commit> .
 ---
 
 ## 远程仓库
+
+远程分支有一个命名规范 —— 它们的格式是:
+
+```git
+<remote name>/<branch name>
+```
+
+## 拉取远程仓库内容
+
+```git
+// git的fetch和pull区别是：git fetch是将远程主机的最新内容拉到本地，用户在检查了以后决定是否合并到工作本机分支中；而git pull 则是将远程主机的最新内容拉下来后直接合并，即：git pull = git fetch + git merge。
+git fetch
+git pull
+```
 
 ### 关联一个远程库
 
@@ -280,7 +304,11 @@ git rebase
 
 ## Git标签
 
-### 打标签
+Git 的 tag 可以（在某种程度上 —— 因为标签可以被删除后重新在另外一个位置创建同名的标签）永久地将某个特定的提交命名为里程碑，然后就可以像分支一样引用了。
+
+更难得的是，它们并不会随着新的提交而移动。你也不能切换到某个标签上面进行修改提交，它就像是提交树上的一个锚点，标识了某个特定的位置。
+
+### 打标签(HEAD)
 
 ```git
 git tag v1.0

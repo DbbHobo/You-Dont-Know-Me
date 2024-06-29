@@ -63,3 +63,7 @@
   border-color: #228b5e transparent transparent transparent;
 }
 ```
+
+## 参考资料
+
+[The Shapes of CSS](https://css-tricks.com/the-shapes-of-css/)

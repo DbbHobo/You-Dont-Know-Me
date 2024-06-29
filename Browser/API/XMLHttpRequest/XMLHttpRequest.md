@@ -58,4 +58,7 @@ xhr.status 即 HTTP 状态码，有 2xx、3xx、4xx、5xx 等。
   // 发出请求
   xhr.send(postData);
 ```
+
+## 参考资料
+
 [XMLHttpRequest - MDN](https://developer.mozilla.org/zh-CN/docs/Web/API/XMLHttpRequest)

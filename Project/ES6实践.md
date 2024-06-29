@@ -929,7 +929,63 @@ console.log([4, 6, 8, 12].findIndex(isPrime)); // -1, not found
 console.log([4, 6, 7, 12].findIndex(isPrime)); // 2
 ```
 
-## optional-chaining
+## 数组新增方法includes、find等
+
+- if中判断条件，利用数组的includes方法：
+
+```js
+// bad
+if(
+    type == 1 ||
+    type == 2 ||
+    type == 3 ||
+    type == 4 ||
+){
+   //...
+}
+
+// good
+const condition = [1,2,3,4];
+
+if( condition.includes(type) ){
+   //...
+}
+```
+
+- 列表搜索
+
+```js
+// bad
+const a = [1,2,3,4,5];
+const result = a.filter( 
+  item =>{
+    return item === 3
+  }
+)
+// good
+const a = [1,2,3,4,5];
+const result = a.find( 
+  item =>{
+    return item === 3
+  }
+)
+```
+
+- 输入框非空判断
+  
+```js
+// bad
+if(value !== null && value !== undefined && value !== ''){
+    //...
+}
+
+// good
+if((value??'') !== ''){
+  //...
+}
+```
+
+## optional-chaining(?.)
 
 ```js
 const obj = {
@@ -956,7 +1012,11 @@ exists?.(); // undefined
 
 需要添加 @babel/plugin-proposal-optional-chaining 插件支持
 
-## logical-assignment-operators
+## logical-assignment-operators(||= &&=)
+
+逻辑或赋值（x ||= y）运算仅在 **x 为假**值时为其赋值。
+
+逻辑与赋值（x &&= y）运算仅在 **x 为真**值时为其赋值。
 
 ```js
 a ||= b;
@@ -1014,7 +1074,9 @@ function example(a = b) {
 
 需要 @babel/plugin-proposal-logical-assignment-operators 插件支持
 
-## nullish-coalescing-operator
+## nullish-coalescing-operator(??=)
+
+逻辑空赋值运算符（x ??= y）仅在 **x 是空值**（null 或 undefined）时对其赋值。
 
 ```js
 a ?? b
@@ -1034,7 +1096,7 @@ var foo = (object.foo != null) ? object.foo : "default";
 
 需要 @babel/plugin-proposal-nullish-coalescing-operator 插件支持
 
-## pipeline-operator
+## pipeline-operator(|>)
 
 ```js
 const double = (n) => n * 2;
@@ -1047,64 +1109,10 @@ double(increment(double(5))); // 22
 5 |> double |> increment |> double; // 22
 ```
 
-## 数组新增方法includes、find等
-
-- if中判断条件，利用数组的includes方法：
-
-```js
-// bad
-if(
-    type == 1 ||
-    type == 2 ||
-    type == 3 ||
-    type == 4 ||
-){
-   //...
-}
-
-// good
-const condition = [1,2,3,4];
-
-if( condition.includes(type) ){
-   //...
-}
-```
-
-- 列表搜索
-
-```js
-// bad
-const a = [1,2,3,4,5];
-const result = a.filter( 
-  item =>{
-    return item === 3
-  }
-)
-// good
-const a = [1,2,3,4,5];
-const result = a.find( 
-  item =>{
-    return item === 3
-  }
-)
-```
-
-- 输入框非空判断
-  
-```js
-// bad
-if(value !== null && value !== undefined && value !== ''){
-    //...
-}
-
-// good
-if((value??'') !== ''){
-  //...
-}
-```
-
 ## 参考资料
 
 [ES6 完全使用手册](https://github.com/mqyqingfeng/Blog/issues/111)
 
 [你会用ES6，那倒是用啊！](https://juejin.cn/post/7016520448204603423)
+
+[The long path of JavaScript - from ES6 until today.](https://dev.to/fsh02/the-long-path-of-javascript-from-es6-until-today-3gc3?context=digest)
