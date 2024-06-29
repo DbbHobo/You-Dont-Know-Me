@@ -768,3 +768,7 @@ React的VNode节点组织结构不同于Vue，兄弟节点并非放在数组中�
 
 - Vue3 对于 Vue2 的改进点在于，在 `VNode` 创建的时候就把该 `VNode` 的是否需要比较等特性通过 `patchFlags` 标明，这样在挂载或更新阶段通过 `patchFlags` 可以直接避免掉很多消耗性能的判断。
 - Vue3 采用了**最长递增子序列**算法，规划了最多的可复用且无需挪动的节点，从而减少了节点挪动次数，增强了算法的效率。
+
+## 参考资料
+
+[A virtual DOM in 200 lines of JavaScript](https://lazamar.github.io/virtual-dom/)

@@ -1,346 +1,5 @@
 # Vue3中的patch方法
 
-## VNode
-
-```ts
-export interface VNode<
-  HostNode = RendererNode,
-  HostElement = RendererElement,
-  ExtraProps = { [key: string]: any }
-> {
-  /**
-   * @internal
-   */
-  __v_isVNode: true
-
-  /**
-   * @internal
-   */
-  [ReactiveFlags.SKIP]: true
-
-  type: VNodeTypes
-  props: (VNodeProps & ExtraProps) | null
-  key: string | number | symbol | null
-  ref: VNodeNormalizedRef | null
-  /**
-   * SFC only. This is assigned on vnode creation using currentScopeId
-   * which is set alongside currentRenderingInstance.
-   */
-  scopeId: string | null
-  /**
-   * SFC only. This is assigned to:
-   * - Slot fragment vnodes with :slotted SFC styles.
-   * - Component vnodes (during patch/hydration) so that its root node can
-   *   inherit the component's slotScopeIds
-   * @internal
-   */
-  slotScopeIds: string[] | null
-  children: VNodeNormalizedChildren
-  component: ComponentInternalInstance | null
-  dirs: DirectiveBinding[] | null
-  transition: TransitionHooks<HostElement> | null
-
-  // DOM
-  el: HostNode | null
-  anchor: HostNode | null // fragment anchor
-  target: HostElement | null // teleport target
-  targetAnchor: HostNode | null // teleport target anchor
-  /**
-   * number of elements contained in a static vnode
-   * @internal
-   */
-  staticCount: number
-
-  // suspense
-  suspense: SuspenseBoundary | null
-  /**
-   * @internal
-   */
-  ssContent: VNode | null
-  /**
-   * @internal
-   */
-  ssFallback: VNode | null
-
-  // optimization only
-  shapeFlag: number
-  patchFlag: number
-  /**
-   * @internal
-   */
-  dynamicProps: string[] | null
-  /**
-   * @internal
-   */
-  dynamicChildren: VNode[] | null
-
-  // application root node only
-  appContext: AppContext | null
-
-  /**
-   * @internal attached by v-memo
-   */
-  memo?: any[]
-  /**
-   * @internal __COMPAT__ only
-   */
-  isCompatRoot?: true
-  /**
-   * @internal custom element interception hook
-   */
-  ce?: (instance: ComponentInternalInstance) => void
-}
-```
-
-## 组件实例
-
-```ts
-export interface ComponentInternalInstance {
-  uid: number
-  type: ConcreteComponent
-  parent: ComponentInternalInstance | null
-  root: ComponentInternalInstance
-  appContext: AppContext
-  /**
-   * Vnode representing this component in its parent's vdom tree
-   */
-  vnode: VNode
-  /**
-   * The pending new vnode from parent updates
-   * @internal
-   */
-  next: VNode | null
-  /**
-   * Root vnode of this component's own vdom tree
-   */
-  subTree: VNode
-  /**
-   * Render effect instance
-   */
-  effect: ReactiveEffect
-  /**
-   * Bound effect runner to be passed to schedulers
-   */
-  update: SchedulerJob
-  /**
-   * The render function that returns vdom tree.
-   * @internal
-   */
-  render: InternalRenderFunction | null
-  /**
-   * SSR render function
-   * @internal
-   */
-  ssrRender?: Function | null
-  /**
-   * Object containing values this component provides for its descendents
-   * @internal
-   */
-  provides: Data
-  /**
-   * Tracking reactive effects (e.g. watchers) associated with this component
-   * so that they can be automatically stopped on component unmount
-   * @internal
-   */
-  scope: EffectScope
-  /**
-   * cache for proxy access type to avoid hasOwnProperty calls
-   * @internal
-   */
-  accessCache: Data | null
-  /**
-   * cache for render function values that rely on _ctx but won't need updates
-   * after initialized (e.g. inline handlers)
-   * @internal
-   */
-  renderCache: (Function | VNode)[]
-
-  /**
-   * Resolved component registry, only for components with mixins or extends
-   * @internal
-   */
-  components: Record<string, ConcreteComponent> | null
-  /**
-   * Resolved directive registry, only for components with mixins or extends
-   * @internal
-   */
-  directives: Record<string, Directive> | null
-  /**
-   * Resolved filters registry, v2 compat only
-   * @internal
-   */
-  filters?: Record<string, Function>
-  /**
-   * resolved props options
-   * @internal
-   */
-  propsOptions: NormalizedPropsOptions
-  /**
-   * resolved emits options
-   * @internal
-   */
-  emitsOptions: ObjectEmitsOptions | null
-  /**
-   * resolved inheritAttrs options
-   * @internal
-   */
-  inheritAttrs?: boolean
-  /**
-   * is custom element?
-   */
-  isCE?: boolean
-  /**
-   * custom element specific HMR method
-   */
-  ceReload?: (newStyles?: string[]) => void
-
-  // the rest are only for stateful components ---------------------------------
-
-  // main proxy that serves as the public instance (`this`)
-  proxy: ComponentPublicInstance | null
-
-  // exposed properties via expose()
-  exposed: Record<string, any> | null
-  exposeProxy: Record<string, any> | null
-
-  /**
-   * alternative proxy used only for runtime-compiled render functions using
-   * `with` block
-   * @internal
-   */
-  withProxy: ComponentPublicInstance | null
-  /**
-   * This is the target for the public instance proxy. It also holds properties
-   * injected by user options (computed, methods etc.) and user-attached
-   * custom properties (via `this.x = ...`)
-   * @internal
-   */
-  ctx: Data
-
-  // state
-  data: Data
-  props: Data
-  attrs: Data
-  slots: InternalSlots
-  refs: Data
-  emit: EmitFn
-  /**
-   * used for keeping track of .once event handlers on components
-   * @internal
-   */
-  emitted: Record<string, boolean> | null
-  /**
-   * used for caching the value returned from props default factory functions to
-   * avoid unnecessary watcher trigger
-   * @internal
-   */
-  propsDefaults: Data
-  /**
-   * setup related
-   * @internal
-   */
-  setupState: Data
-  /**
-   * devtools access to additional info
-   * @internal
-   */
-  devtoolsRawSetupState?: any
-  /**
-   * @internal
-   */
-  setupContext: SetupContext | null
-
-  /**
-   * suspense related
-   * @internal
-   */
-  suspense: SuspenseBoundary | null
-  /**
-   * suspense pending batch id
-   * @internal
-   */
-  suspenseId: number
-  /**
-   * @internal
-   */
-  asyncDep: Promise<any> | null
-  /**
-   * @internal
-   */
-  asyncResolved: boolean
-
-  // lifecycle
-  isMounted: boolean
-  isUnmounted: boolean
-  isDeactivated: boolean
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.CREATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_MOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.MOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UPDATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UPDATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.BEFORE_UNMOUNT]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.UNMOUNTED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.DEACTIVATED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.ERROR_CAPTURED]: LifecycleHook
-  /**
-   * @internal
-   */
-  [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
-
-  /**
-   * For caching bound $forceUpdate on public proxy access
-   */
-  f?: () => void
-  /**
-   * For caching bound $nextTick on public proxy access
-   */
-  n?: () => Promise<void>
-}
-```
-
 ## DOM操作
 
 `DOM`操作相关的两个文件分别在`runtime-dom/src/nodeOps`、`runtime-dom/src/patchProps`，前者进行具体的`DOM`增删操作等，后者为`DOM`元素上的属性进行增删等。
@@ -348,6 +7,7 @@ export interface ComponentInternalInstance {
 DOM增删相关操作：
 
 ```ts
+// 【packages/runtime-dom/src/nodeOps.ts】
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
 const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
@@ -444,6 +104,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
 属性相关操作：
 
 ```ts
+// 【packages/runtime-dom/src/patchProp.ts】
 const nativeOnRE = /^on[a-z]/
 
 type DOMRendererOptions = RendererOptions<Node, Element>
@@ -607,96 +268,97 @@ const render: RootRenderFunction = (vnode, container, isSVG) => {
 }
 ```
 
-当`VNode`存在时，就会进入`patch`方法。
+当`VNode`存在时，就会进入`patch`方法，以上是根组件app实例的生成过程，然后会深入进行内部内容的`patch`生成。
 
 ### 组件挂载、更新的回调componentUpdateFn
 
 前文中讲到在 `componentUpdateFn` 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
 
-1. `renderComponentRoot`生成最新的`VNode`
+1. `renderComponentRoot`生成最新的`VNode`(subTree/nextTree)
 2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const componentUpdateFn = () => {
-    // 【首次挂载-组件实例还未挂载 isMounted是false】
-    if (!instance.isMounted) {
-      let vnodeHook: VNodeHook | null | undefined
-      const { el, props } = initialVNode
-      const { bm, m, parent } = instance
-      const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
+  // 【首次挂载-组件实例还未挂载 isMounted是false】
+  if (!instance.isMounted) {
+    let vnodeHook: VNodeHook | null | undefined
+    const { el, props } = initialVNode
+    const { bm, m, parent } = instance
+    const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
+    //【...省略】
+
+    if (el && hydrateNode) {
       //【...省略】
-
-      if (el && hydrateNode) {
-        //【...省略】
-      } else {
-        //【...省略】
-
-        //【1.renderComponentRoot生成VNode赋值给subTree】
-        const subTree = (instance.subTree = renderComponentRoot(instance))
-
-        //【...省略】
-
-        //【2.深度调用patch进行VNode对比然后挂载】
-        patch(
-          null,
-          subTree,
-          container,
-          anchor,
-          instance,
-          parentSuspense,
-          isSVG
-        )
-
-        //【...省略】
-
-        initialVNode.el = subTree.el
-      }
-
-      //【...省略】
-
-      // 【实例上的isMounted标志设为true，代表挂载完成】
-      instance.isMounted = true
-
-      //【...省略】
-
-      // #2458: deference mount-only object parameters to prevent memleaks
-      initialVNode = container = anchor = null as any
     } else {
-      // 【更新组件-组件实例已经挂载 isMounted是true 说明是更新】
-      // updateComponent
-      // This is triggered by mutation of component's own state (next: null)
-      // OR parent calling processComponent (next: VNode)
-      let { next, bu, u, parent, vnode } = instance
-      let originNext = next
-      let vnodeHook: VNodeHook | null | undefined
-      
       //【...省略】
 
-      //【1.const nextTree = renderComponentRoot(instance)构造VNode】
-      const nextTree = renderComponentRoot(instance)
-      
-      //【...省略】
-
-      const prevTree = instance.subTree//【旧VNode】
-      instance.subTree = nextTree//【新VNode】
+      //【1.renderComponentRoot生成VNode赋值给subTree】
+      const subTree = (instance.subTree = renderComponentRoot(instance))
 
       //【...省略】
 
-      //【2.深度执行patch进行挂载更新DOM】
+      //【2.深度调用patch进行VNode对比然后挂载】
       patch(
-        prevTree,
-        nextTree,
-        // parent may have changed if it's in a teleport
-        hostParentNode(prevTree.el!)!,
-        // anchor may have changed if it's in a fragment
-        getNextHostNode(prevTree),
+        null,
+        subTree,
+        container,
+        anchor,
         instance,
         parentSuspense,
         isSVG
       )
+
+      //【...省略】
+
+      initialVNode.el = subTree.el
     }
+
+    //【...省略】
+
+    // 【实例上的isMounted标志设为true，代表挂载完成】
+    instance.isMounted = true
+
+    //【...省略】
+
+    // #2458: deference mount-only object parameters to prevent memleaks
+    initialVNode = container = anchor = null as any
+  } else {
+    // 【更新组件-组件实例已经挂载 isMounted是true 说明是更新】
+    // updateComponent
+    // This is triggered by mutation of component's own state (next: null)
+    // OR parent calling processComponent (next: VNode)
+    let { next, bu, u, parent, vnode } = instance
+    let originNext = next
+    let vnodeHook: VNodeHook | null | undefined
+    
+    //【...省略】
+
+    //【1.const nextTree = renderComponentRoot(instance)构造VNode】
+    const nextTree = renderComponentRoot(instance)
+    
+    //【...省略】
+
+    const prevTree = instance.subTree//【旧VNode】
+    instance.subTree = nextTree//【新VNode】
+
+    //【...省略】
+
+    //【2.深度执行patch进行挂载更新DOM】
+    patch(
+      prevTree,
+      nextTree,
+      // parent may have changed if it's in a teleport
+      hostParentNode(prevTree.el!)!,
+      // anchor may have changed if it's in a fragment
+      getNextHostNode(prevTree),
+      instance,
+      parentSuspense,
+      isSVG
+    )
   }
+}
 ```
 
 ## Patch方法前置条件生成VNode
@@ -704,6 +366,7 @@ const componentUpdateFn = () => {
 前文中讲到组件挂载过程的第三步调用 **`setupRenderEffect`** 设置组件渲染逻辑，就会调用`renderComponentRoot`生成VNode。`renderComponentRoot`的核心是调用`render`方法，而`render`方法其实是件组件挂载过程的第二步生成，要么是`setup`返回的渲染函数要么是将`template`编译`compile`成的`render`方法。`render`方法的核心就是将`template`转化成`VNode`。
 
 ```ts
+// 【packages/runtime-core/src/componentRenderUtils.ts】
 export function renderComponentRoot(
   instance: ComponentInternalInstance
 ): VNode {
@@ -912,7 +575,7 @@ export function renderComponentRoot(
 
 虚拟`VNode`节点中，有几个用于`patch`方法的关键字段如下：
 
-- type
+- `type`
 
 ```ts
 export type VNodeTypes =
@@ -929,7 +592,7 @@ export type VNodeTypes =
   | typeof SuspenseImpl
 ```
 
-- patchFlags
+- `patchFlags`
 
 `patchFlags` 用于标识虚拟节点应该如何`patch`的类型，在编译的`tansform`优化阶段生成，用于运行时优化。通过进行 `｜` 或运算进行标记的组合，如果当前节点是一个动态文本节点(0000 0001)，它同时又具有动态 style (0000 0100)，二者进行 `｜` 或运算后值为 (0000 0101)。
 
@@ -952,7 +615,7 @@ export const enum PatchFlags {
 }
 ```
 
-- shapeFlags
+- `shapeFlags`
 
 `shapeFlags` 针对组件进行了更详细的分类，在生成`VNode`阶段生成，便于在`patch`阶段，根据不同的组件类型执行相应的逻辑。
 
@@ -1326,9 +989,9 @@ const patchStaticNode = (
 
 Block概念：
 
-- 一个`Block`其实就是一个块，一块 `VNode`，`VNode`拿到了所有的动态节点，它们存储在 `dynamicChildren` 中，因此在 `diff` 过程中就可以避免按照 `VNode` 树一层一层的遍历，而是直接找到 `dynamicChildren` 进行更新。
-- 使用了`v-if/v-else-if/v-else/v-for`等指令的元素可以看做一个`Block`。
-- Vue3 中不再限制组件的模板必须有一个根节点，所以如果是多个根节点，会包裹一个`Fragment`，也当成一个`Block`。
+- 一个`Block`其实就是一个块，一块 `VNode`，`VNode`拿到了所有的动态节点，它们存储在 `dynamicChildren` 中，因此在 `diff` 过程中就可以避免按照 `VNode` 树一层一层的遍历，而是直接找到 `dynamicChildren` 进行更新
+- 使用了`v-if/v-else-if/v-else/v-for`等指令的元素可以看做一个`Block`
+- Vue3 中不再限制组件的模板必须有一个根节点，所以如果是多个根节点，会包裹一个`Fragment`，也当成一个`Block`
 
 节点在以下几种情景下会被`Fragment`包裹成为一个`block`块：
 
@@ -1343,6 +1006,8 @@ Block概念：
 3. 否则执行`patchChildren`根据是否存在`key`进入`patchKeyedChildren`或`patchUnkeyedChildren`分支
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
+
 //【Vue3新增了Fragment组件，用于处理某些同级节点包裹为一个整体但又不想多一个DOM节点】
 //【Fragment主要处理children，其本身其实是个空节点】
 const processFragment = (
@@ -1455,6 +1120,8 @@ const processFragment = (
 }
 ```
 
+`mountChildren` 方法是在旧节点不存在的情况下直接对新节点进行生成挂载。
+
 `patchBlockChildren`方法根据新旧**动态子节点dynamicChildren**进行不同的对比操作，最后进入`patch`递归。
 
 `patchChildren`根据是否有`key`可以进入`patchKeyedChildren`或`patchUnkeyedChildren`分支，在新旧子节点都是多节点时就到了我们常说的**diff核心**算法。
@@ -1464,6 +1131,7 @@ const processFragment = (
 遍历`n2`的子节点然后调用`patch`方法进入递归循环：
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const mountChildren: MountChildrenFn = (
   children,
   container,
@@ -1555,6 +1223,7 @@ const patchBlockChildren: PatchBlockChildrenFn = (
 - `mountChildren`
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const patchChildren: PatchChildrenFn = (
     n1,
     n2,
@@ -1685,6 +1354,7 @@ const patchChildren: PatchChildrenFn = (
 取新旧节点序列较短的长度遍历新旧节点，相同索引的节点进行下一轮`patch`，如果旧节点序列长于新节点序列则删除后续的旧节点，如果旧节点序列短于新节点序列则新增后续的新节点
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const patchUnkeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
@@ -1751,6 +1421,7 @@ const patchUnkeyedChildren = (
 - 如果是有`key`（部分有）的情况`patchKeyedChildren`：
 
 ```ts
+// 【packages/runtime-core/src/renderer.ts】
 const patchKeyedChildren = (
     c1: VNode[],
     c2: VNodeArrayChildren,
