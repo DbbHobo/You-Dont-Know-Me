@@ -83,9 +83,7 @@ useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
 },
 ```
 
-### useMemo 原理
-
-#### `mountMemo`
+### `mountMemo`
 
 `mountMemo` 方法首先调用 `mountWorkInProgressHook` 生成对应的 `hook` ，然后调用用户传入的方法得到缓存值 `nextValue` 并将缓存值 `nextValue` 和依赖对象`nextDeps` 以数组形式存入 `hook` 的 `memoizedState` 属性`[nextValue, nextDeps]`，最后返回缓存值 `nextValue`：
 
@@ -101,6 +99,7 @@ function mountMemo<T>(
     nextCreate();
   }
   const nextValue = nextCreate();
+  // 【缓存值，缓存依赖数据构造成一个数组存在当前hook上】
   hook.memoizedState = [nextValue, nextDeps];
   return nextValue;
 }
@@ -109,7 +108,7 @@ function mountMemo<T>(
 ![react](./assets/useMemo1.png)
 ![react](./assets/useMemo2.png)
 
-#### `updateMemo`
+### `updateMemo`
 
 `updateMemo` 方法首先调用 `updateWorkInProgressHook` 找到对应的 `hook`，然后对比依赖的 `deps` 是否相等，如果相等直接返回之前缓存的值，如果不相等就重新调用用户传入的函数计算：
 
@@ -182,7 +181,7 @@ useCallback is a React Hook that lets you cache a function definition between re
         const [count,setCount] = React.useState(1)
         const getInfo  = useCallback((sonName)=>{
           console.log(sonName)
-    },[id])
+        },[id])
         return <div>
                   <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
                   <h2>HOBO~{count}</h2>
@@ -222,9 +221,7 @@ useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 },
 ```
 
-### useCallback 原理
-
-#### `mountCallback`
+### `mountCallback`
 
 `mountCallback` 方法首先调用 `mountWorkInProgressHook` 生成对应的 `hook` ，然后将缓存内容 `callback` 和依赖对象 `nextDeps` 以数组形式存入 `hook` 的 `memoizedState` 属性`[callback, nextDeps]`，最后返回缓存内容 `callback`函数：
 
@@ -233,6 +230,7 @@ useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
+  // 【缓存函数，缓存依赖数据构造成一个数组存在当前hook上】
   hook.memoizedState = [callback, nextDeps];
   return callback;
 }
@@ -240,7 +238,7 @@ function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 
 ![react](./assets/useCallback1.png)
 
-#### `updateCallback`
+### `updateCallback`
 
 `updateCallback` 方法首先调用 `updateWorkInProgressHook` 找到对应的 `hook`，然后对比依赖的 `deps` 是否相等，如果相等直接返回之前缓存的内容，如果不相等就重新缓存用户传入的 `callback` 函数：
 
@@ -266,8 +264,10 @@ function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 ## 总结
 
 1. `useMemo`和`useCallback`方法都会在`hook`的`memoizedState`属性上存储如下形式数据`[缓存内容，[依赖值1,依赖值2...]]`，不同在于`useMemo`缓存的是函数的返回值，而`useCallback`缓存的是函数本身；
-2. `useMemo`和`useCallback`方法都会都会比较依赖值是否变化，如果有变化`useMemo`会重新执行函数然后返回函数执行结果而`useCallback`是直接返回函数本身；
+2. `useMemo`和`useCallback`方法都会都会比较依赖值是否变化，如果有变化`useMemo`会重新执行函数然后返回函数执行结果而`useCallback`是直接返回缓存的函数本身；
 3. `useMemo`和`useCallback`的使用场景通常可以配合`React.memo`，一旦我们用`useCallback`缓存了函数并传入子组件，只要依赖值没有变化，那就不会引起子组件的`rerender`；
+
+![react](./assets/useMemo.png)
 
 ## 参考资料
 

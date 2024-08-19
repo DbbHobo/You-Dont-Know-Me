@@ -379,7 +379,7 @@ function updateContextProvider(
   const newValue = newProps.value;
 
   // 【省略代码...】
-
+  // 【Consumer如何感知最近的Provider，关键就在于pushProvider方法】
   pushProvider(workInProgress, context, newValue);
 
   if (enableLazyContextPropagation) {
@@ -396,7 +396,7 @@ function updateContextProvider(
           oldProps.children === newProps.children &&
           !hasLegacyContextChanged()
         ) {
-          // 【Context内容无变动&子内容无变动就跳过子内容的rerender】
+          // 【Context内容无变动&子内容无变动（childLanes为0）就跳过子内容的rerender】
           return bailoutOnAlreadyFinishedWork(
             current,
             workInProgress,

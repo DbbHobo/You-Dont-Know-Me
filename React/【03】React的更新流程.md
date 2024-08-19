@@ -172,7 +172,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
   workInProgressRootRenderLanes = NoLanes;
 
   // It's safe to process the queue now that the render phase is complete.
-  // 【3.处理concurrentQueues】
+  // 【3.处理concurrentQueues，调用markUpdateLaneFromFiberToRoot打标记】
   finishQueueingConcurrentUpdates();
 
   return workInProgressRootExitStatus;
@@ -222,22 +222,17 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
   // Check if the tree has completed.
   if (workInProgress !== null) {
     // Still work remaining.
-    if (enableSchedulingProfiler) {
-      markRenderYielded();
-    }
-    return RootInProgress;
+    // 【省略代码...】
   } else {
     // Completed the tree.
-    if (enableSchedulingProfiler) {
-      markRenderStopped();
-    }
+    // 【省略代码...】
 
     // Set this to null to indicate there's no in-progress render.
     workInProgressRoot = null;
     workInProgressRootRenderLanes = NoLanes;
 
     // It's safe to process the queue now that the render phase is complete.
-    // 【3.处理concurrentQueues】
+    // 【3.处理concurrentQueues，调用markUpdateLaneFromFiberToRoot打标记】
     finishQueueingConcurrentUpdates();
 
     // Return the final exit status.
@@ -253,6 +248,8 @@ function workLoopConcurrent() {
   }
 }
 ```
+
+`workLoopSync`/`workLoopConcurrent`方法都是循环遍历调用`performUnitOfWork`依次处理`fiber`节点
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -290,7 +287,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 
 ### prepareFreshStack / finishQueueingConcurrentUpdates
 
-此处属于准备和收尾工作阶段：
+此处`prepareFreshStack`属于准备和`finishQueueingConcurrentUpdates`属于收尾工作阶段：
 
 1. 确定`workInProgressRoot`为全局唯一根节点`FiberRootNode`，调用`createWorkInProgress`方法为`FiberRootNode`的`current`创建`alternate`节点，并且`workInProgress`指向`alternate`节点；
 2. 调用`finishQueueingConcurrentUpdates`方法，`Concurrent`模式下`render`过程中加入的`update`任务由`enqueueUpdate`方法暂存在`concurrentQueues`队列中，如果有`update`任务与已有的`update`任务串起来形成闭环，直到`render`过程完成或者被中断的时候再加入到对应`fiber`/`hook`的`queue`中；
@@ -346,7 +343,7 @@ export function finishQueueingConcurrentUpdates(): void {
       }
       queue.pending = update;
     }
-
+    // 【-----markUpdateLaneFromFiberToRoot标记更新-----】
     if (lane !== NoLane) {
       markUpdateLaneFromFiberToRoot(fiber, update, lane);
     }
@@ -396,7 +393,7 @@ function beginWork(
       ) {
         // No pending updates or context. Bail out now.
         didReceiveUpdate = false;
-        // 【hasScheduledUpdateOrContext为false，表明节点上没有update任务，复用current节点的内容，得到复用的节点直接返回】
+        // 【hasScheduledUpdateOrContext为false，表明节点上没有update任务，尝试复用current节点的内容，得到复用的节点直接返回】
         return attemptEarlyBailoutIfNoScheduledUpdate(
           current,
           workInProgress,
@@ -574,7 +571,9 @@ function beginWork(
 }
 ```
 
-进入更新阶段的`beginWork`和首次挂载不同的是，首先会看当前节点是否能复用之前的，根节点`root`是没有变化的所以直接复用，从而进入`attemptEarlyBailoutIfNoScheduledUpdate`=>`bailoutOnAlreadyFinishedWork`=>`cloneChildFibers`方法：
+进入更新阶段的`beginWork`和首次挂载不同的是，首先会看当前节点是否能复用之前的，判断条件依次是：1.`current`存在；2.`oldProps !== newProps`新旧`props`不同；3.是否有`update`任务的安排通过`lane`判断；4.还有一些`flag`判断等；(`didReceiveUpdate`表示`props`、`context`是否有变化)。和首次挂载一样会从根节点开始遍历所有节点，但是如果有的节点`props`/`context`没有变化、`lanes`和`childLanes`都是0表明没有更新任务，直接复用旧节点。子组件如果直接写在JSX中，每次祖先组件重新渲染重新执行祖先组件的函数会重新生调用子组件的函数，然后作为pendingProps存在，所以新旧props虽然可能是“值”相同但并不是同一个对象，所以子组件也会重新渲染。
+
+根节点`root`是没有变化的所以直接复用，从而进入`attemptEarlyBailoutIfNoScheduledUpdate`=>`bailoutOnAlreadyFinishedWork`=>`cloneChildFibers`方法：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -2561,7 +2560,7 @@ function updateHostComponent(
 
 `scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootSync` + `commitRoot`
 
-`commitRoot` => `commitRootImpl` => `scheduleCallback(flushPassiveEffects)` => `commitBeforeMutationEffects` => `commitMutationEffects` => `commitLayoutEffects`
+`commitRoot` => `commitRootImpl` => `scheduleCallback(flushPassiveEffects)` => `commitBeforeMutationEffects` + `commitMutationEffects` + `commitLayoutEffects`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -2714,7 +2713,7 @@ export function commitMutationEffects(
 
 2. `commitMutationEffects`
   
-   - `DOM` 变化阶段。 主要处理节点标记（`flags`）为`Placement`, `Update`, `Deletion`, `Hydrating`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`destroy`。
+   - `DOM` 变化阶段。 主要处理节点标记（`flags`）为`Placement`, `Update`, `Deletion`, `Hydrating`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`destroy`。处理的顺序是`Deletion`、`Placement`、`Update`。
 
 3. `commitLayoutEffects`
   

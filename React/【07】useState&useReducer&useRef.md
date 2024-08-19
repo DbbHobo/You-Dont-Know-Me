@@ -99,14 +99,12 @@ useState<S>(
 }
 ```
 
-### useState 原理
-
-#### `mountState`
+### `mountState`
 
 创建一个对应的 `hook` 并定义 `memoizedState` 、 `baseState` 、 `queue` 等属性，返回`[hook.memoizedState, dispatch]`， `dispatch` 就是返回给用户更新状态的方法：
 
-1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储到对应`fiber`的`memoizedState`属性上；
-2. 初始值如果用户传的是函数就执行获取，然后将初始值`initialState`存储到`hook`的`memoizedState`和`baseState`属性上；
+1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储或者说串联到对应`fiber`的`memoizedState`属性上；
+2. 初始值如果用户传的是函数就执行获取，然后将初始值`initialState`存储到`hook`实例的`memoizedState`和`baseState`属性上；
 3. 构造一个`UpdateQueue`实例挂载在`hook`的`queue`属性上；
 4. 构造`dispatch`方法挂载在`hook.queue.dispatch`上，实质是调用的`React`提供的`dispatchSetState`方法，这个方法里除了计算最新的`state`值与旧值比较还会根据`state`值是否改变，如果改变了会构造`update`任务并调用`scheduleUpdateOnFiber`安排`performConcurrentWorkOnRoot`进`TaskQueue`任务队列；
 5. 返回`[hook.memoizedState, dispatch]`；
@@ -135,7 +133,7 @@ function mountState<S>(
     lastRenderedState: (initialState: any),
   };
   hook.queue = queue;
-  // 【dispatch用于更新状态的方法，实际调用了dispatchSetState，保存在queue的dispatch属性上】
+  // 【dispatch用于更新状态的方法，实际调用了dispatchSetState，保存在hook.queue的dispatch属性上】
   const dispatch: Dispatch<BasicStateAction<S>> = (queue.dispatch =
     (dispatchSetState.bind(null, currentlyRenderingFiber, queue): any));
   // 【返回[hook.memoizedState, dispatch]，dispatch就是返回给用户用来更新状态的方法】
@@ -170,20 +168,21 @@ function mountWorkInProgressHook(): Hook {
 ![react](./assets/useState1.png)
 ![react](./assets/useState2.png)
 
-#### `dispatchSetState`
+### `dispatchSetState`
 
 ```ts
 const dispatch: Dispatch<BasicStateAction<S>> = (queue.dispatch =
     (dispatchSetState.bind(null, currentlyRenderingFiber, queue): any));
 ```
 
-`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`Update`任务加入当前`hook`的`queue`的`pending` 队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化去调度更新。
+`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`update`任务加入当前`hook`的`queue`的`pending` 队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化去调度更新。
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
 2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
 3. 非`render`过程中产生的状态变化会提前计算新值赋给`eagerState`，提前算好后续直接从这个属性获取新增，新旧值如果相同就会跳过`scheduleUpdateOnFiber`也就不会引起`re-render`，如果是连续多次状态变化则仅计算第一次；
 4. (`action`为值)此处去提前计算新值的前提是`fiber`节点`lane`为`NoLanes`且`alternate === null || alternate.lanes === NoLanes`，表明没有更新事件，如果有更新事件就会跳过，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次（// The priority hasn't changed. We can reuse the existing task. Exit.），并且以最后一个`update`任务为准，这也是为什么连续`setState`几次值只变动一次且值为最后一个值；
-5. (`action`为函数)，同样地，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次，但是`action`为函数在后续`updateState`方法中总会计算每一次的值，所以连续`setState`几次值会得到几次值的最终计算结果；
+5. (`action`为函数)，同样地，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次，但是`action`为函数时，在`hook.queue.pending`中由于`action`并不相同所以会将每一个`action`添加到队列中，所以在后续`updateState`方法中依次依赖上一次的结果计算每一次的值，所以连续`setState`几次值会得到几次值的最终计算结果；
+6. 每次`dispatchSetState`构造的`update`任务优先级不一定相同，所以`hook`还会有一个`baseQueue`存储着优先级较低的还未执行的`update`队列，直到下一轮`render`过程可能会和其他`update`任务串联起来再去执行；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -259,7 +258,7 @@ function dispatchSetState<S, A>(
       }
     }
 
-    // 【-----非render过程中的update加入concurrentQueues队列，且给对应fiber标记lanes优先级-----】
+    // 【-----非render过程中的update任务加入hook.queue循环链表，且给对应fiber标记lanes优先级-----】
     const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
     // 【根据状态改变调用scheduleUpdateOnFiber调度update，继而走到beginWork/completeWork环节】
     if (root !== null) {
@@ -346,7 +345,7 @@ function enqueueUpdate(
   // The fiber's `lane` field is used in some places to check if any work is
   // scheduled, to perform an eager bailout, so we need to update it immediately.
   // TODO: We should probably move this to the "shared" queue instead.
-  // 【给对应fiber表示lanes】
+  // 【给对应fiber标识lanes】
   fiber.lanes = mergeLanes(fiber.lanes, lane);
   const alternate = fiber.alternate;
   if (alternate !== null) {
@@ -374,7 +373,7 @@ function beginWork(
 ![react](./assets/dispatchSetState2.png)
 ![react](./assets/dispatchSetState3.png)
 
-#### `updateState` => `updateReducer`
+### `updateState` => `updateReducer`
 
 `dispatchSetState`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新DOM任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useState`方法，然后这一次是更新情况下就会调用`updateState`方法从而进入`updateReducer`方法。
 
@@ -642,12 +641,13 @@ function updateWorkInProgressHook(): Hook {
 ![react](./assets/useState6.png)
 
 ```ts
+// 第一个setState因为fiber.lanes为0所以提前计算eagerState为101，然后将rerender任务入队，第二个setState因为fiber.lanes此时已经为1，所以直接将rerender任务入队，但是又由于两次rerender任务的优先级完全相同`existingCallbackPriority === newCallbackPriority`，所以第二次任务被直接忽略，同理第三次setState也一样。最终仅有一个update任务添加在hook.queue.pending里，并且其值是提前算好的eagerState。
 function handleClick() {
   setState(age + 100); // setState(1 + 100)
   setState(age + 200); // setState(1 + 200)
   setState(age + 300); // setState(1 + 300)
 }
-
+// 三次调用setState都会最终添加一个update任务在hook.queue.pending里（中间用interleaved过渡在enqueueConcurrentHookUpdate方法处理），然后在updateReducer方法中遍历三个任务并执行，每次执行的入参都是上一次执行的结果
 function handleClick() {
   setState(a => a + 100); // setState(1 => 101)
   setState(a => a + 200); // setState(101 => 301)
@@ -774,9 +774,7 @@ useReducer<S, I, A>(
 }
 ```
 
-### useReducer 原理
-
-#### `mountReducer`
+### `mountReducer`
 
 创建一个对应的 `hook` 实例，如果有传 `init` 方法就调用 `init` 方法得到初始值，否者直接拿 `initialArg` 作为初始值，然后创建一个 `UpdateQueue` 挂到 `hook` 的 `queue` 属性上，最后返回 `[hook.memoizedState, dispatch]`， `dispatch` 就是返回给用户更新状态的方法，和 `useState` 非常类似。
 
@@ -825,7 +823,7 @@ function mountReducer<S, I, A>(
 ![react](./assets/useReducer1.png)
 ![react](./assets/useReducer2.png)
 
-#### `dispatchReducerAction`
+### `dispatchReducerAction`
 
 ```ts
 const dispatch: Dispatch<A> = (queue.dispatch = (dispatchReducerAction.bind(
@@ -835,7 +833,7 @@ const dispatch: Dispatch<A> = (queue.dispatch = (dispatchReducerAction.bind(
   ): any));
 ```
 
-`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务，然后也分为render过程中产生或者非render过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值eagerState
+`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务，然后也分为render过程中产生或者非render过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值`eagerState`
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
 2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
@@ -880,7 +878,7 @@ function dispatchReducerAction<S, A>(
 ![react](./assets/dispatchReducerAction1.png)
 ![react](./assets/dispatchReducerAction2.png)
 
-#### `updateReducer`
+### `updateReducer`
 
 `dispatchReducerAction`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新DOM任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useReducer`方法，然后这一次是更新情况下就会进入`updateReducer`方法。
 
@@ -901,7 +899,8 @@ function updateReducer<S, I, A>(
       'Should have a queue. This is likely a bug in React. Please file an issue.',
     );
   }
-  // 【如果是setState调用的，reducer就是basicStateReducer】
+  // 【如果是useState调用的，reducer就是basicStateReducer】
+  // 【如果是useReducer调用的，reducer就是用户传入的reducer】
   queue.lastRenderedReducer = reducer;
 
   const current: Hook = (currentHook: any);
@@ -1011,9 +1010,7 @@ function updateReducer<S, I, A>(
           // we can use the eagerly computed state
           newState = ((update.eagerState: any): S);
         } else {
-          // 【action是值的话，每次set调用后的值已经计算好】
-          // 【action是函数，会把上一轮的state传入后计算】
-          // 【导致连续多次调用setState结果并不相同，是值的话分别计算，是函数的话依赖上一次的值计算】
+          // 【调用reducer计算最新值】
           newState = reducer(newState, action);
         }
       }
@@ -1102,7 +1099,7 @@ useRef is a React Hook that lets you reference a value that’s not needed for r
 
 ### useRef 入口
 
-`useRef`方法入口，后续可能会调用方法有`mountRef` & `updateRef`：
+`useRef`方法入口，后续可能会调用方法有`mountRef` | `updateRef`：
 
 ```ts
 // 【packages/react/src/ReactHooks.js】
@@ -1123,9 +1120,7 @@ useRef<T>(initialValue: T): {current: T} {
 },
 ```
 
-### useRef 原理
-
-#### `mountRef`
+### `mountRef`
 
 `mountRef`除了创建对应的 `hook` ，还会初始化一个对象包含一个 `current` 属性，用户传入的初始值作为这个 `current` 属性的值，然后把这个初始对象存入 `hook` 的 `memoizedState` ：
 
@@ -1147,7 +1142,7 @@ function mountRef<T>(initialValue: T): {current: T} {
 }
 ```
 
-#### `updateRef`
+### `updateRef`
 
 调用`updateWorkInProgressHook`更新`hook`，`useRef`通常用来存储不需要变化的内容、不会引起重新渲染的内容。
 
@@ -1159,13 +1154,15 @@ function updateRef<T>(initialValue: T): {current: T} {
 }
 ```
 
-#### ref存储DOM对象
+### useRef存储DOM对象
 
-其实在`commit`阶段`commitLayoutEffectOnFiber`方法中会调用一个叫`commitAttachRef`的方法里面会获取对应DOM元素为`ref`这个`hook`赋值。
+使用`useRef`存储`DOM`对象是一种常见使用方法，其实在`commit`阶段`commitLayoutEffectOnFiber`方法中会调用一个叫`safelyAttachRef`的方法，实际使用`try/catch`去调用`commitAttachRef`方法里面会获取对应DOM元素为`ref`这个`hook`赋值。
 
-1. `attach`在`commitLayoutEffectOnFiber`阶段，获取到DOM赋值给`ref.current`；
+1. `attach`在`commitLayoutEffectOnFiber`阶段，根据`flags & Ref`标识，获取到当前`fiber`节点对应的`DOM`赋值给`ref.current`；
 2. `detach`在`commitMutationEffectsOnFiber`阶段，是`commitLayoutEffectOnFiber`之前的阶段，有些类似`useEffect`里先调用`effect.destory()`再调用`effect.create()`，清空再获取最新内容的意思；
-3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个flags在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
+3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个flags在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`beginWork`阶段的`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
+
+- `attach`在`commit`第三阶段`commitLayoutEffects`
 
 ```ts
 // 【-----attach-----】
@@ -1266,11 +1263,12 @@ function commitAttachRef(finishedWork: Fiber) {
 }
 ```
 
+- `detach`在`commit`第二阶段`commitMutationEffects`
+
 ```ts
 // 【-----detach-----】
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
 // `recursivelyTraverseMutationEffects`/`commitMutationEffects` => `commitMutationEffectsOnFiber` => `safelyDetachRef`
-
 function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
   const ref = current.ref;
   const refCleanup = current.refCleanup;
@@ -1331,6 +1329,8 @@ function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
 }
 ```
 
+- `markRef`在`beginWork`阶段根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
+
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function markRef(current: Fiber | null, workInProgress: Fiber) {
@@ -1351,10 +1351,20 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
 1. `fiber.memoizedState`上存储了`hook`链表，以`next`链接，每次都是按序执行；
 2. `fiber.updateQueue`上存储了更新任务链表；
 3. `hook.queue`上存储了状态更新链表，用于更新`hook`的状态值；
-4. 用户触发状态值更改时，`useState`和`useReducer`分别会调用`dispatchSetState`/`dispatchReducerAction`，两者都会构造对应的update任务放入何时的任务队列，而`useState`可能会提前计算新值，`useReducer`则不会，然后都会进行更新任务的调度继而进入`render`、`commit`流程进行更新；
+4. 用户触发状态值更改时，`useState`和`useReducer`分别会调用`dispatchSetState`/`dispatchReducerAction`，两者都会构造对应的`update`任务放入合适的任务队列，而`useState`可能会提前计算新值，`useReducer`则不会，然后都会进行更新任务的调度继而进入`render`、`commit`流程进行更新；
 5. `useState`和`useReducer`在更新时都使用的`updateReducer`方法，区别在于`reducer`函数前者用的`React`提供的默认函数`basicStateReducer`后者由用户定义；
-6. `useRef`如果用在获取`DOM`元素上那在`commit`阶段`commitLayoutEffectOnFiber`方法中会调用一个叫`commitAttachRef`的方法里面会获取对应DOM元素为`ref`这个`hook`赋值。在`commitMutationEffectsOnFiber`阶段会调用`safelyDetachRef`去`detach`。
+6. `useRef`如果用在获取`DOM`元素上那在`commit`第三阶段`commitLayoutEffectOnFiber`方法(`commitLayoutEffects`)中会调用一个叫`safelyAttachRef`的方法里面会获取对应DOM元素而后给对应节点的`ref`这个`hook`赋值。在`commit`第二阶段`commitMutationEffectsOnFiber`方法(`commitMutationEffects`)会调用`safelyDetachRef`去`detach`。
+
+![react](./assets/useState.png)
 
 ## 参考资料
 
+[API Reference -> Hooks -> useState](https://react.dev/reference/react/useState)
+
+[API Reference -> Hooks -> useReducer](https://react.dev/reference/react/useReducer)
+
+[API Reference -> Hooks -> useRef](https://react.dev/reference/react/useRef)
+
 [Comparing useState and useReducer](https://react.dev/learn/extracting-state-logic-into-a-reducer#comparing-usestate-and-usereducer)
+
+[The React useRef Hook: Not Just for DOM Elements](https://dev.to/opensauced/the-react-useref-hook-not-just-for-html-elements-3cf3?context=digest)

@@ -116,15 +116,15 @@ function FiberNode(
 
 ## diff过程
 
-前文可知，JSX到DOM的呈现大致有如下三个的过程：
+前文可知，React的渲染流程大致有如下三个的过程：
 
-1. `Scheduler`：按优先级进行任务调度的过程
+1. `Scheduler`：按优先级进行`Update`任务调度的过程
 2. `Render`：由`React-Element`构造`fiber`树的过程
-3. `Commit`：由`fiber`树到`DOM`渲染的过程
+3. `Commit`：由`fiber`树到`DOM`渲染并调用各种副作用的过程
 
 在`render`过程中，有两个重要的过程是`beginWork`和`completeWork`，会根据`tag`不同进入不同的方法。
 
-`root` =>  `ƒ App()` => `div` => `h2` => `a` => `h2` => `b` => `h2` => `e` => `h2` => `f` => `h2` => `c`
+`root` => `ƒ App()` => `div` => `h2` => `a` => `h2` => `b` => `h2` => `e` => `h2` => `f` => `h2` => `c`
 
 `updateHostRoot` => `updateFunctionComponent` => `updateHostComponent` => `updateHostComponent` => `updateHostText` ...
 
@@ -578,6 +578,8 @@ function reconcileChildrenArray(
         deleteChild(returnFiber, oldFiber);
       }
     }
+    // 【lastPlacedIndex表示的是最后一次检查能否复用的旧节点的索引】
+    // 【旧节点不存在的话标识newFiber是Placement表明是新增，旧节点存在且索引小于lastPlacedIndex标识Placement表明是移动（从前往后移动），旧节点存在且索引大于等于于lastPlacedIndex则不用动这个节点】
     lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
     if (previousNewFiber === null) {
       // TODO: Move out of the loop. This only happens for the first run.
@@ -593,7 +595,7 @@ function reconcileChildrenArray(
     oldFiber = nextOldFiber;
   }
 
-  // 【新节点已经遍历结束，删除剩余的旧节点】
+  // 【新节点已经遍历结束，删除剩余的旧节点，并且返回第一个节点作为祖先节点的child】
   if (newIdx === newChildren.length) {
     // We've reached the end of the new children. We can delete the rest.
     deleteRemainingChildren(returnFiber, oldFiber);
@@ -680,7 +682,7 @@ function reconcileChildrenArray(
 
 - 第一遍循环，从第一个新/旧节点开始看是否可以复用，关键方法`updateSlot`，会判断旧节点是否可复用，a、b节点会走入`updateElement`方法，因为都有可复用节点会走向`useFiber`；
 
-`updateSlot` => `updateElement` => `useFiber` => `createWorkInProgress`
+**`updateSlot` => `updateElement` => `useFiber` => `createWorkInProgress`**
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -691,7 +693,7 @@ function updateSlot(
   lanes: Lanes,
 ): Fiber | null {
   // Update the fiber if the keys match, otherwise return null.
-  【获取旧节点的key】
+  // 【获取旧节点的key】
   const key = oldFiber !== null ? oldFiber.key : null;
 
   // 【新节点是文本】
@@ -994,7 +996,7 @@ function placeChild(
 
 ![react](./assets/diff7-placeChild.png)
 
-- 第一个循环继续，b节点也是可复用节点，重复上述过程，然后下一个节点e无法复用（`updateSlot`返回的`newFiber`为`null`）跳出第一个循环；
+- 第一个循环继续，b节点也是可复用节点，重复上述过程复用b节点，然后下一个节点e无法复用（`updateSlot`返回的`newFiber`为`null`）跳出第一个循环；
 
 ![react](./assets/diff8.png)
 
@@ -1027,9 +1029,9 @@ function mapRemainingChildren(
 }
 ```
 
-- 进入第二轮循环，遍历新节点，调用`updateFromMap`方法，先在`existingChildren`根据`key`或者`index`寻找是否有可用旧节点，然后根据类型进入不同方法，e、f节点会走入`updateElement`方法，因为都是新增节点会走向`createFiberFromElement`；
+- 进入第二轮循环，遍历新节点，调用`updateFromMap`方法，先在`existingChildren`根据`key`或者`index`寻找是否有可用旧节点，然后根据类型进入不同方法，e、f节点会走入`updateElement`方法，因为都是新增节点无法复用旧节点会走向`createFiberFromElement`；
 
-`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`
+**`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`**
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -1335,5 +1337,5 @@ export function createFiberFromTypeAndProps(
 4. 第一次循环结束的时候可能有三种情况，第一种`newChildren`遍历完毕而`old fiber`还有剩余，说明剩下的`old fiber`是需要删除的，第二种`old fiber`遍历完毕而`newChildren`还有剩余，说明剩下的`newChildren`是需要增加的，第三种就是`newChildren`和`old fiber`都有剩余，那就要进入第二次循环；
 5. 构造一个`Map<old fiber的key或index，old fiber>`把剩余的未匹配的旧节点存储起来，然后进入第二轮循环，继续遍历`newChildren`，第一步先调用`updateFromMap`方法，首先在`existingChildren`中根据`key`或者`index`寻找是否有可用旧节点，然后根据新节点的tag类型进入不同方法；
 6. 如果是全新的节点通常会走如下路径`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`；
-7. 如果是可复用的节点通常会走如下路径`updateFromMap` => `updateElement` => `useFiber` => `createWorkInProgress`；
+7. 如果是可复用的节点通常会走如下路径`updateFromMap` => `updateElement` => `useFiber` => `createWorkInProgress`，如果是不可复用的节点则创建权限的节点如下`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`；
 8. 经过两次遍历，本层的新节点对应的`fiber node`结构也就构造完成了；

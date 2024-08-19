@@ -10,7 +10,7 @@ react-main
     ├── react                  # 核心API等，React Hooks等
     ├── react-dom              # DOM和服务器端SSR渲染方法入口
     ├── react-reconciler       # 协调器Reconciler的实现
-    ├── scheduler              # 调度器Scheduler
+    ├── scheduler              # 调度器Scheduler的实现
     ├── shared                 # 公共方法等
 ```
 
@@ -82,14 +82,15 @@ export const REACT_CONTEXT_TYPE: symbol = Symbol.for('react.context');
 
 首次执行`ReactDOM.render`会创建 `fiberRoot` 和 `rootFiber`。其中`fiberRoot`是整个应用的根节点，`rootFiber`是`<App/>`所在组件树的根节点。
 
-整体渲染流程分成了两个大的阶段：
+整体渲染流程分成了四个大的阶段：
 
-1. `render` 阶段：从 `React Element` 转换成 `fiber`，并且对需要操作的节点打上 `flags` 的标记，这个过程是可以打断的。
+1. **`trigger`** 阶段：无论是首次渲染还是rerender过程，在这个阶段进行任务的触发`scheduleUpdateOnFiber`，当任务安排完成就会调用`scheduleCallback()`/`scheduleSyncCallback`进入下一个阶段调度阶段；
 
-- 由 `scheduler` 调度器进行不同优先级任务排序。
-- 从 `React Element` 转成 `fiber` 的过程叫做 `reconcile` 协调。
+2. **`scheduler`** 阶段：调度阶段，不同任务的优先级不同，`workLoop`会遍历所有任务并执行；
 
-2. `commit` 阶段：对有 `flags` 标记的 `fiber` 节点进行 `DOM` 操作，并执行所有的 `effect` 副作用函数，这个过程是不能打断的。
+3. **`render`** 阶段：从 `React Element` 转换成 `fiber`，并且对需要操作的节点打上 `flags` 的标记，这个过程是可以打断的，最后形成完整的`fiber tree`；
+
+4. **`commit`** 阶段：对有 `flags` 标记的 `fiber` 节点进行 `DOM` 操作，并执行所有的 `effect` 副作用函数，这个过程是不能打断的；
 
 ```js
 function createElement(type, props, ...children) {
@@ -421,6 +422,10 @@ Didact.render(element, container)
 - `Reconciler`：协调器，构建`fiber`数据结构相关，根据最新状态构建新的 `fiber` 树，与之前的 `fiber` 树进行 `diff` 对比，对 `fiber` 节点标记不同的副作用
 - `Scheduler`：调度器，用来调度任务执行顺序，让浏览器的每一帧优先执行高优先级的任务
 - `effect`：渲染、更新过程中的副作用
+
+## React源码调试
+<!-- TODO -->
+1. 首先下载最新版本的React项目
 
 ## 总结
 
