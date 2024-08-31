@@ -4,7 +4,7 @@ In the document node is the DOM (Document Object Model), the document object mod
 
 `DOM`为`JavaScript`提供了一种访问和操作HTML元素的"方法"。`DOM`（文档对象模型）是针对 `HTML` 和 `XML` 文档的一个 API（应用程序编程接口）。 `DOM` 描绘了一个层次化的**DOM节点树**，允许开发人员添加、移除和修改页面的某一部分。
 
-HTML 元素通过元素节点表示，特性（attribute）通过**特性节点**表示，文档类型通过**文档类型节点**表示，而注释则通过**注释节点**表示。总共有 12 种节点类型，这些类型都继承自一个基类型。每个节点都有一个 **`childNodes`** 属性，其中保存着一个 `NodeList` 对象。 `NodeList` 是一种**类数组对象**，用于保存一组有序的节点，可以通过位置来访问这些节点。包含在 `childNodes` 列表中的每个节点相互之间都是同胞节点。通过使用列表中每个节点的 `previousSibling` 和 `nextSibling` 属性，可以访问同一列表中的其他节点。父节点的 `firstChild` 和 `lastChild` 属性分别指向其 `childNodes` 列表中的第一个和最后一个节点。
+HTML 元素通过**元素节点**表示，特性（attribute）通过**特性节点**表示，文档类型通过**文档类型节点**表示，而注释则通过**注释节点**表示。总共有 12 种节点类型，这些类型都继承自一个基类型。每个节点都有一个 **`childNodes`** 属性，其中保存着一个 `NodeList` 对象。 `NodeList` 是一种**类数组对象**，用于保存一组有序的节点，可以通过位置来访问这些节点。包含在 `childNodes` 列表中的每个节点相互之间都是同胞节点。通过使用列表中每个节点的 `previousSibling` 和 `nextSibling` 属性，可以访问同一列表中的其他节点。父节点的 `firstChild` 和 `lastChild` 属性分别指向其 `childNodes` 列表中的第一个和最后一个节点。
 
 一个DOM元素的原型链是这样的：
 
@@ -12,7 +12,7 @@ HTML 元素通过元素节点表示，特性（attribute）通过**特性节点*
 
 HTML 元素类的总体继承关系如下：
 
-![browser](./assets/html-dom-hierarchy.svg)
+![browser](./assets/dom-hierarchy.svg)
 
 因此，元素继承其所有祖先的属性和方法。例如，考虑 `<a>` 元素，在 `DOM` 中由类型为 `HTMLAnchorElement` 的对象表示。元素包括了该类文档中，`Anchor` 特定的属性和方法。但也包括 `HTMLElement`、`Element` 以及 `Node` 定义的内容，最后是 `EventTarget` 定义的内容。
 
@@ -29,6 +29,10 @@ HTML 元素类的总体继承关系如下：
 - `HTMLElement.offsetLeft`
 
 只读属性，返回当前元素左上角相对于 `HTMLElement.offsetParent` 节点的左边界偏移的像素值。
+
+- `HTMLElement.blur()`
+- `HTMLElement.click()`
+- `HTMLElement.focus()`
 
 ## Element
 
@@ -54,9 +58,37 @@ HTML 元素类的总体继承关系如下：
 
 返回一个 `DOMRect` 对象，其提供了元素的大小及其相对于视口的位置。
 
+- `Element.append()`
+- `Element.before()`
+- `Element.getAnimations()`
+- `Element.getAttribute()`
+- `Element.getElementsByClassName()`
+- `Element.getElementsByTagName()`
+- `Element.hasAttribute()`
+- `Element.remove()`
+- `Element.removeAttribute()`
+- `Element.scroll()`
+- `Element.scrollTo()`
+
 ## Node
 
 `Node` 是一个接口，各种类型的 `DOM API` 对象会从这个接口继承。它允许我们使用相似的方式对待这些不同类型的对象；比如，继承同一组方法，或者用同样的方式测试。
+
+- `Node.childNodes`
+- `Node.firstChild`
+- `Node.lastChild`
+- `Node.baseURI`
+- `Node.nextSibling`
+- `Node.nodeType`
+- `Node.parentNode`
+
+- `Node.appendChild()`
+- `Node.cloneNode()`
+- `Node.hasChildNodes()`
+- `Node.insertBefore()`
+- `Node.isSameNode()`
+- `Node.removeChild()`
+- `Node.replaceChild()`
 
 以下接口都从 `Node` 继承其方法和属性：
 
@@ -74,10 +106,10 @@ HTML 元素类的总体继承关系如下：
 
 常见监听事件有：
 
-  * DOMContentLoaded
-  * scroll
-  * paste
-  * fullscreenchange
+1. `DOMContentLoaded`
+2. `scroll`
+3. `paste`
+4. `fullscreenchange`
 
 - `EventTarget.removeEventListener()`
 
@@ -235,6 +267,20 @@ bindEvent(p1, "click", function (e) {
 
 `Document` => `Node` => `EventTarget` => `Object`
 
+![browser](./assets/document-hierarchy.png)
+
+- `Document.location`
+- `Document.body`
+- `Document.title`
+
+- `Document.createAttribute()`
+- `Document.createComment()`
+- `Document.createElement()`
+- `Document.getElementById()`
+- `Document.getElementsByClassName()`
+- `Document.getElementsByName()`
+- `Document.getElementsByTagName()`
+
 ### 获取 DOM 节点(查找)
 
 最常用的 DOM API 就是获取节点，其中常用的获取方法如下面代码示例：
@@ -300,6 +346,28 @@ div1.removeChild(child[0]);
 
 `Window` => `EventTarget` => `Object`
 
+- `Window.history`
+- `Window.indexedDB`
+- `Window.innerHeight`
+- `Window.innerWidth`
+- `Window.localStorage`
+- `Window.sessionStorage`
+- `Window.location`
+- `Window.performance`
+- `Window.screen`
+- `Window.screenLeft`
+- `Window.screenTop`
+- `Window.screenX`
+- `Window.screenY`
+- `Window.scrollX`
+- `Window.scrollY`
+
+- `Window.resizeTo()`
+- `Window.scroll()`
+- `Window.scrollTo()`
+- `Window.atob()`
+- `Window.btoa()`
+
 ## attribute & property
 
 全局属性是所有 `HTML` 元素共有的属性；它们可以用于所有元素，即使属性可能对某些元素不起作用。
@@ -334,9 +402,15 @@ div1.removeChild(child[0]);
 - tabindex
 - title
 - translate
-- 事件处理器属性：onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
+- 事件处理器：onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
 
-<!-- TODO -->
+## 总结
+
+`div` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
+
+`Document` => `Node` => `EventTarget` => `Object`
+
+`Window` => `EventTarget` => `Object`
 
 ## 参考资料
 

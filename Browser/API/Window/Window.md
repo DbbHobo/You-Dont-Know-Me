@@ -7,10 +7,10 @@ The BOM (Browser Object Model) consists of the objects navigator, history, scree
 BOM（浏览器对象模型）是浏览器本身的一些信息的设置和获取，例如获取浏览器的宽度、高度，设置让浏览器跳转到哪个地址等等。
 
 - window
-- navigator
-- screen
-- location
-- history
+- window.navigator
+- window.screen
+- window.location
+- window.history
 
 ## window.navigator
 
