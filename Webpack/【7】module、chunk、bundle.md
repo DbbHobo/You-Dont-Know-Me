@@ -10,7 +10,7 @@ a chunk is a group of modules within the webpack process, a bundle is an emitted
 
 ## module
 
-`Webpack` 支持为转换生成的代码输出对应的 `Source Map` 文件，以方便在浏览器中能通过源码调试。 控制 `Source Map` 输出的 `Webpack` 配置项是 `devtool`，它有很多选项。
+模块是Web应用程序的最小构建单元。在`Webpack`中，模块可以是`JavaScript`文件、`CSS`文件、图片文件、`JSON`文件等。每个模块可以依赖于其他模块，这些依赖关系被`Webpack`解析并构建出模块依赖图。`Webpack` 支持为转换生成的代码输出对应的 `Source Map` 文件，以方便在浏览器中能通过源码调试。 控制 `Source Map` 输出的 `Webpack` 配置项是 `devtool`，它有很多选项。
 
 ## chunk
 
@@ -75,6 +75,8 @@ module.exports = {
 答案是5个，两个入口分别产生一个， `runtimeChunk: "single"`会将`Webpack`在浏览器端运行时需要的代码单独抽离到一个文件，`commons`下的配置会产生一个`chunk`，`vendor`下的配置会产生一个`chunk`。
 
 ## bundle
+
+`Bundle`是`Webpack`最终输出的文件。每个`bundle`通常对应于一个或多个`chunk`。这些`bundle`是可以直接被浏览器加载的文件，通常是`JavaScript`、`CSS`或其他资源文件。
 
 通常我们会弄混 `chunk` 和 `bundle`，以为`chunk`就是`bundle`，`bundle`就是我们最终输出的一个或多个打包文件。确实，大多数情况下，一个`chunk`会生产一个`bundle`。但有时候也不完全是一对一的关系，比如我们把`devtool`配置成`'source-map'`。然后只有一个入口文件，也不配置代码分割：
 
