@@ -178,6 +178,176 @@ const p = Promise.reject("出错了");
 const p = new Promise((resolve, reject) => reject("出错了"));
 ```
 
+### Promise.withResolvers()
+
+`Promise.withResolvers()` 静态方法返回一个对象，其包含一个新的 `Promise` 对象和两个函数，用于解决或拒绝它，对应于传入给 `Promise()` 构造函数执行器的两个参数。
+
+```js
+async function* readableToAsyncIterable(stream) {
+  let { promise, resolve, reject } = Promise.withResolvers();
+  stream.on("error", (error) => reject(error));
+  stream.on("end", () => resolve());
+  stream.on("readable", () => resolve());
+
+  while (stream.readable) {
+    await promise;
+    let chunk;
+    while ((chunk = stream.read())) {
+      yield chunk;
+    }
+    ({ promise, resolve, reject } = Promise.withResolvers());
+  }
+}
+```
+
+## Promise应用
+
+## 并发指定数量的请求
+
+```js
+function mockRequest(id) {
+  return new Promise((resolve) => {
+    const delay = Math.floor(Math.random() * 2000) + 1000; // 模拟 1-3 秒的随机延迟
+    setTimeout(() => {
+      console.log(`Request ${id} completed`);
+      resolve(`Result of request ${id}`);
+    }, delay);
+  });
+}
+
+async function promiseQueue(requests, maxConcurrent) {
+  let results = [];
+  let executing = [];
+  let index = 0;
+
+  const enqueue = () => {
+    if (index === requests.length) {
+      return Promise.resolve();
+    }
+
+    const promise = requests[index++]().then(result => {
+      results.push(result);
+      executing.splice(executing.indexOf(promise), 1);
+    });
+
+    executing.push(promise);
+
+    let r = Promise.resolve();
+    if (executing.length >= maxConcurrent) {
+      r = Promise.race(executing);
+    }
+
+    return r.then(enqueue);
+  };
+
+  return enqueue().then(() => Promise.all(executing)).then(() => results);
+}
+
+// 创建一个包含 10 个请求的数组
+const requests = Array.from({ length: 10 }, (_, i) => () => mockRequest(i + 1));
+
+// 最大并发数为 3
+const maxConcurrent = 3;
+
+promiseQueue(requests, maxConcurrent).then(results => {
+  console.log('All requests completed');
+  console.log(results);
+});
+```
+
+## 取消Promise
+
+- `Promise.withResolvers`
+
+```ts
+// 使用Promise.withResolvers
+const buildCancelableTask = <T>(asyncFn: () => Promise<T>) => {
+  let rejected = false;
+  const { promise, resolve, reject } = Promise.withResolvers<T>();
+
+  return {
+    run: () => {
+      if (!rejected) {
+        asyncFn().then(resolve, reject);
+      }
+
+      return promise;
+    },
+
+    cancel: () => {
+      rejected = true;
+      reject(new Error('CanceledError'));
+    },
+  };
+};
+
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+const ret = buildCancelableTask(async () => {
+  await sleep(1000);
+  return 'Hello';
+});
+
+(async () => {
+  try {
+    const val = await ret.run();
+    console.log('val: ', val);
+  } catch (err) {
+    console.log('err: ', err);
+  }
+})();
+
+setTimeout(() => {
+  ret.cancel();
+}, 500);
+```
+
+- `AbortController`
+
+```ts
+// 使用AbortController
+const buildCancelableFetch = <T>(
+  requestFn: (signal: AbortSignal) => Promise<T>,
+) => {
+  const abortController = new AbortController();
+
+  return {
+    run: () =>
+      new Promise<T>((resolve, reject) => {
+        if (abortController.signal.aborted) {
+          reject(new Error('CanceledError'));
+          return;
+        }
+
+        requestFn(abortController.signal).then(resolve, reject);
+      }),
+
+    cancel: () => {
+      abortController.abort();
+    },
+  };
+};
+​
+const ret = buildCancelableFetch(async signal => {
+  return fetch('http://localhost:5000', { signal }).then(res =>
+    res.text(),
+  );
+});
+​
+(async () => {
+  try {
+    const val = await ret.run();
+    console.log('val: ', val);
+  } catch (err) {
+    console.log('err: ', err);
+  }
+})();
+​
+setTimeout(() => {
+  ret.cancel();
+}, 500);
+```
+
 ## 参考资料
 
 [ES6 入门](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/promise)

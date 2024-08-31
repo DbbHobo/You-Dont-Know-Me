@@ -72,7 +72,9 @@ var exports = module.exports;
 
 ## ES6
 
-ES6 中的模块是**编译时加载**；ES6 模块不是对象，而是通过 `export` 命令显式指定输出的代码，`import` 时采用静态命令的形式。即在 `import` 时可以指定加载某个输出值，而不是加载整个模块。
+ES6 模块的设计思想是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。
+
+ES6 中的模块是**编译时加载**，S6 模块不是对象，而是通过 `export` 命令显式指定输出的代码，`import` 时采用静态命令的形式。即在 `import` 时可以指定加载某个输出值，而不是加载整个模块。
 
 ES6 在语言标准的层面上，实现了模块功能，浏览器和服务器通用的模块解决方案。`export` 命令用于规定模块的对外接口，`import` 命令用于输入其他模块提供的功能。
 
@@ -91,19 +93,14 @@ import XXX from "./b.js";
 
 ## CommonJS 和 ES6 模块的区别
 
-`CommonJS` 其实加载的是一个对象，这个对象只有在脚本运行时才会生成，而且只会生成一次。但是 `ES6` 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成，这样我们就可以使用各种工具对 JS 模块进行依赖分析，优化代码；
-
-因为 `CommonJS` 的 `require` 语法是同步的，所以就导致了 `CommonJS` 模块规范只适合用在服务端，而 `ES6` 模块无论是在浏览器端还是服务端都是可以使用的，但是在服务端中，还需要遵循一些特殊的规则才能使用；
-
-`CommonJS` 模块输出的是一个值的拷贝，而 `ES6` 模块输出的是值的引用；
-
-`CommonJS` 模块是**运行时**加载，而 `ES6` 模块是**编译时**输出接口，使得对 JS 的模块进行静态分析成为了可能；
-
-因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。`CommonJS` 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 `ES6` 模块相反，使用 `import` 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
-
-关于模块顶层的 `this` 指向问题，在 `CommonJS` 顶层，`this` 指向当前模块；而在 `ES6` 模块中，`this` 指向 `undefined`；
-
-关于两个模块互相引用的问题，在 `ES6` 模块当中，是支持加载 `CommonJS` 模块的。但是反过来，`CommonJS` 并不能 `require ES6` 模块，在 NodeJS 中，两种模块方案是分开处理的。
+- `CommonJS` 模块是**运行时**加载，而 `ES6` 模块是**编译时**输出接口，使得对 JS 的模块进行静态分析成为了可能。`CommonJS` 其实加载的是一个对象，这个对象只有在脚本运行时才会生成，而且只会生成一次。但是 `ES6` 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成，这样我们就可以使用各种工具对 JS 模块进行依赖分析，优化代码；
+- `CommonJS` 的 `require` 语法是同步的，所以就导致了 `CommonJS` 模块规范只适合用在服务端，而 `ES6` 模块无论是在浏览器端还是服务端都是可以使用的，但是在服务端中，还需要遵循一些特殊的规则才能使用；
+- `CommonJS` 模块输出的是一个**值的拷贝**，一旦输出一个值，模块内部的变化就影响不到这个值。而 `ES6` 模块输出的是**值的引用**，原始值变了，import加载的值也会跟着变；
+- 因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。`CommonJS` 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 `ES6` 模块相反，使用 `import` 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
+- 关于模块顶层的 `this` 指向问题，在 `CommonJS` 顶层，`this` 指向当前模块；而在 `ES6` 模块中，`this` 指向 `undefined`；
+- 关于两个模块互相引用的问题，在 `ES6` 模块当中，是支持加载 `CommonJS` 模块的。但是反过来，`CommonJS` 并不能 `require ES6` 模块，在 NodeJS 中，两种模块方案是分开处理的；
+- `.mjs`文件总是以 `ES6` 模块加载，`.cjs`文件总是以 `CommonJS` 模块加载，`.js`文件的加载取决于`package.json`里面`type`字段的设置；
+- `ES6` 模块与 `CommonJS` 模块尽量不要混用。`require`命令不能加载`.mjs`文件，会报错，只有`import`命令才可以加载`.mjs`文件。反过来，`.mjs`文件里面也不能使用`require`命令，必须使用`import`；
 
 ## AMD、CMD、UMD
 
@@ -142,3 +139,5 @@ define(function (require, exports, module) {
 [Module 的语法](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/module)
 
 [Understanding (all) JavaScript module formats and tools](https://weblogs.asp.net/dixin/understanding-all-javascript-module-formats-and-tools)
+
+[ES6 In Depth: Modules](https://hacks.mozilla.org/2015/08/es6-in-depth-modules/)

@@ -36,6 +36,23 @@ const compose = function (f, g) {
 }
 
 const compose = (...fns) => (...args) => fns.reduceRight((val, fn) => fn.apply(null, [].concat(val)), args);
+
+const compose = (...fns) => x0 => fns.reduceRight(
+    (x, f) => f(x),
+    x0
+);
+
+// We call this function 'flow' as the values flow,
+// from left to right.
+const flow = (...fns) => x0 => fns.reduce(
+    (x, f) => f(x),
+    x0
+);
+
+const pipe = (x0, ...fns) => fns.reduce(
+    (x, f) => f(x),
+    x0
+);
 ```
 
 ## 函数柯里化
@@ -128,3 +145,7 @@ const num2 = calc(100,200) // 缓存得到的结果
 [学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
 
 [An introduction to functional programming](https://codewords.recurse.com/issues/one/an-introduction-to-functional-programming)
+
+[JAVASCRIPT FUNCTION COMPOSITION: WHAT’S THE BIG DEAL?](https://jrsinclair.com/articles/2022/javascript-function-composition-whats-the-big-deal/)
+
+[HOW TO COMPOSE JAVASCRIPT FUNCTIONS THAT TAKE MULTIPLE PARAMETERS (THE EPIC GUIDE)](https://jrsinclair.com/articles/2024/how-to-compose-functions-that-take-multiple-parameters-epic-guide/)

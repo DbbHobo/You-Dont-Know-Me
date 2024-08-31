@@ -36,7 +36,7 @@
 
 - 问题
 
-内存泄漏（Memory Leak)
+内存泄漏（Memory Leak）
 
 闭包阻止了垃圾回收机制对变量进行回收，因此变量会永远存在内存中，即使当变量不再被使用时，这样会造成内存泄漏，会严重影响页面的性能。因此当变量对象不再适用时，我们要将其释放。解决内存泄露：将暴露外部的闭包变量置为 null。
 
@@ -51,3 +51,5 @@
 ## 参考资料
 
 [Closures MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Closures)
+
+[Grokking V8 closures for fun (and profit?)](https://mrale.ph/blog/2012/09/23/grokking-v8-closures-for-fun.html)
