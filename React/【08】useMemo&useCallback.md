@@ -261,6 +261,235 @@ function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 
 ![react](./assets/useCallback2.png)
 
+## React.memo()
+
+React normally re-renders a component whenever its parent re-renders. With memo, you can create a component that React will not re-render when its parent re-renders so long as its new props are the same as the old props. Such a component is said to be memoized.
+
+A React component should always have pure rendering logic. This means that it must return the same output if its props, state, and context haven’t changed. By using memo, you are telling React that your component complies with this requirement, so React doesn’t need to re-render as long as its props haven’t changed. Even with memo, your component will re-render if its own state changes or if a context that it’s using changes.
+
+### 原理
+
+`React.memo()`入口如下，可以看到其实就是创建了了一个`elementType`对象：
+
+```ts
+export function memo<Props>(
+  type: React$ElementType,
+  compare?: (oldProps: Props, newProps: Props) => boolean,
+) {
+  // 【省略代码...】
+  const elementType = {
+    $$typeof: REACT_MEMO_TYPE,
+    type,
+    compare: compare === undefined ? null : compare,
+  };
+  // 【省略代码...】
+  return elementType;
+}
+```
+
+后续在进行`fiber`构建的`beginWork`阶段，遇到`memo``包裹的组件就会进入updateMemoComponent` 或者 `updateSimpleMemoComponent`方法：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+case MemoComponent: {
+  const type = workInProgress.type;
+  const unresolvedProps = workInProgress.pendingProps;
+  // Resolve outer props first, then resolve inner props.
+  let resolvedProps = disableDefaultPropsExceptForClasses
+    ? unresolvedProps
+    : resolveDefaultPropsOnNonClassComponent(type, unresolvedProps);
+  resolvedProps = disableDefaultPropsExceptForClasses
+    ? resolvedProps
+    : resolveDefaultPropsOnNonClassComponent(type.type, resolvedProps);
+  return updateMemoComponent(
+    current,
+    workInProgress,
+    type,
+    resolvedProps,
+    renderLanes,
+  );
+}
+case SimpleMemoComponent: {
+  return updateSimpleMemoComponent(
+    current,
+    workInProgress,
+    workInProgress.type,
+    workInProgress.pendingProps,
+    renderLanes,
+  );
+}
+```
+
+首次`beginWork`会进入`updateMemoComponent`，在`isSimpleFunctionComponent`为true并且`React.memo`方法没传入`compare`方法的情况下会把`fiber`的`tag`改成`SimpleMemoComponent`并进入`updateSimpleMemoComponent`方法。
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+function updateMemoComponent(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  Component: any,
+  nextProps: any,
+  renderLanes: Lanes,
+): null | Fiber {
+  if (current === null) {
+    const type = Component.type;
+    if (
+      isSimpleFunctionComponent(type) &&
+      Component.compare === null &&
+      // SimpleMemoComponent codepath doesn't resolve outer props either.
+      (disableDefaultPropsExceptForClasses ||
+        Component.defaultProps === undefined)
+    ) {
+      let resolvedType = type;
+      // 【省略代码...】
+      // If this is a plain function component without default props,
+      // and with only the default shallow comparison, we upgrade it
+      // to a SimpleMemoComponent to allow fast path updates.
+      workInProgress.tag = SimpleMemoComponent;
+      workInProgress.type = resolvedType;
+      // 【省略代码...】
+      return updateSimpleMemoComponent(
+        current,
+        workInProgress,
+        resolvedType,
+        nextProps,
+        renderLanes,
+      );
+    }
+
+    // 【省略代码...】
+    const child = createFiberFromTypeAndProps(
+      Component.type,
+      null,
+      nextProps,
+      workInProgress,
+      workInProgress.mode,
+      renderLanes,
+    );
+    child.ref = workInProgress.ref;
+    child.return = workInProgress;
+    workInProgress.child = child;
+    return child;
+  }
+  const currentChild = ((current.child: any): Fiber); // This is always exactly one child
+  const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
+    current,
+    renderLanes,
+  );
+  if (!hasScheduledUpdateOrContext) {
+    // This will be the props with resolved defaultProps,
+    // unlike current.memoizedProps which will be the unresolved ones.
+    const prevProps = currentChild.memoizedProps;
+    // Default to shallow comparison
+    let compare = Component.compare;
+    compare = compare !== null ? compare : shallowEqual;
+    if (compare(prevProps, nextProps) && current.ref === workInProgress.ref) {
+      return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
+    }
+  }
+  // React DevTools reads this flag.
+  workInProgress.flags |= PerformedWork;
+  const newChild = createWorkInProgress(currentChild, nextProps);
+  newChild.ref = workInProgress.ref;
+  newChild.return = workInProgress;
+  workInProgress.child = newChild;
+  return newChild;
+}
+
+function shouldConstruct(Component: Function) {
+  const prototype = Component.prototype;
+  return !!(prototype && prototype.isReactComponent);
+}
+
+export function isSimpleFunctionComponent(type: any): boolean {
+  return (
+    typeof type === 'function' &&
+    !shouldConstruct(type) &&
+    type.defaultProps === undefined
+  );
+}
+```
+
+可以看到`updateSimpleMemoComponent`会简单的根据新旧`props`以及节点上是否有更新任务进行判断，如果不需要`rerender`就会进入`bailoutOnAlreadyFinishedWork`，否则还是走正常的函数组件流程。
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+function updateSimpleMemoComponent(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  Component: any,
+  nextProps: any,
+  renderLanes: Lanes,
+): null | Fiber {
+  // TODO: current can be non-null here even if the component
+  // hasn't yet mounted. This happens when the inner render suspends.
+  // We'll need to figure out if this is fine or can cause issues.
+  if (current !== null) {
+    const prevProps = current.memoizedProps;
+    // 【对比新旧props，相同的话，并且在该节点上没有更新任务，就可以跳过rerender进入bailoutOnAlreadyFinishedWork】
+    if (
+      shallowEqual(prevProps, nextProps) &&
+      current.ref === workInProgress.ref &&
+      // Prevent bailout if the implementation changed due to hot reload.
+      (__DEV__ ? workInProgress.type === current.type : true)
+    ) {
+      didReceiveUpdate = false;
+
+      // The props are shallowly equal. Reuse the previous props object, like we
+      // would during a normal fiber bailout.
+      //
+      // We don't have strong guarantees that the props object is referentially
+      // equal during updates where we can't bail out anyway — like if the props
+      // are shallowly equal, but there's a local state or context update in the
+      // same batch.
+      //
+      // However, as a principle, we should aim to make the behavior consistent
+      // across different ways of memoizing a component. For example, React.memo
+      // has a different internal Fiber layout if you pass a normal function
+      // component (SimpleMemoComponent) versus if you pass a different type
+      // like forwardRef (MemoComponent). But this is an implementation detail.
+      // Wrapping a component in forwardRef (or React.lazy, etc) shouldn't
+      // affect whether the props object is reused during a bailout.
+      workInProgress.pendingProps = nextProps = prevProps;
+
+      if (!checkScheduledUpdateOrContext(current, renderLanes)) {
+        // The pending lanes were cleared at the beginning of beginWork. We're
+        // about to bail out, but there might be other lanes that weren't
+        // included in the current render. Usually, the priority level of the
+        // remaining updates is accumulated during the evaluation of the
+        // component (i.e. when processing the update queue). But since since
+        // we're bailing out early *without* evaluating the component, we need
+        // to account for it here, too. Reset to the value of the current fiber.
+        // NOTE: This only applies to SimpleMemoComponent, not MemoComponent,
+        // because a MemoComponent fiber does not have hooks or an update queue;
+        // rather, it wraps around an inner component, which may or may not
+        // contains hooks.
+        // TODO: Move the reset at in beginWork out of the common path so that
+        // this is no longer necessary.
+        workInProgress.lanes = current.lanes;
+        return bailoutOnAlreadyFinishedWork(
+          current,
+          workInProgress,
+          renderLanes,
+        );
+      } else if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
+        // This is a special case that only exists for legacy mode.
+        // See https://github.com/facebook/react/pull/19216.
+        didReceiveUpdate = true;
+      }
+    }
+  }
+  // 【否则还是走正常函数组件流程】
+  return updateFunctionComponent(
+    current,
+    workInProgress,
+    Component,
+    nextProps,
+    renderLanes,
+  );
+}
+```
+
 ## 总结
 
 1. `useMemo`和`useCallback`方法都会在`hook`的`memoizedState`属性上存储如下形式数据`[缓存内容，[依赖值1,依赖值2...]]`，不同在于`useMemo`缓存的是函数的返回值，而`useCallback`缓存的是函数本身；
