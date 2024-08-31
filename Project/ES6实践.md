@@ -610,110 +610,6 @@ add(1, 2) // 3
 add(1); // Error: Missing parameter.
 ```
 
-## 拓展运算符
-
-- arguments 转数组
-
-```js
-// bad
-function sortNumbers() {
-  return Array.prototype.slice.call(arguments).sort();
-}
-
-// good
-const sortNumbers = (...numbers) => numbers.sort();
-```
-
-- 调用参数
-
-```js
-// bad
-Math.max.apply(null, [14, 3, 77])
-
-// good
-Math.max(...[14, 3, 77])
-// 等同于
-Math.max(14, 3, 77);
-```
-
-- 构建对象
-剔除部分属性，将剩下的属性构建一个新的对象
-
-```js
-let [a, b, ...arr] = [1, 2, 3, 4, 5];
-
-const { a, b, ...others } = { a: 1, b: 2, c: 3, d: 4, e: 5 };
-```
-
-有条件的构建对象
-
-```js
-// bad
-function pick(data) {
-  const { id, name, age} = data
-
-  const res = { guid: id }
-
-  if (name) {
-    res.name = name
-  }
-  else if (age) {
-    res.age = age
-  }
-
-  return res
-}
-
-// good
-function pick({id, name, age}) {
-  return {
-    guid: id,
-    ...(name && {name}),
-    ...(age && {age})
-  }
-}
-```
-
-合并对象
-
-```js
-let obj1 = { a: 1, b: 2,c: 3 }
-let obj2 = { b: 4, c: 5, d: 6}
-let merged = {...obj1, ...obj2};
-```
-
-- React
-将对象全部传入组件
-
-```js
-const parmas =  {value1: 1, value2: 2, value3: 3}
-
-<Test {...parmas} />
-```
-
-## 双冒号运算符
-
-```js
-foo::bar;
-// 等同于
-bar.bind(foo);
-
-foo::bar(...arguments);
-// 等同于
-bar.apply(foo, arguments);
-如果双冒号左边为空，右边是一个对象的方法，则等于将该方法绑定在该对象上面。
-```
-
-```js
-var method = obj::obj.foo;
-// 等同于
-var method = ::obj.foo;
-
-let log = ::console.log;
-// 等同于
-var log = console.log.bind(console);
-```
-
 ## 解构赋值
 
 - 对象的基本解构
@@ -985,6 +881,110 @@ if((value??'') !== ''){
 }
 ```
 
+## 拓展运算符(...)
+
+- arguments 转数组
+
+```js
+// bad
+function sortNumbers() {
+  return Array.prototype.slice.call(arguments).sort();
+}
+
+// good
+const sortNumbers = (...numbers) => numbers.sort();
+```
+
+- 调用参数
+
+```js
+// bad
+Math.max.apply(null, [14, 3, 77])
+
+// good
+Math.max(...[14, 3, 77])
+// 等同于
+Math.max(14, 3, 77);
+```
+
+- 构建对象
+剔除部分属性，将剩下的属性构建一个新的对象
+
+```js
+let [a, b, ...arr] = [1, 2, 3, 4, 5];
+
+const { a, b, ...others } = { a: 1, b: 2, c: 3, d: 4, e: 5 };
+```
+
+有条件的构建对象
+
+```js
+// bad
+function pick(data) {
+  const { id, name, age} = data
+
+  const res = { guid: id }
+
+  if (name) {
+    res.name = name
+  }
+  else if (age) {
+    res.age = age
+  }
+
+  return res
+}
+
+// good
+function pick({id, name, age}) {
+  return {
+    guid: id,
+    ...(name && {name}),
+    ...(age && {age})
+  }
+}
+```
+
+合并对象
+
+```js
+let obj1 = { a: 1, b: 2,c: 3 }
+let obj2 = { b: 4, c: 5, d: 6}
+let merged = {...obj1, ...obj2};
+```
+
+- React
+将对象全部传入组件
+
+```js
+const parmas =  {value1: 1, value2: 2, value3: 3}
+
+<Test {...parmas} />
+```
+
+## 双冒号运算符(::)
+
+```js
+foo::bar;
+// 等同于
+bar.bind(foo);
+
+foo::bar(...arguments);
+// 等同于
+bar.apply(foo, arguments);
+如果双冒号左边为空，右边是一个对象的方法，则等于将该方法绑定在该对象上面。
+```
+
+```js
+var method = obj::obj.foo;
+// 等同于
+var method = ::obj.foo;
+
+let log = ::console.log;
+// 等同于
+var log = console.log.bind(console);
+```
+
 ## optional-chaining(?.)
 
 ```js
@@ -1011,6 +1011,44 @@ exists?.(); // undefined
 ```
 
 需要添加 @babel/plugin-proposal-optional-chaining 插件支持
+
+## Nullish coalescing operator(??)
+
+空值合并运算符（??）是一个逻辑运算符，当左侧的操作数为 null 或者 undefined 时，返回其右侧操作数，否则返回左侧操作数。
+
+```js
+a ?? b
+
+// 相当于
+
+(a !== null && a !== void 0) ? a : b
+```
+
+```js
+var foo = object.foo ?? "default";
+
+// 相当于
+
+var foo = (object.foo != null) ? object.foo : "default";
+```
+
+需要 @babel/plugin-proposal-nullish-coalescing-operator 插件支持
+
+## Nullish coalescing assignment(??=)
+
+逻辑空赋值运算符（x ??= y）仅在 **x 是空值**（null 或 undefined）时对其赋值。
+
+```js
+const a = { duration: 50 };
+
+a.speed ??= 25;
+console.log(a.speed);
+// Expected output: 25
+
+a.duration ??= 10;
+console.log(a.duration);
+// Expected output: 50
+```
 
 ## logical-assignment-operators(||= &&=)
 
@@ -1074,28 +1112,6 @@ function example(a = b) {
 
 需要 @babel/plugin-proposal-logical-assignment-operators 插件支持
 
-## nullish-coalescing-operator(??=)
-
-逻辑空赋值运算符（x ??= y）仅在 **x 是空值**（null 或 undefined）时对其赋值。
-
-```js
-a ?? b
-
-// 相当于
-
-(a !== null && a !== void 0) ? a : b
-```
-
-```js
-var foo = object.foo ?? "default";
-
-// 相当于
-
-var foo = (object.foo != null) ? object.foo : "default";
-```
-
-需要 @babel/plugin-proposal-nullish-coalescing-operator 插件支持
-
 ## pipeline-operator(|>)
 
 ```js
@@ -1116,3 +1132,5 @@ double(increment(double(5))); // 22
 [你会用ES6，那倒是用啊！](https://juejin.cn/post/7016520448204603423)
 
 [The long path of JavaScript - from ES6 until today.](https://dev.to/fsh02/the-long-path-of-javascript-from-es6-until-today-3gc3?context=digest)
+
+[ES6 In Depth: Modules](https://hacks.mozilla.org/2015/08/es6-in-depth-modules/)
