@@ -567,7 +567,7 @@ function propagateContextChanges<T>(
 }
 ```
 
-![react](./assets/useContext1.png)
+![react](./assets/useContext/useContext1.png)
 
 `pushProvider`主要处理的是由`createContext`创建的`context`，更新`context._currentValue`到最新值，作为`provider`要提供数据供子组件使用，子组件总是会找到最近的那个`provider`获取值，因此需要`valueStack`和`fiberStack`两个栈结构来存储`context`值和对应`fiber`节点：
 
@@ -627,7 +627,7 @@ export function pushProvider<T>(
 }
 ```
 
-![react](./assets/useContext2.png)
+![react](./assets/useContext/useContext2.png)
 
 `pushProvider`用到的辅助函数`push`如下，这里的`cursor`就是前面传入的`valueCursor`：
 
@@ -654,7 +654,7 @@ function push<T>(cursor: StackCursor<T>, value: T, fiber: Fiber): void {
 }
 ```
 
-![react](./assets/useContext3.png)
+![react](./assets/useContext/useContext3.png)
 
 #### Provider的`completeWork`
 
@@ -676,7 +676,7 @@ function completeWork() {
 }
 ```
 
-![react](./assets/useContext6.png)
+![react](./assets/useContext/useContext6.png)
 
 `popProvider`仍然处理的是由`createContext`创建的`context`，因为`render`解析过程从上至下，没有下一层的时候去找兄弟节点，然后返回上一层再去找兄弟节点，根据这个特性，当回到当前`provider`节点进行`completeWork`时说明子节点已经全部处理完了，该消费当前`context`的已经消费结束（`consumer`永远消费离自己最近的`provider`提供的数据），因此需要调用`popProvider`将当前栈顶清空，然后继续回祖先节点处理：
 
@@ -764,7 +764,7 @@ function pop<T>(cursor: StackCursor<T>, fiber: Fiber): void {
 }
 ```
 
-![react](./assets/useContext7.png)
+![react](./assets/useContext/useContext7.png)
 
 ---
 
@@ -994,8 +994,8 @@ function readContextForConsumer<T>(
 }
 ```
 
-![react](./assets/useContext4.png)
-![react](./assets/useContext5.png)
+![react](./assets/useContext/useContext4.png)
+![react](./assets/useContext/useContext5.png)
 
 #### Consumer通过JSX方式消费
 
@@ -1401,10 +1401,10 @@ function propagateContextChanges<T>(
 }
 ```
 
-![react](./assets/useContext8.png)
-![react](./assets/useContext9.png)
-![react](./assets/useContext10.png)
-![react](./assets/useContext11.png)
+![react](./assets/useContext/useContext8.png)
+![react](./assets/useContext/useContext9.png)
+![react](./assets/useContext/useContext10.png)
+![react](./assets/useContext/useContext11.png)
 
 ## 总结
 
@@ -1414,4 +1414,4 @@ function propagateContextChanges<T>(
 4. 子组件消费完之后回到`Provider`组件的`completeWork`阶段，继而调用`popProvider`出栈，这一操作是为了保证所有的`Consumer`组件永远消费的是离自己最近的`Provider`组件提供的数据；
 5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧`context`数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`Consumer`组件的祖先节点`childLanes`属性用于后续更新这些组件；
 
-![react](./assets/useContext.png)
+![react](./assets/useContext/useContext.png)

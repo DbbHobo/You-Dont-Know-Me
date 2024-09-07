@@ -131,7 +131,7 @@ function dispatchSetState<S, A>(
 }
 ```
 
-![react](./assets/dispatchSetState1.png)
+![react](./assets/update/dispatchSetState1.png)
 
 ## render流程
 
@@ -797,7 +797,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 }
 ```
 
-![react](./assets/update_beginWork1.png)
+![react](./assets/update/update_beginWork1.png)
 
 接下来`beginWork`会根据`tag`类型进入不同的 `update` 方法，在`ƒ App()`节点的`beginWork`阶段会走进`updateFunctionComponent`方法：
 
@@ -978,9 +978,9 @@ export function renderWithHooks<Props, SecondArg>(
 }
 ```
 
-![react](./assets/update_beginWork10.png)
-![react](./assets/update_beginWork11.png)
-![react](./assets/update_beginWork12.png)
+![react](./assets/update/update_beginWork10.png)
+![react](./assets/update/update_beginWork11.png)
+![react](./assets/update/update_beginWork12.png)
 
 完成`ƒ App()`节点的`beginWork`，进入`div`节点的`beginWork`阶段会走到如下`updateHostComponent`方法：
 
@@ -1025,7 +1025,7 @@ function updateHostComponent(
 }
 ```
 
-![react](./assets/update_beginWork2.png)
+![react](./assets/update/update_beginWork2.png)
 
 `updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`，根据 `current` 是否为 `null` 会进入 `mountChildFibers` 或 `reconcileChildFibers` 流程，这一次我们是更新流程所以进入`reconcileChildFibers`，`mountChildFibers` 和 `reconcileChildFibers`是由`createChildReconciler`返回的内部的方法：
 
@@ -1132,9 +1132,9 @@ function createChildReconciler(
 }
 ```
 
-![react](./assets/update_beginWork3.png)
-![react](./assets/update_beginWork4.png)
-![react](./assets/createChildReconciler.png)
+![react](./assets/update/update_beginWork3.png)
+![react](./assets/update/update_beginWork4.png)
+![react](./assets/update/createChildReconciler.png)
 
 下一步进入`reconcileChildFibersImpl`也是`createChildReconciler`内部的方法，通过对 `newChild` 分类进行不同的处理，单独的节点，或者数组也就是多节点通过不同的方法进行处理：
 
@@ -1284,7 +1284,7 @@ function reconcileChildFibersImpl(
 }
 ```
 
-![react](./assets/update_beginWork5.png)
+![react](./assets/update/update_beginWork5.png)
 
 **多节点**处理方法 `reconcileChildrenArray` ，为了更好的调试diff过程，此方法用例如下，将节点abc变成了aceb，key同显示内容：
 
@@ -1728,10 +1728,10 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 }
 ```
 
-![react](./assets/update_beginWork6.png)
-![react](./assets/update_beginWork7.png)
-![react](./assets/update_beginWork8.png)
-![react](./assets/update_beginWork9.png)
+![react](./assets/update/update_beginWork6.png)
+![react](./assets/update/update_beginWork7.png)
+![react](./assets/update/update_beginWork8.png)
+![react](./assets/update/update_beginWork9.png)
 
 **单节点**处理方法 `reconcileSingleElement` 如下：
 
@@ -1938,7 +1938,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 }
 ```
 
-![react](./assets/update_completeWork1.png)
+![react](./assets/update/update_completeWork1.png)
 
 `completeWork`里根据`tag`分类进入不同方法
 
@@ -2411,9 +2411,9 @@ function markUpdate(workInProgress: Fiber) {
 
 最后一步步往上回溯形成一颗完整的`fiber`树结构。
 
-![react](./assets/update_completeWork2.png)
-![react](./assets/update_completeWork3.png)
-![react](./assets/update_completeWork4.png)
+![react](./assets/update/update_completeWork2.png)
+![react](./assets/update/update_completeWork3.png)
+![react](./assets/update/update_completeWork4.png)
 
 ### updateHostComponent
 
@@ -2935,7 +2935,7 @@ function commitBeforeMutationEffectsDeletion(deletion: Fiber) {
 }
 ```
 
-![react](./assets/update_commit1.png)
+![react](./assets/update/update_commit1.png)
 
 ### commitMutationEffects
 
@@ -3251,7 +3251,7 @@ function commitReconciliationEffects(finishedWork: Fiber) {
 }
 ```
 
-![react](./assets/update_commit2.png)
+![react](./assets/update/update_commit2.png)
 
 `mutation`阶段主要进行的操作类型有如下：
 
@@ -4069,7 +4069,7 @@ function commitLayoutEffectOnFiber(
 }
 ```
 
-![react](./assets/update_commit3.png)
+![react](./assets/update/update_commit3.png)
 
 ## 总结
 
@@ -4078,5 +4078,5 @@ function commitLayoutEffectOnFiber(
 3. `completeWork`阶段和首次挂载不同的是，会根据当前节点对应DOM是否存在决定要新建DOM还是仅对比`props`，对比`props`后如果有更新为这个节点标记`Update`需要更新，在`commit`阶段会进行具体的处理，在向上回溯的过程中会把子节点带有的标记往祖先节点带，所以最终在根节点上`subtreeFlags`属性能知道子节点具体到底需不要更新等；
 4. `commit`过程（`commitRoot`）仍然是三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，在`commitMutationEffects`过程中，主要通过判断每一个`fiber`节点的`flags`属性然后进行具体的DOM操作，`commitMutationEffects`阶段会按照删除（下一层）、新增（下一层）、更新（本层）DOM的顺序进行；
 
-![react](./assets/update.png)
-![react](./assets/update_fiber.png)
+![react](./assets/update/update.png)
+![react](./assets/update/update_fiber.png)

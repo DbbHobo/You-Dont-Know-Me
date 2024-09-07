@@ -197,7 +197,7 @@ function resolveDispatcher() {
 }
 ```
 
-![hook](./assets/useEffect1.png)
+![hook](./assets/useEffect/useEffect1.png)
 
 `dispatcher`根据环境还有是首次挂载还是更新等情况有区分，可以看到`useEffect`方法实际调用了`mountEffect`或者`updateEffect`：
 
@@ -232,7 +232,7 @@ useEffect(
 }
 ```
 
-![hook](./assets/useEffect2-mountEffect.png)
+![hook](./assets/useEffect/useEffect2-mountEffect.png)
 
 ### `mountEffect` => `mountEffectImpl` => `mountWorkInProgressHook` / `pushEffect`
 
@@ -283,7 +283,7 @@ function mountEffect(
 }
 ```
 
-![hook](./assets/useEffect3-mountEffect.png)
+![hook](./assets/useEffect/useEffect3-mountEffect.png)
 
 - `currentlyRenderingFiber`：当前正在构造的这个`fiber node`
 - `currentHook`：`current fiber`对应的`hook list`
@@ -420,8 +420,8 @@ function pushEffect(
 }
 ```
 
-![hook](./assets/useEffect4-mountEffect.png)
-![hook](./assets/useEffect5-mountEffect.png)
+![hook](./assets/useEffect/useEffect4-mountEffect.png)
+![hook](./assets/useEffect/useEffect5-mountEffect.png)
 
 ### `updateEffect` => `updateEffectImpl` => `updateWorkInProgressHook` / `pushEffect`
 
@@ -561,7 +561,7 @@ function is(x: any, y: any) {
 }
 ```
 
-![hook](./assets/useEffect6-updateEffect.png)
+![hook](./assets/useEffect/useEffect6-updateEffect.png)
 
 `updateWorkInProgressHook`方法其实就是要确定当前`workInProgress fiber`节点对应的 `workInProgressHook`，此之前确定 `nextCurrentHook` 和 `nextWorkInProgressHook`，前置知识点在于一个节点对应的`hook`链表以`memoizedState`属性存储着并以`next`链接：
 
@@ -672,12 +672,12 @@ function updateWorkInProgressHook(): Hook {
 }
 ```
 
-![hook](./assets/useEffect7-updateEffect.png)
-![hook](./assets/useEffect8-updateEffect.png)
-![hook](./assets/useEffect9-updateEffect.png)
-![hook](./assets/useEffect10-updateEffect.png)
-![hook](./assets/useEffect11-updateEffect.png)
-![hook](./assets/useEffect12-updateEffect.png)
+![hook](./assets/useEffect/useEffect7-updateEffect.png)
+![hook](./assets/useEffect/useEffect8-updateEffect.png)
+![hook](./assets/useEffect/useEffect9-updateEffect.png)
+![hook](./assets/useEffect/useEffect10-updateEffect.png)
+![hook](./assets/useEffect/useEffect11-updateEffect.png)
+![hook](./assets/useEffect/useEffect12-updateEffect.png)
 
 ### fiber.updateQueue存储的effect list触发时机
 
@@ -2057,7 +2057,7 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 6. `useEffect`和`useLayoutEffect`都使用`mountEffectImpl`/`updateEffectImpl`，但是入参`hookFlag`并不相同分别是`HookPassive`/`HookLayout`，两者都会创建对应的`effect`实例，但是`effect`实例的`tag`并不相同。两者回调函数作用时机也不同`useEffect`是发生在`commit`三阶段之后，`useLayoutEffect`是发生在`commit`第三阶段。
 7. `useEffect`和`useLayoutEffect`两者的销毁函数作用时机也不同，`useEffect`和的`effect`实例的`destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。`useLayoutEffect`的`effect`实例的`destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成DOM挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
 
-![react](./assets/useEffect.png)
+![react](./assets/useEffect/useEffect.png)
 
 ## 参考资料
 

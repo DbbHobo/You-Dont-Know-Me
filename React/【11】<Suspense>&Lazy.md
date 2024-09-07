@@ -805,12 +805,12 @@ function updateOffscreenComponent(
 }
 ```
 
-![react](./assets/suspense0.png)
-![react](./assets/suspense1.png)
-![react](./assets/suspense2.png)
-![react](./assets/suspense3.png)
-![react](./assets/suspense4.png)
-![react](./assets/suspense5.png)
+![react](./assets/Suspense/suspense0.png)
+![react](./assets/Suspense/suspense1.png)
+![react](./assets/Suspense/suspense2.png)
+![react](./assets/Suspense/suspense3.png)
+![react](./assets/Suspense/suspense4.png)
+![react](./assets/Suspense/suspense5.png)
 
 #### 更新阶段-先显示fallback再显示primaryChild
 
@@ -944,9 +944,9 @@ function updateSuspenseFallbackChildren(
 }
 ```
 
-![react](./assets/suspense6.png)
-![react](./assets/suspense7.png)
-![react](./assets/suspense8.png)
+![react](./assets/Suspense/suspense6.png)
+![react](./assets/Suspense/suspense7.png)
+![react](./assets/Suspense/suspense8.png)
 
 #### 更新阶段-直接显示primaryChild
 
@@ -1558,8 +1558,8 @@ function markComponentSuspended(
 }
 ```
 
-![react](./assets/suspense9.png)
-![react](./assets/suspense10.png)
+![react](./assets/Suspense/suspense9.png)
+![react](./assets/Suspense/suspense10.png)
 
 可以看到每次在进入`workLoopSync`/`workLoopConcurrent`工作之前，会对之前的`workInProgressSuspendedReason`状态进行一个判断，其实主要就是监测`Suspense`组件包裹的异步内容是否有状态改变，前面`workInProgressSuspendedReason`已经设置为`SuspendedOnDeprecatedThrowPromise`，所以进入`unwindSuspendedUnitOfWork`这个方法：
 
@@ -2050,10 +2050,10 @@ export function attachPingListener(
 }
 ```
 
-![react](./assets/suspense11.png)
-![react](./assets/suspense12.png)
-![react](./assets/suspense13.png)
-![react](./assets/suspense14.png)
+![react](./assets/Suspense/suspense11.png)
+![react](./assets/Suspense/suspense12.png)
+![react](./assets/Suspense/suspense13.png)
+![react](./assets/Suspense/suspense14.png)
 
 和普通节点`completeUnitOfWork()`不同的是这一次走的是`Incomplete`这个处理路径，已知前面已经给当前组件节点标记了`Incomplete`。可以看到只是处理了当前节点和`Offscreen fiber`的`flags`等等，`Offscreen fiber`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`，并没有进入真正的`completeWork`，因为正式内容要等`Promise`被`resolve`之后再显示。然后回到上一层`Offscreen fiber`节点进行`completeUnitOfWork(unitOfWork)`，同样的流程，所以最后直到`Offscreen fiber`节点的祖先节点`Suspense fiber`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`。
 
@@ -2568,8 +2568,8 @@ export function unhideInstance(instance: Instance, props: Props): void {
 }
 ```
 
-![react](./assets/suspense15.png)
-![react](./assets/suspense16.png)
+![react](./assets/Suspense/suspense15.png)
+![react](./assets/Suspense/suspense16.png)
 
 总结一下这部分内容：
 
@@ -2774,6 +2774,6 @@ function retryTimedOutBoundary(boundaryFiber: Fiber, retryLane: Lane) {
 
 1. `fallback fiber`由`Fragment`包裹，`primaryChild fiber`由`Offscreen`包裹；
 
-![react](./assets/Suspense.png)
+![react](./assets/Suspense/Suspense.png)
 
 <!-- 【TODO：完成Lazy源码理解】 -->

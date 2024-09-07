@@ -950,11 +950,11 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 }
 ```
 
-![react](./assets/diff2-reconcileChildrenArray.png)
-![react](./assets/diff3-updateSlot.png)
-![react](./assets/diff4-updateElement.png)
-![react](./assets/diff5-useFiber.png)
-![react](./assets/diff6-createWorkInProgress.png)
+![react](./assets/diff/diff2-reconcileChildrenArray.png)
+![react](./assets/diff/diff3-updateSlot.png)
+![react](./assets/diff/diff4-updateElement.png)
+![react](./assets/diff/diff5-useFiber.png)
+![react](./assets/diff/diff6-createWorkInProgress.png)
 
 - 已经得到由`current fiber`复用来的`newFiber`，调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动；
 
@@ -994,11 +994,11 @@ function placeChild(
 }
 ```
 
-![react](./assets/diff7-placeChild.png)
+![react](./assets/diff/diff7-placeChild.png)
 
 - 第一个循环继续，b节点也是可复用节点，重复上述过程复用b节点，然后下一个节点e无法复用（`updateSlot`返回的`newFiber`为`null`）跳出第一个循环；
 
-![react](./assets/diff8.png)
+![react](./assets/diff/diff8.png)
 
 - 跳出循环后先检查此时，如果新节点已经遍历完，说明剩余的旧节点需要删除；旧节点已经遍历完而新节点还有，说明剩余的新节点要插入；
 - 新旧节点都有剩余的情况下，进入第二个循环，首先将所有剩余的旧节点构造一个`map<oldFiber的key或索引index，oldFiber>`；
@@ -1313,18 +1313,18 @@ export function createFiberFromTypeAndProps(
 }
 ```
 
-![react](./assets/diff9.png)
-![react](./assets/diff10.png)
+![react](./assets/diff/diff9.png)
+![react](./assets/diff/diff10.png)
 
 - 已经得到全新创建的`newFiber`，调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，e、f节点因为都是新增节点所以会标志`Placement`；
 
-![react](./assets/diff11.png)
+![react](./assets/diff/diff11.png)
 
 - 循环到最后一个节点c，在`updateFromMap`中首先在`existingChildren`根据`key`或者`index`找到了可用的旧节点，然后进入`updateElement`方法，因为有可复用节点会走向`useFiber`，由旧的c节点构造出来的新c节点fiber node，由于`className`的变化，会把最新的`className`放在`pendingProps`属性中用于后续处理；
 
-![react](./assets/diff12.png)
-![react](./assets/diff13.png)
-![react](./assets/diff14.png)
+![react](./assets/diff/diff12.png)
+![react](./assets/diff/diff13.png)
+![react](./assets/diff/diff14.png)
 
 - 同样的对新c节点调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，此处不需要插入或者移动；
 - 到此处所有的新节点遍历完毕，返回第一个新的`fiber node`，其他的节点通过`sibling`属性依次链接在后面，这一层的diff过程也就完成了，新的`fiber node`结构生成；

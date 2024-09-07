@@ -455,6 +455,7 @@ export function createRoot(
     container.nodeType === COMMENT_NODE
       ? (container.parentNode: any)
       : container;
+  // 【对原生事件进行监听】
   listenToAllSupportedEvents(rootContainerElement);
   
   // 【生成一个ReactDOMRoot实例】
@@ -810,8 +811,8 @@ export function enqueueUpdate<State>(
 }
 ```
 
-![react](./assets/updateContainer1.png)
-![react](./assets/updateContainer2.png)
+![react](./assets/mount/updateContainer1.png)
+![react](./assets/mount/updateContainer2.png)
 
 ### Scheduler - 第一步：update任务优先级等相关等准备工作
 
@@ -1148,8 +1149,8 @@ function unstable_scheduleCallback(
 }
 ```
 
-![react](./assets/scheduleCallback1.png)
-![react](./assets/scheduleCallback2.png)
+![react](./assets/mount/scheduleCallback1.png)
+![react](./assets/mount/scheduleCallback2.png)
 
 ---
 
@@ -1221,8 +1222,8 @@ function performSyncWorkOnRoot(root: FiberRoot) {
 }
 ```
 
-![react](./assets/performSyncWorkOnRoot1.png)
-![react](./assets/performSyncWorkOnRoot2.png)
+![react](./assets/mount/performSyncWorkOnRoot1.png)
+![react](./assets/mount/performSyncWorkOnRoot2.png)
 
 ---
 
@@ -1543,8 +1544,8 @@ const performWorkUntilDeadline = () => {
 };
 ```
 
-![react](./assets/performConcurrentWorkOnRoot1.png)
-![react](./assets/performConcurrentWorkOnRoot2.png)
+![react](./assets/mount/performConcurrentWorkOnRoot1.png)
+![react](./assets/mount/performConcurrentWorkOnRoot2.png)
 
 ### Render - 第二步：React-Element转化为fiber过程
 
@@ -2081,7 +2082,7 @@ export function finishQueueingConcurrentUpdates(): void {
 }
 ```
 
-![react](./assets/prepareFreshStack.png)
+![react](./assets/mount/prepareFreshStack.png)
 
 - React中存在两个`fiber`树，当前屏幕上显示内容对应的`fiber`树称为`current fiber`树，正在构建的Fiber树称为`workInProgress fiber`树，构建完以后总是将`FiberRootNode`的`current`指向构建完的最新的`fiber`树；
 - `workInProgress`指向当前工作节点`fiberNode`，完成一个节点就指向子节点，在最开始阶段`workInProgress`指向全局唯一根节点`FiberRootNode`的`current`对应的`alternate`节点上，因为`current`永远是屏幕上目前显示的`fiber`树，而对应的`alternate`是目前需要去构建的`fiber`树，初次挂载由于没有内容，所以`current`仅有一个`tag`为`HostRoot`的节点；
@@ -2360,7 +2361,7 @@ function beginWork(
 }
 ```
 
-![react](./assets/beginWork1.png)
+![react](./assets/mount/beginWork1.png)
 
 首次渲染根据 `workInProgress.tag` 会进入 `updateHostRoot` 方法：
 
@@ -2415,7 +2416,7 @@ function updateHostRoot(
 }
 ```
 
-![react](./assets/beginWork2.png)
+![react](./assets/mount/beginWork2.png)
 
 `updateHostRoot` 方法接下来进入`reconcileChildren`，根据 `current` 是否为 `null` 会进入 `mountChildFibers` 或 `reconcileChildFibers` 流程，得到的结果赋值给`workInProgress.child`：
 
@@ -2455,7 +2456,7 @@ export function reconcileChildren(
 }
 ```
 
-![react](./assets/beginWork3.png)
+![react](./assets/mount/beginWork3.png)
 
 `mountChildFibers`/`reconcileChildFibers` 其实就是调用 `createChildReconciler`，入参是不同的 `boolean` 值，最终都会调用 `reconcileChildFibers` 这个方法：
 
@@ -3056,7 +3057,7 @@ function updateSlot(
 }
 ```
 
-![react](./assets/beginWork4.png)
+![react](./assets/mount/beginWork4.png)
 
 `createFiberFromElement`是其中一个针对 `React-Element` 处理并返回 `fiber` 的方法，可以看到`fiberTag`由于还不确定类型所以暂定为`IndeterminateComponent`：
 
@@ -3115,9 +3116,9 @@ function createFiber(
 }
 ```
 
-![react](./assets/beginWork5.png)
-![react](./assets/beginWork6.png)
-![react](./assets/beginWork7.png)
+![react](./assets/mount/beginWork5.png)
+![react](./assets/mount/beginWork6.png)
+![react](./assets/mount/beginWork7.png)
 
 `fiber node`节点的`tag`有以下类型值，通常3代表`HostRoot`，也就是fiber树的根节点，在后续调试过程中可以看到几次类型判断中从3开始又到3结束：
 
@@ -3265,7 +3266,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 }
 ```
 
-![react](./assets/completeWork1.png)
+![react](./assets/mount/completeWork1.png)
 
 `completeWork`里根据`tag`分类进入不同方法
 
@@ -3472,9 +3473,9 @@ function completeWork(
 }
 ```
 
-![react](./assets/completeWork2.png)
-![react](./assets/completeWork3.png)
-![react](./assets/completeWork4.png)
+![react](./assets/mount/completeWork2.png)
+![react](./assets/mount/completeWork3.png)
+![react](./assets/mount/completeWork4.png)
 
 最终遍历生成一个个的 `FiberNode` 对象和对应DOM，然后通过`return`、`child`、`sibling`链接起来，变成一个完整的`fiber`树和`DOM`树。
 
@@ -3625,7 +3626,7 @@ function commitRoot(
 }
 ```
 
-![react](./assets/commitRoot.png)
+![react](./assets/mount/commitRoot.png)
 
 `commitRootImpl`首先会执行 `flushPassiveEffects` 方法，然后是如下三个方法：
 
@@ -4003,7 +4004,7 @@ function commitRootImpl(
 }
 ```
 
-![react](./assets/commitRootImpl.png)
+![react](./assets/mount/commitRootImpl.png)
 
 1. 前序`commitBeforeMutationEffects`期间会执行执行`getSnapshotBeforeUpdate`生命周期函数，这期间主要是做`mutation`前的准备工作，比如给`container`清空内容等等；
 
@@ -4172,8 +4173,8 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
 }
 ```
 
-![react](./assets/commitBeforeMutationEffects1.png)
-![react](./assets/commitBeforeMutationEffects2.png)
+![react](./assets/mount/commitBeforeMutationEffects1.png)
+![react](./assets/mount/commitBeforeMutationEffects2.png)
 
 2. 中序`commitMutationEffects(root, finishedWork, lanes)`此方法调用完成时也就是 `DOM` 渲染完成的过程，首先进入`commitMutationEffectsOnFiber`方法，然后根据tag类型进入不同的处理方法，比如`HostRoot`/`HostComponent`类型的节点会先调用`recursivelyTraverseMutationEffects`遍历。`subtreeFlags`是`MutationMask`的节点就是需要`mutation`的节点然后深入调用`commitMutationEffectsOnFiber`，继而调用`commitReconciliationEffects`，在`commitReconciliationEffects`方法中会根据`fiber node`的`flags`类型进行合适的DOM操作。这个阶段完成了DOM渲染显示到页面上，`root.current = finishedWork;`current指向最新的fiber树；
 
@@ -4512,12 +4513,12 @@ function insertOrAppendPlacementNodeIntoContainer(
 }
 ```
 
-![react](./assets/commitMutationEffects1.png)
-![react](./assets/commitMutationEffects2.png)
-![react](./assets/commitMutationEffects3.png)
-![react](./assets/commitMutationEffects4.png)
-![react](./assets/commitMutationEffects5.png)
-![react](./assets/commitMutationEffects6.png)
+![react](./assets/mount/commitMutationEffects1.png)
+![react](./assets/mount/commitMutationEffects2.png)
+![react](./assets/mount/commitMutationEffects3.png)
+![react](./assets/mount/commitMutationEffects4.png)
+![react](./assets/mount/commitMutationEffects5.png)
+![react](./assets/mount/commitMutationEffects6.png)
 
 3. 后序`commitLayoutEffects`同样也是进入`commitLayoutEffectOnFiber`方法，先判断tag类型进入不同的处理方法，如果是`HostRoot`进行遍历，调用`commitLayoutEffectOnFiber`完成所有剩余任务；
 
@@ -4764,8 +4765,8 @@ function recursivelyTraverseLayoutEffects(
 }
 ```
 
-![react](./assets/commitLayoutEffects1.png)
-![react](./assets/commitLayoutEffects2.png)
+![react](./assets/mount/commitLayoutEffects1.png)
+![react](./assets/mount/commitLayoutEffects2.png)
 
 1. `commitBeforeMutationEffects`
 
@@ -4788,8 +4789,8 @@ function recursivelyTraverseLayoutEffects(
 5. `render`过程（`renderRootSync`/`renderRootConcurrent`）主要是深度遍历节点调用`beginWork`生成`fiber node`并且标识合适的`flags`，当到达底部节点时会去调用`completeUnitOfWork`生成`DOM`，然后检查是否存在`sibling`，存在就继续调用`beginWork`/`completeUnitOfWork`，不存在就回到上层节点继续调用`completeUnitOfWork`，重复此过程，直到完成`fiber`树构建，此时`DOM`也已构建并标记了合适的`flags`；
 6. `commit`过程（`commitRoot`）主要有三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，`commitMutationEffects`是`mutation`过程也就是将`fiber`树反映到`DOM`渲染的过程，另外两个方法分别是前置和后置的处理工作；
 
-![react](./assets/mount.png)
-![react](./assets/mount_fiber.png)
+![react](./assets/mount/mount.png)
+![react](./assets/mount/mount_fiber.png)
 
 ## 参考资料
 

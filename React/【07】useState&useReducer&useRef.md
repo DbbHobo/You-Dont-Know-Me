@@ -165,8 +165,8 @@ function mountWorkInProgressHook(): Hook {
 }
 ```
 
-![react](./assets/useState1.png)
-![react](./assets/useState2.png)
+![react](./assets/useState/useState1.png)
+![react](./assets/useState/useState2.png)
 
 ### `dispatchSetState`
 
@@ -370,8 +370,8 @@ function beginWork(
 }
 ```
 
-![react](./assets/dispatchSetState2.png)
-![react](./assets/dispatchSetState3.png)
+![react](./assets/useState/dispatchSetState2.png)
+![react](./assets/useState/dispatchSetState3.png)
 
 ### `updateState` => `updateReducer`
 
@@ -635,10 +635,10 @@ function updateWorkInProgressHook(): Hook {
 }
 ```
 
-![react](./assets/useState3.png)
-![react](./assets/useState4.png)
-![react](./assets/useState5.png)
-![react](./assets/useState6.png)
+![react](./assets/useState/useState3.png)
+![react](./assets/useState/useState4.png)
+![react](./assets/useState/useState5.png)
+![react](./assets/useState/useState6.png)
 
 ```ts
 // 第一个setState因为fiber.lanes为0所以提前计算eagerState为101，然后将rerender任务入队，第二个setState因为fiber.lanes此时已经为1，所以直接将rerender任务入队，但是又由于两次rerender任务的优先级完全相同`existingCallbackPriority === newCallbackPriority`，所以第二次任务被直接忽略，同理第三次setState也一样。最终仅有一个update任务添加在hook.queue.pending里，并且其值是提前算好的eagerState。
@@ -655,8 +655,8 @@ function handleClick() {
 }
 ```
 
-![react](./assets/useState7.png)
-![react](./assets/useState8.png)
+![react](./assets/useState/useState7.png)
+![react](./assets/useState/useState8.png)
 
 ---
 
@@ -820,8 +820,8 @@ function mountReducer<S, I, A>(
 }
 ```
 
-![react](./assets/useReducer1.png)
-![react](./assets/useReducer2.png)
+![react](./assets/useState/useReducer1.png)
+![react](./assets/useState/useReducer2.png)
 
 ### `dispatchReducerAction`
 
@@ -875,8 +875,8 @@ function dispatchReducerAction<S, A>(
 }
 ```
 
-![react](./assets/dispatchReducerAction1.png)
-![react](./assets/dispatchReducerAction2.png)
+![react](./assets/useState/dispatchReducerAction1.png)
+![react](./assets/useState/dispatchReducerAction2.png)
 
 ### `updateReducer`
 
@@ -1048,7 +1048,7 @@ function updateReducer<S, I, A>(
 }
 ```
 
-![react](./assets/useReducer3.png)
+![react](./assets/useState/useReducer3.png)
 ![react](./assets/useReducer4.png)
 
 处理完当前`hook`的更新之后，最后会回到组件的`updateFuctionComponent`方法，此时`fiber`上的`memoizedState`也就是`hook`状态已经更新到最新状态并且返回了`nextChildren`（函数组件返回的JSX对应的`React-Element`），继而调用`reconcileChildren`继续处理子节点。可以看出来，`hook`是处理函数组件特殊的一环，为函数组件提供了更丰富的功能。
@@ -1355,7 +1355,7 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
 5. `useState`和`useReducer`在更新时都使用的`updateReducer`方法，区别在于`reducer`函数前者用的`React`提供的默认函数`basicStateReducer`后者由用户定义；
 6. `useRef`如果用在获取`DOM`元素上那在`commit`第三阶段`commitLayoutEffectOnFiber`方法(`commitLayoutEffects`)中会调用一个叫`safelyAttachRef`的方法里面会获取对应DOM元素而后给对应节点的`ref`这个`hook`赋值。在`commit`第二阶段`commitMutationEffectsOnFiber`方法(`commitMutationEffects`)会调用`safelyDetachRef`去`detach`。
 
-![react](./assets/useState.png)
+![react](./assets/useState/useState.png)
 
 ## 参考资料
 

@@ -105,8 +105,8 @@ function mountMemo<T>(
 }
 ```
 
-![react](./assets/useMemo1.png)
-![react](./assets/useMemo2.png)
+![react](./assets/useMemo/useMemo1.png)
+![react](./assets/useMemo/useMemo2.png)
 
 ### `updateMemo`
 
@@ -156,7 +156,7 @@ function areHookInputsEqual(
 }
 ```
 
-![react](./assets/useMemo3.png)
+![react](./assets/useMemo/useMemo3.png)
 
 ---
 
@@ -236,7 +236,7 @@ function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 }
 ```
 
-![react](./assets/useCallback1.png)
+![react](./assets/useMemo/useCallback1.png)
 
 ### `updateCallback`
 
@@ -259,7 +259,7 @@ function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 }
 ```
 
-![react](./assets/useCallback2.png)
+![react](./assets/useMemo/useCallback2.png)
 
 ## React.memo()
 
@@ -496,7 +496,7 @@ function updateSimpleMemoComponent(
 2. `useMemo`和`useCallback`方法都会都会比较依赖值是否变化，如果有变化`useMemo`会重新执行函数然后返回函数执行结果而`useCallback`是直接返回缓存的函数本身；
 3. `useMemo`和`useCallback`的使用场景通常可以配合`React.memo`，一旦我们用`useCallback`缓存了函数并传入子组件，只要依赖值没有变化，那就不会引起子组件的`rerender`；
 
-![react](./assets/useMemo.png)
+![react](./assets/useMemo/useMemo.png)
 
 ## 参考资料
 

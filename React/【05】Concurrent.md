@@ -1246,7 +1246,7 @@ function shouldYieldToHost(): boolean {
 
 ## 总结
 
-![react](./assets/Scheduler.png)
+![react](./assets/Scheduler/Scheduler.png)
 
 1. 当`fiber`节点上有事件触发状态改变等，就会构造对应的`update`任务，`update`任务都会有一个`lane`字段表示优先级；
 2. 任务调度阶段，调度`update`任务的时候，会根据`lane`进行优先级判断，是否同步，最后如果是异步任务取最高优先级的`lane`映射到`Scheduler`优先级继续进行`task`的调度；
@@ -1347,21 +1347,21 @@ function shouldYieldToHost(): boolean {
 
 用一个调试用例再来完整的回顾一下整个流程
 
-![react](./assets/Concurrent1.png)
-![react](./assets/Concurrent2.png)
-![react](./assets/Concurrent3.png)
-![react](./assets/Concurrent4.png)
-![react](./assets/Concurrent5.png)
-![react](./assets/Concurrent6.png)
-![react](./assets/Concurrent7.png)
-![react](./assets/Concurrent8.png)
-![react](./assets/Concurrent9.png)
-![react](./assets/Concurrent10.png)
-![react](./assets/Concurrent11.png)
-![react](./assets/Concurrent12.png)
-![react](./assets/Concurrent13.png)
-![react](./assets/Concurrent14.png)
-![react](./assets/Concurrent15.png)
+![react](./assets/Scheduler/Concurrent1.png)
+![react](./assets/Scheduler/Concurrent2.png)
+![react](./assets/Scheduler/Concurrent3.png)
+![react](./assets/Scheduler/Concurrent4.png)
+![react](./assets/Scheduler/Concurrent5.png)
+![react](./assets/Scheduler/Concurrent6.png)
+![react](./assets/Scheduler/Concurrent7.png)
+![react](./assets/Scheduler/Concurrent8.png)
+![react](./assets/Scheduler/Concurrent9.png)
+![react](./assets/Scheduler/Concurrent10.png)
+![react](./assets/Scheduler/Concurrent11.png)
+![react](./assets/Scheduler/Concurrent12.png)
+![react](./assets/Scheduler/Concurrent13.png)
+![react](./assets/Scheduler/Concurrent14.png)
+![react](./assets/Scheduler/Concurrent15.png)
 
 ## 参考资料
 
