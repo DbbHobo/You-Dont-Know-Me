@@ -459,4 +459,4 @@ export function flushPostFlushCbs(seen?: CountMap) {
 
 ## 总结
 
-![nextTick](./assets/Vue3任务执行顺序.png)
+![nextTick](./assets/nexttick.png)

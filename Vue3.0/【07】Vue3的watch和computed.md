@@ -127,10 +127,10 @@ export class ComputedRefImpl<T> {
 }
 ```
 
-![computed](./assets/computed1.png)
-![computed](./assets/computed2.png)
-![computed](./assets/computed3.png)
-![computed](./assets/computed4.png)
+![computed](./assets/watch&computed/computed1.png)
+![computed](./assets/watch&computed/computed2.png)
+![computed](./assets/watch&computed/computed3.png)
+![computed](./assets/watch&computed/computed4.png)
 
 可以看到调用`computed`方法通常传入一个`getter`函数，然后生成一个`ComputedRefImpl`实例，并且创建一个`computed effect`副作用然后`_dirty`设置为true且非SSR时才执行`effect.run()`获取最新值。这个`_dirty`变量是`computed`实现缓存的一个关键内容，默认是true因此`computed`默认第一遍会执行（比如`template`模板中使用了`computed`值会计算一遍），如果`_dirty`为false就不会进行重新计算也就是所谓的缓存。那么什么时候`_dirty`变量会进行改变呢？流程是这样的：
 
@@ -673,9 +673,9 @@ function doWatch(
 }
 ```
 
-![watch](./assets/watch1.png)
-![watch](./assets/watch2.png)
-![watch](./assets/watch3.png)
+![watch](./assets/watch&computed/watch1.png)
+![watch](./assets/watch&computed/watch2.png)
+![watch](./assets/watch&computed/watch3.png)
 
 <!-- 【TODO：3.4.27版本对这块有更新】 -->
 `watch`和之前版本类似，仍旧是构造`job`并根据入参`flush`到底是加入前置任务队列还是后置，`job`根据是否有回调函数cb进行不同处理。还有构造对应`watch effect`。
@@ -946,4 +946,4 @@ function doWatch(
 1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是相当于构造一个类`ref`对象直接包装 `triggerRefValue` 这个依赖收集方法。
 2. `computed`用`_dirty`参数（默认true）判断是否需要执行对应`effect`实例的`run`方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。
 
-![watch、computed](./assets/Vue3的watch和computed.png)
+![watch、computed](./assets/watch&computed/watch&computed.png)
