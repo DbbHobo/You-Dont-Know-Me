@@ -132,7 +132,6 @@ Scavenge算法的垃圾回收过程主要就是将存活对象在**From 空间**
 
 ```js
 enum AllocationSpace {
-  // TODO(v8:7464): Actually map this space's memory as read-only.
   RO_SPACE, // 不变的对象空间
   NEW_SPACE, // 新生代用于 GC 复制算法的空间
   OLD_SPACE, // 老生代常驻对象空间
@@ -181,3 +180,5 @@ enum AllocationSpace {
 [Garbage collection](https://javascript.info/garbage-collection)
 
 [JavaScript Visualized: the JavaScript Engine](https://dev.to/lydiahallie/javascript-visualized-the-javascript-engine-4cdf)
+
+[JavaScript Memory Management and Optimization Techniques for Large-Scale Applications](https://dev.to/shafayeat/javascript-memory-management-and-optimization-techniques-for-large-scale-applications-5e4a?context=digest)

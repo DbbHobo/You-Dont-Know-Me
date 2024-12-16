@@ -8,7 +8,11 @@ HTML 元素通过**元素节点**表示，特性（attribute）通过**特性节
 
 一个DOM元素的原型链是这样的：
 
-`div` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
+`<div></div>` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
+
+一个Canvas元素的原型链是这样的：
+
+`<canvas></canvas>` => `HTMLCanvasElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
 
 HTML 元素类的总体继承关系如下：
 
@@ -16,7 +20,7 @@ HTML 元素类的总体继承关系如下：
 
 因此，元素继承其所有祖先的属性和方法。例如，考虑 `<a>` 元素，在 `DOM` 中由类型为 `HTMLAnchorElement` 的对象表示。元素包括了该类文档中，`Anchor` 特定的属性和方法。但也包括 `HTMLElement`、`Element` 以及 `Node` 定义的内容，最后是 `EventTarget` 定义的内容。
 
-每一层级都定义了元素实用性的一个关键方面。从 `Node` 开始，该元素继承了有关该元素能否被另一个元素包含，以及自身包含其他元素的概念。特别重要的是从 `EventTarget` 继承的：接收和处理事件（如鼠标点击、播放和暂停事件等）的能力。
+每一层级都定义了元素实用性的一个关键方面。从 `Node` 开始，该元素继承了有关该元素能否被另一个元素包含，以及自身包含其他元素的概念。特别重要的是从 `EventTarget` 继承的接收和处理事件（如鼠标点击、播放和暂停事件等）的能力。
 
 ## HTMLElement
 
@@ -100,7 +104,7 @@ HTML 元素类的总体继承关系如下：
 
 `Element` 及其子项、`document` 和 `window` 是最常见的事件目标，但其他对象也可以是事件目标。比如 `XMLHttpRequest`、`AudioNode` 和 `AudioContext` 等等。
 
-- `EventTarget.addEventListener()`
+- `addEventListener()`
 
 在 `EventTarget` 上注册特定事件类型的事件处理程序。
 
@@ -111,11 +115,11 @@ HTML 元素类的总体继承关系如下：
 3. `paste`
 4. `fullscreenchange`
 
-- `EventTarget.removeEventListener()`
+- `removeEventListener()`
 
 `EventTarget` 中删除事件侦听器。
 
-- `EventTarget.dispatchEvent()`
+- `dispatchEvent()`
 
 将事件分派到此 `EventTarget`。
 
@@ -402,11 +406,16 @@ div1.removeChild(child[0]);
 - tabindex
 - title
 - translate
-- 事件处理器：onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
+
+事件处理器：
+
+onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
 
 ## 总结
 
-`div` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
+`<div></div>` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
+
+`<canvas></canvas>` => `HTMLCanvasElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
 
 `Document` => `Node` => `EventTarget` => `Object`
 
