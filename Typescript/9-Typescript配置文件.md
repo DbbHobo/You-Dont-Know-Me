@@ -1,11 +1,13 @@
 # Typescript配置文件
 
 ## tsconfig.json作用
+
 - 用于标识 `TypeScript` 项目的根路径；
 - 用于配置 `TypeScript` 编译器；
 - 用于指定编译的文件。
 
 Vue3中的tsconfig.json文件如下：
+
 ```json
 {
   "compilerOptions": {
@@ -44,14 +46,16 @@ Vue3中的tsconfig.json文件如下：
 }
 ```
 
-##  tsconfig.json配置
-- `compilerOptions` 编译配置项，如何对具体的ts文件进行编译
-- `files` 是一个数组列表，里面包含指定文件的相对或绝对路径，用来指定待编译文件，编译器在编译的时候只会编译包含在files中列出的文件。
-- `include` & `exclude` 指定编译某些文件，或者指定排除某些文件。
+## tsconfig.json配置
+
+- `compilerOptions`：编译配置项，如何对具体的ts文件进行编译
+- `files`：是一个数组列表，里面包含指定文件的相对或绝对路径，用来指定待编译文件，编译器在编译的时候只会编译包含在files中列出的文件。
+- `include` & `exclude`：指定编译某些文件，或者指定排除某些文件。
 - `compileOnSave`：true 让IDE在保存文件的时候根据tsconfig.json重新生成文件。
-- `extends` 可以通过指定一个其他的tsconfig.json文件路径，来继承这个配置文件里的配置。
+- `extends`：可以通过指定一个其他的tsconfig.json文件路径，来继承这个配置文件里的配置。
 
 `compilerOptions` 支持很多选项，常见的有 `baseUrl`、 `target`、`moduleResolution` 和 `lib` 等。
+
 ```json
 {
   "compilerOptions": {

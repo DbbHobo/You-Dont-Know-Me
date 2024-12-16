@@ -11,6 +11,7 @@ interface rectangle extends shape {
   witdh: number,
   height: number
 }
+
 // 方案2
 type Shape = {
   area: number
