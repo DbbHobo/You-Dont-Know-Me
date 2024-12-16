@@ -10,6 +10,28 @@
 
 ## Map的静态属性、方法
 
+### Map.groupBy(items, callbackFn)
+
+Map.groupBy() 静态方法使用提供的回调函数返回的值对给定可迭代对象中的元素进行分组。最终返回的 Map 使用测试函数返回的唯一值作为键，可用于获取每个组中的元素组成的数组。
+
+```js
+const inventory = [
+  { name: 'asparagus', type: 'vegetables', quantity: 9 },
+  { name: 'bananas', type: 'fruit', quantity: 5 },
+  { name: 'goat', type: 'meat', quantity: 23 },
+  { name: 'cherries', type: 'fruit', quantity: 12 },
+  { name: 'fish', type: 'meat', quantity: 22 },
+];
+
+const restock = { restock: true };
+const sufficient = { restock: false };
+const result = Map.groupBy(inventory, ({ quantity }) =>
+  quantity < 6 ? restock : sufficient,
+);
+console.log(result.get(restock));
+// [{ name: "bananas", type: "fruit", quantity: 5 }]
+```
+
 ---
 
 ## Map的实例属性、方法
@@ -175,7 +197,7 @@ console.log(iterator1.next().value);
 // Expected output: Array [1, "bar"]
 ```
 
-### Map.prototype.forEach()
+### Map.prototype.forEach((element,key,map)=>{})
 
 - The forEach() method of Map instances executes a provided function once per each key/value pair in this map, in insertion order.
 

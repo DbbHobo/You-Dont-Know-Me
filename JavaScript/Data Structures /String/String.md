@@ -65,7 +65,7 @@ String.raw({
 
 ## String的实例方法
 
-### String.prototype.concat()
+### String.prototype.concat(str1, str2, … , strN)
 
 - concatenates the string arguments to the calling string and returns a new string.
 
@@ -80,7 +80,7 @@ var greetList = ["Hello", " ", "Venkat", "!"];
 "".concat(...greetList); // "Hello Venkat!"
 ```
 
-### String.prototype.split()
+### String.prototype.split(separator, limit)
 
 - splits a String object into an array of strings by separating the string into substrings, using a specified separator string to determine where to make each split.
 
@@ -97,11 +97,11 @@ console.log(nameList);
 //[ "Harry Trump", "Fred Barney", "Helen Rigby", "Bill Abel", "Chris Hand", "" ]
 ```
 
-### String.prototype.slice()
+### String.prototype.slice(indexStart, indexEnd)
 
 - extracts a section of a string and returns it as a new string, without modifying the original string.
 
-提取某个字符串的一部分，并返回一个新的字符串，且不会改动原字符串。
+提取某个字符串的一部分，并返回一个新的字符串，且**不会改动原字符串**。
 
 ```js
 var str = "The morning is upon us.";
@@ -110,7 +110,7 @@ str.slice(-3, -1); // returns 'us'
 str.slice(0, -1); // returns 'The morning is upon us'
 ```
 
-### String.prototype.substring()
+### String.prototype.substring(indexStart, indexEnd)
 
 - returns the part of the string between the start and end indexes, or to the end of the string.
 
@@ -128,12 +128,12 @@ var anyString = "Mozilla";
 var anyString4 = anyString.substring(anyString.length - 4);
 console.log(anyString4);
 
-substring和substr的不同;
+// substring和substr的不同：
 var text = "Mozilla";
 console.log(text.substring(2, 5)); // => "zil"
 console.log(text.substr(2, 3)); // => "zil"
 
-substring和slice的不同;
+// substring和slice的不同：
 var text = "Mozilla";
 console.log(text.substring(5, 2)); // => "zil"
 console.log(text.slice(5, 2)); // => ""
@@ -153,7 +153,7 @@ var orig = "foo    ";
 console.log(orig.trim()); // 'foo'
 ```
 
-### String.prototype.padStart() /  String.prototype.padEnd()
+### String.prototype.padStart(targetLength, padString) /  String.prototype.padEnd(targetLength, padString)
 
 - 用另一个字符串填充当前字符串(如果需要的话，会重复多次)，以便产生的字符串达到给定的长度。从当前字符串的左侧(右侧)开始填充。
 
@@ -164,7 +164,7 @@ console.log(orig.trim()); // 'foo'
 "abc".padEnd(10, "foo"); // "abcfoofoof"
 ```
 
-### String.prototype.repeat()
+### String.prototype.repeat(count)
 
 - The repeat() method constructs and returns a new string which contains the specified number of copies of the string on which it was called, concatenated together.
 
@@ -177,7 +177,7 @@ console.log(`I feel ${mood.repeat(3)}`);
 // Expected output: "I feel Happy! Happy! Happy! "
 ```
 
-### String.prototype.replace() / String.prototype.replaceAll()
+### String.prototype.replace(pattern, replacement) / String.prototype.replaceAll(pattern, replacement)
 
 - returns a new string with some or all matches of a pattern replaced by a replacement. The pattern can be a string or a RegExp, and the replacement can be a string or a function to be called for each match. If pattern is a string, only the first occurrence will be replaced.
 
@@ -189,7 +189,7 @@ var newstr = str.replace(/xmas/i, "Christmas");
 console.log(newstr); // Twas the night before Christmas...
 ```
 
-### String.prototype.indexOf() / String.prototype.lastIndexOf()
+### String.prototype.indexOf(searchString, position) / String.prototype.lastIndexOf()
 
 - returns the index within the calling String object of the first occurrence of the specified value, starting the search at fromIndex. Returns -1 if the value is not found.
 
@@ -208,7 +208,7 @@ while (position !== -1) {
 console.log(count); // displays 4
 ```
 
-### String.prototype.search()
+### String.prototype.search(regexp)
 
 - executes a search for a match between a regular expression and this String object.
 
@@ -222,7 +222,7 @@ console.log(str.search(re)); // returns 4, which is the index of the first capit
 console.log(str.search(re2)); // returns -1 cannot find '.' dot punctuation
 ```
 
-### String.prototype.match() / String.prototype.matchAll()
+### String.prototype.match(regexp) / String.prototype.matchAll(regexp)
 
 - retrieves the result of matching a string against a regular expression.
 
@@ -248,7 +248,7 @@ console.log(array[1]);
 // Expected output: Array ["test2", "e", "st2", "2"]
 ```
 
-### String.prototype.includes()
+### String.prototype.includes(searchString, position)
 
 - The includes() method performs a case-sensitive search to determine whether one string may be found within another string, returning true or false as appropriate.
 
@@ -294,7 +294,7 @@ console.log(`The character at index ${index} is ${sentence.charAt(index)}`);
 'XYZ'.codePointAt(42); // undefined
 ```
 
-### String.prototype.startsWith() / String.prototype.endsWith()
+### String.prototype.startsWith(searchString, position) / String.prototype.endsWith(searchString, endPosition)
 
 `startsWith()` 方法用来判断当前字符串是否以另外一个给定的子字符串开头，并根据判断结果返回 true 或 false。
 
@@ -324,7 +324,7 @@ console.log(str2.endsWith('question'));
 // Expected output: false
 ```
 
-### String.prototype.at()
+### String.prototype.at(index)
 
 `at()` 方法接受一个整数值，并返回一个新的 String，该字符串由位于指定偏移量处的单个 UTF-16 码元组成。该方法允许正整数和负整数。负整数从字符串中的最后一个字符开始倒数。
 
@@ -346,12 +346,12 @@ console.log(`Using an index of ${index} the character returned is ${sentence.at(
 
 ### 查找特定字符串序列位置的方法
 
-- search
-- indexOf
+- `String.prototype.search()`
+- `String.prototype.indexOf()`
 
 ### 字符串转化为数组的方法
   
-- split
+- `String.prototype.split()`
 
 ### slice和substring区别
   
@@ -362,10 +362,10 @@ console.log(`Using an index of ${index} the character returned is ${sentence.at(
 
 ### 可结合正则使用的方法
   
-- replace
-- match
-- search
-- spilt
+- `String.prototype.replace()`
+- `String.prototype.match()`
+- `String.prototype.search()`
+- `String.prototype.spilt()`
 
 ## 参考资料
 

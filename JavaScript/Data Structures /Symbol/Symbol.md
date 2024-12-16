@@ -6,7 +6,7 @@ ES6 引入了一种新的原始数据类型`Symbol`，表示独一无二的值�
 
 `Symbol`函数可以接受一个字符串作为参数，表示对 `Symbol` 实例的描述，主要是为了在控制台显示，或者转为字符串时，比较容易区分。`Symbol`函数的参数只是表示对当前 `Symbol` 值的描述，因此相同参数的`Symbol`函数的返回值是不相等的。
 
-`Symbol`函数前不能使用new命令，否则会报错。这是因为生成的 `Symbol` 是一个原始类型的值，不是对象。也就是说，由于 `Symbol` 值不是对象，所以不能添加属性。基本上，它是一种类似于字符串的数据类型。
+`Symbol`函数前不能使用new命令，否则会报错。这是因为生成的 `Symbol` 是一个原始类型的值，不是对象。也就是说，由于 `Symbol` 值不是对象，所以不能添加属性。基本上，它是一种类似于字符串的数据类型。它可以作为 class 定义中 extends 子句的值使用，但对它进行 super 调用将会导致异常。
 
 ```js
 let s = Symbol();
@@ -14,7 +14,7 @@ typeof s
 // "symbol"
 ```
 
-## Symbol 静态的属性、方法
+## Symbol 静态的方法
 
 ### Symbol.for()
 
@@ -68,63 +68,120 @@ console.log(Symbol.keyFor(Symbol.iterator));
 // Expected output: undefined
 ```
 
-## ES6内置的 Symbol
+## Symbol 实例的属性、方法
 
-除了定义自己使用的 Symbol 值以外，ES6 还提供了多个内置的 Symbol 值，指向语言内部使用的方法。
+### Symbol.prototype.description
 
-- Symbol.hasInstance
+description 是一个只读属性，它会返回 Symbol 对象的可选描述的字符串。
+
+```js
+console.log(Symbol('desc').description);
+// Expected output: "desc"
+
+console.log(Symbol.iterator.description);
+// Expected output: "Symbol.iterator"
+
+console.log(Symbol.for('foo').description);
+// Expected output: "foo"
+
+console.log(`${Symbol('foo').description}bar`);
+// Expected output: "foobar"
+```
+
+### Symbol.prototype[Symbol.toPrimitive]
+
+`[Symbol.toPrimitive]()` 方法可将 Symbol 对象转换为 symbol 值。
+
+```js
+const sym = Symbol("example");
+sym === sym[Symbol.toPrimitive](); // true
+```
+
+### Symbol.prototype.toString()
+
+toString() 方法返回当前 symbol 对象的字符串表示。
+
+```js
+Symbol("desc").toString(); // "Symbol(desc)"
+
+// 内置通用（well-known）symbol
+Symbol.iterator.toString(); // "Symbol(Symbol.iterator)
+
+// global symbols
+Symbol.for("foo").toString(); // "Symbol(foo)"
+```
+
+### Symbol.prototype.valueOf()
+
+Symbol 值的 valueOf() 方法会返回该符号（symbol）的值。
+
+```js
+const symbol1 = Symbol('foo');
+
+console.log(typeof Object(symbol1));
+// Expected output: "object"
+
+console.log(typeof Object(symbol1).valueOf());
+// Expected output: "symbol"
+```
+
+## Symbol 静态的属性也是ES6内置的 Symbol
+
+除了定义自己使用的 `Symbol` 值以外，ES6 还提供了多个内置的 `Symbol` 值，指向语言内部使用的方法。
+
+- `Symbol.hasInstance`
 
 对象的`Symbol.hasInstance`属性，指向一个内部方法。当其他对象使用`instanceof`运算符，判断是否为该对象的实例时，会调用这个方法。比如，`foo instanceof Foo`在语言内部，实际调用的是`Foo[Symbol.hasInstance](foo)`。
 
-- Symbol.isConcatSpreadable
+- `Symbol.isConcatSpreadable`
 
 对象的`Symbol.isConcatSpreadable`属性等于一个布尔值，表示该对象用于`Array.prototype.concat()`时，是否可以展开。
 
-- Symbol.iterator
+- `Symbol.iterator`
 
 对象的`Symbol.iterator`属性，指向该对象的默认遍历器方法。
 
-- Symbol.match
+- `Symbol.match`
 
 对象的`Symbol.match`属性，指向一个函数。当执行`str.match(myObject)`时，如果该属性存在，会调用它，返回该方法的返回值。
 
-- Symbol.matchAll
+- `Symbol.matchAll`
 
 对象的`Symbol.matchAll`属性，指向一个方法，当该对象被`String.prototype.matchAll`方法调用时，会返回该方法的返回值。
 
-- Symbol.replace
+- `Symbol.replace`
 
 对象的`Symbol.replace`属性，指向一个方法，当该对象被`String.prototype.replace`方法调用时，会返回该方法的返回值。
 
-- Symbol.search
+- `Symbol.search`
 
 对象的`Symbol.search`属性，指向一个方法，当该对象被`String.prototype.search`方法调用时，会返回该方法的返回值。
 
-- Symbol.species
+- `Symbol.species`
 
 对象的`Symbol.species`属性，指向一个构造函数。创建衍生对象时，会使用该属性。
 
-- Symbol.split
+- `Symbol.split`
 
 对象的`Symbol.split`属性，指向一个方法，当该对象被`String.prototype.split`方法调用时，会返回该方法的返回值。
 
-- Symbol.toPrimitive
+- `Symbol.toPrimitive`
 
 对象的`Symbol.toPrimitive`属性，指向一个方法。该对象被转为原始类型的值时，会调用这个方法，返回该对象对应的原始类型值。
 
 `Symbol.toPrimitive`被调用时，会接受一个字符串参数，表示当前运算的模式，一共有三种模式。
 
-  - Number：该场合需要转成数值
-  - String：该场合需要转成字符串
-  - Default：该场合可以转成数值，也可以转成字符串
+- `Number`：该场合需要转成数值
+- `String`：该场合需要转成字符串
+- `Default`：该场合可以转成数值，也可以转成字符串
 
-- Symbol.toStringTag
+- `Symbol.toStringTag`
 
 对象的`Symbol.toStringTag`属性，指向一个方法。在该对象上面调用`Object.prototype.toString`方法时，如果这个属性存在，它的返回值会出现在`toString`方法返回的字符串之中，表示对象的类型。也就是说，这个属性可以用来定制`[object Object]`或`[object Array]`中object后面的那个字符串。
 
 ![symbol](../../assets/symbol.png)
 
-- Symbol.unscopables
+- `Symbol.unscopables`
 
 对象的`Symbol.unscopables`属性，指向一个对象。该对象指定了使用`with`关键字时，哪些属性会被`with`环境排除。
 
@@ -142,7 +199,7 @@ console.log(Symbol.keyFor(Symbol.iterator));
 
 ### 应用一：防止XSS
 
-在React的ReactElement对象中，有一个typeof属性，它是一个Symbol类型的变量：
+在`React`的`ReactElement`对象中，有一个`typeof`属性，它是一个`Symbol`类型的变量：
 
 ```js
 var REACT_ELEMENT_TYPE =
@@ -150,7 +207,7 @@ var REACT_ELEMENT_TYPE =
   0xeac7;
 ```
 
-ReactElement.isValidElement函数用来判断一个React组件是否是有效的，下面是它的具体实现。
+`ReactElement.isValidElement`函数用来判断一个`React`组件是否是有效的，下面是它的具体实现。可见React渲染时会把没有typeof标识，以及规则校验不通过的组件过滤掉。
 
 ```js
 ReactElement.isValidElement = function (object) {
@@ -158,7 +215,6 @@ ReactElement.isValidElement = function (object) {
 };
 ```
 
-可见React渲染时会把没有typeof标识，以及规则校验不通过的组件过滤掉。
 如果你的服务器有一个漏洞，允许用户存储任意JSON对象， 而客户端代码需要一个字符串，这可能会成为一个问题：
 
 ```js
@@ -203,18 +259,18 @@ class myClass {
 在某些情况下，我们可能要为对象添加一个属性，此时就有可能造成属性覆盖，用`Symbol`作为对象属性可以保证永远不会出现同名属性。
 
 ```js
-  Function.prototype.myCall = function (context) {
-    if (typeof this !== 'function') {
-      return undefined; // 用于防止 Function.prototype.myCall() 直接调用
-    }
-    context = context || window;
-    const fn = Symbol();
-    context[fn] = this;
-    const args = [...arguments].slice(1);
-    const result = context[fn](...args);
-    delete context[fn];
-    return result;
+Function.prototype.myCall = function (context) {
+  if (typeof this !== 'function') {
+    return undefined; // 用于防止 Function.prototype.myCall() 直接调用
   }
+  context = context || window;
+  const fn = Symbol();
+  context[fn] = this;
+  const args = [...arguments].slice(1);
+  const result = context[fn](...args);
+  delete context[fn];
+  return result;
+}
 ```
 
 我们需要在某个对象上临时调用一个方法，又不能造成属性污染，`Symbol`是一个很好的选择。

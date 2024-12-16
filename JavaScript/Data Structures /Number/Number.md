@@ -183,6 +183,7 @@ JavaScript 中最小的安全整数 (-(2^53 - 1)).
 ### Number.isSafeInteger()
 
 确定传递的值是否为安全整数 ( -(2^53 - 1) 至 2^53 - 1) 之间。
+
 ### Number.parseFloat()
 
 和全局对象 parseFloat() 一样。

@@ -10,7 +10,7 @@ JavaScript 对象转换成基本类型值是一个称为“类型转换”或“
 
 ## 基本类型值转布尔值
 
-在 `JavaScript` 中，只有 6 种值可以被转换成 `false`，其他都会被转换成 `true`。
+在 `JavaScript` 中，只有以下几种值可以被转换成 `false`，其他都会被转换成 `true`。
 
 ```js
 console.log(Boolean()) // false
@@ -81,7 +81,7 @@ console.log(String(1)) // 1
 
 在对象转换成基本类型值的过程中，JavaScript 遵循一组规则，通常会按照以下顺序进行尝试：
 
-1. `ToPrimitive` 抽象操作：JavaScript 首先尝试使用 `ToPrimitive` 抽象操作将对象转换为基本类型值。这个抽象操作会尝试调用对象的 `valueOf()` 和 `toString()` 方法来获取基本类型值。如果对象具有 `valueOf()` 方法，则首先调用它，然后再调用 `toString()` 方法。如果这两个方法都不存在或者返回的不是基本类型值，那么会引发类型错误。
+1. `ToPrimitive` 操作：JavaScript 首先尝试使用 `ToPrimitive` 操作将对象转换为基本类型值。这个操作会尝试调用对象的 `valueOf()` 和 `toString()` 方法来获取基本类型值。如果对象具有 `valueOf()` 方法，则首先调用它，然后再调用 `toString()` 方法。如果这两个方法都不存在或者返回的不是基本类型值，那么会引发类型错误。
 
 2. 隐式强制转换：如果上述步骤未能成功转换对象为基本类型值，JavaScript 将尝试进行隐式强制转换。这通常发生在算术运算、比较运算和字符串拼接等情况下。在这种情况下，JavaScript 会尝试自动将对象转换为基本类型值，具体转换规则取决于操作符和操作数的类型。
 
@@ -107,6 +107,12 @@ console.log(String(1)) // 1
 
 另一个转换对象的函数是 `valueOf`，表示对象的原始值。默认的 `valueOf` 方法返回这个对象本身，数组、函数、正则简单的继承了这个默认方法，也会返回**对象本身**。日期是一个例外，它会返回它的一个内容表示: 1970 年 1 月 1 日以来的毫秒数。
 
+当对象需要参与数学运算时（如加减乘除），会优先调用 `valueOf`。
+
+如果 `valueOf` 返回的是原始值，则该值会被使用；否则，JavaScript 会尝试调用 `toString`。
+
+- `Object.prototype.valueOf`：将 this 值转换成对象。
+
 ```js
 let date = new Date(2023, 4, 22);
 console.log(date.valueOf()) // 1684684800000
@@ -114,13 +120,13 @@ console.log(date.valueOf()) // 1684684800000
 
 ### toString
 
-所有的对象除了 `null` 和 `undefined` 之外的任何值对象都具有 `toString` 方法，通常情况下，它和使用 `String` 方法返回的结果一致。`toString` 方法的作用在于返回一个反映这个对象的字符串。
+所有的对象除了 `null` 和 `undefined` 之外的任何对象都具有 `toString` 方法，通常情况下，它和使用 `String` 方法返回的结果一致。`toString` 方法的作用在于返回一个反映这个对象的字符串。
 
-- `Object.prototype.toString`
-- `Array.prototype.toString`
-- `Function.prototype.toString`
-- `Date.prototype.toString`
-- `RegExp.prototype.toString`
+- `Object.prototype.toString`：返回一个表示该对象的字符串
+- `Array.prototype.toString`：返回一个字符串，表示指定的数组及其元素。
+- `Function.prototype.toString`：返回一个表示该函数源码的字符串。
+- `Date.prototype.toString`：返回一个字符串，以本地的时区表示该 Date 对象。
+- `RegExp.prototype.toString`：返回一个表示该正则表达式的字符串。
 
 ```js
 console.log(({}).toString()) // [object Object]
@@ -169,6 +175,7 @@ true == ['2']  // false
 ```js
 undefined == false // false
 null == false // false
+undefined == null // true
 ```
 
 - `String` 和 `Number`
@@ -202,27 +209,27 @@ undefined == false // false
 ```js
 "0" == null; // false
 "0" == undefined; // false
-"0" == false; // true -- 晕！
+"0" == false; // true -- 注意
 "0" == NaN; // false
 "0" == 0; // true
 "0" == ""; // false
 false == null; // false
 false == undefined; // false
 false == NaN; // false
-false == 0; // true -- 晕！
-false == ""; // true -- 晕！
-false == []; // true -- 晕！
+false == 0; // true -- 注意
+false == ""; // true -- 注意
+false == []; // true -- 注意
 false == {}; // false
 "" == null; // false
 "" == undefined; // false
 "" == NaN; // false
-"" == 0; // true -- 晕！
-"" == []; // true -- 晕！
+"" == 0; // true -- 注意
+"" == []; // true -- 注意
 "" == {}; // false
 0 == null; // false
 0 == undefined; // false
 0 == NaN; // false
-0 == []; // true -- 晕！
+0 == []; // true -- 注意
 0 == {}; // false
 [] == ![]; //true
 false == []; //true
@@ -260,3 +267,5 @@ false == []; //true
 ## 参考资料
 
 [JavaScript 深入之头疼的类型转换(上)](https://github.com/mqyqingfeng/Blog/issues/159)
+
+[Re-implementing JavaScript's == in JavaScript](https://evanhahn.com/re-implementing-javascript-double-equals-in-javascript/)

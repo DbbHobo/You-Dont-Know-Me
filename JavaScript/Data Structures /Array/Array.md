@@ -33,11 +33,10 @@ Array(1, 2, 3); // [1, 2, 3]
 
 ### Array.from()
 
-用于将两类对象转为真正的数组：类似数组的对象（array-like object）和可遍历（iterable）的对象（包括 ES6 新增的数据结构 Set 和 Map）。
+用于将两类对象转为真正的数组：类似数组的对象（array-like object）和可遍历（iterable）的对象（包括 ES6 新增的数据结构 `Set` 和 `Map`）。
 
 - creates a new, shallow-copied Array instance from an array-like or iterable object.
-
-create Arrays from:array-like objects (objects with a length property and indexed elements) or iterable objects (objects where you can get its elements, such as Map and Set).
+- create Arrays from:array-like objects (objects with a length property and indexed elements) or iterable objects (objects where you can get its elements, such as Map and Set).
 
 ```js
 console.log(Array.from("foo"));
@@ -51,7 +50,7 @@ console.log(Array.from([1, 2, 3], (x) => x + x));
 
 ## Array的实例方法
 
-### Array.prototype.push()*
+### Array.prototype.push(item1, item2, ...)*
 
 `push()` 方法将指定的元素添加到数组的末尾，并返回新的数组长度。
 
@@ -92,7 +91,7 @@ console.log(plants);
 // Expected output: Array ["broccoli", "cauliflower", "cabbage"]
 ```
 
-### Array.prototype.unshift()*
+### Array.prototype.unshift(item1, item2, ...)*
 
 `unshift()` 方法将指定元素添加到数组的开头，并返回数组的新长度。
 
@@ -126,7 +125,7 @@ console.log(firstElement);
 // Expected output: 1
 ```
 
-### Array.prototype.splice()*
+### Array.prototype.splice(start, deleteCount, item1, item2, …, itemN)*
 
 通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回**被修改的内容**。
 
@@ -169,7 +168,7 @@ console.log('array1:', array1);
 // Expected output: "array1:" Array ["three", "two", "one"]
 ```
 
-### Array.prototype.sort()*
+### Array.prototype.sort(compareFn)*
 
 `sort()` 方法用原地算法对数组的元素进行排序，并返回数组。默认排序顺序是在将元素转换为字符串，然后比较它们的 UTF-16 代码单元值序列时构建的。由于它取决于具体实现，因此无法保证排序的时间和空间复杂性。
 
@@ -189,7 +188,7 @@ console.log(array1);
 // Expected output: Array [1, 100000, 21, 30, 4]
 ```
 
-### Array.prototype.concat()
+### Array.prototype.concat(value1, value2, …, valueN)
 
 合并多个数组，不会改变原数组，最终会返回一个新数组。
 
@@ -203,7 +202,7 @@ console.log(array1.concat(array2));
 // expected output: Array ["a", "b", "c", "d", "e", "f"]
 ```
 
-### Array.prototype.slice()
+### Array.prototype.slice(start, end)
 
 返回一个新的数组对象，这一对象是一个由 begin 和 end 决定的原数组的浅拷贝（包括 begin，不包括 end）。原始数组不会被改变。
 
@@ -222,7 +221,7 @@ console.log(animals.slice(1, 5));
 // expected output: Array ["bison", "camel", "duck", "elephant"]
 ```
 
-### Array.prototype.join()
+### Array.prototype.join(separator)
 
 **数组 => 字符串**
 
@@ -238,7 +237,7 @@ a.join(" + "); // 'Wind + Water + Fire'
 a.join(""); // 'WindWaterFire'
 ```
 
-### Array.prototype.map()
+### Array.prototype.map((element,index,array)=>{})
 
 返回一个新数组，包含了该数组中的每个元素调用一次传入的函数后的返回值。
 
@@ -256,7 +255,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 // numbers is still [1, 2, 3, 4]
 ```
 
-### Array.prototype.every()
+### Array.prototype.every((element,index,array)=>{})
 
 传入一个函数判断数组的每一项真假，全为 true 返回 true，有 false 即返回 false，最终返回一个 Boolean 值。
 
@@ -266,7 +265,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 [12, 5, 8, 130, 44].every((x) => x >= 10); // false
 ```
 
-### Array.prototype.some()
+### Array.prototype.some((element,index,array)=>{})
 
 传入一个函数判断数组的每一项真假，有 true 返回 true，全为 false 即返回 false，最终返回一个 Boolean 值。
 
@@ -277,7 +276,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 [12, 5, 8, 1, 4].some((x) => x > 10); // true
 ```
 
-### Array.prototype.filter()
+### Array.prototype.filter((element,index,array)=>{})
 
 返回一个新数组, 包含了通过传入的函数过滤后的所有元素。
 
@@ -294,7 +293,7 @@ console.log(filterItems(fruits, "ap")); // ['apple', 'grapes']
 console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
 ```
 
-### Array.prototype.forEach()
+### Array.prototype.forEach((element,index,array)=>{})
 
 `forEach()` 方法对数组的每个元素执行一次给定的函数。在`forEach`中用`return`不会返回，函数会继续执行，想要中途返回可以用`some`或者`every`方法替换。
 
@@ -333,7 +332,7 @@ for (let elem of ['a', 'b'].values()) {
 // 'b'
 ```
 
-### Array.prototype.reduce()
+### Array.prototype.reduce((accumulator,element,index,array)=>{})
 
 对数组中的每个元素执行一个由您提供的 `reducer` 函数（从左到右），将其结果汇总为**单个返回值**。
 
@@ -354,7 +353,7 @@ for (let elem of ['a', 'b'].values()) {
 );
 ```
 
-### Array.prototype.reduceRight()
+### Array.prototype.reduceRight((accumulator,element,index,array)=>{})
 
 接受一个函数作为累加器（accumulator）和数组的每个值（从右到左）将其减少为单个值。
 
@@ -371,7 +370,7 @@ console.log(array1);
 // expected output: Array [4, 5, 2, 3, 0, 1]
 ```
 
-### Array.prototype.find() / Array.prototype.findLast()
+### Array.prototype.find((element,index,array)=>{}) / Array.prototype.findLast((element,index,array)=>{})
 
 数组实例的 `find()` 方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
 
@@ -393,7 +392,7 @@ console.log(found);
 // Expected output: 130
 ```
 
-### Array.prototype.findIndex() / Array.prototype.findLastIndex()
+### Array.prototype.findIndex((element,index,array)=>{}) / Array.prototype.findLastIndex((element,index,array)=>{})
 
 数组实例的`findIndex()`方法，**返回第一个符合条件的数组成员的位置**，如果所有成员都不符合条件，则返回-1。
 
@@ -413,7 +412,7 @@ console.log(array1.findLastIndex(isLargeNumber));
 // Index of element with value: 130
 ```
 
-### Array.prototype.includes()
+### Array.prototype.includes(searchElement, fromIndex)
 
 返回一个**布尔值**，表示某个数组是否包含给定的值。
 
@@ -434,7 +433,7 @@ console.log(pets.includes('at'));
 // Expected output: false
 ```
 
-### Array.prototype.indexOf()
+### Array.prototype.indexOf(searchElement, fromIndex)
 
 返回找到的**第一个给定值的索引**，找不到则返回-1，表示某个数组是否包含给定的值。
 
@@ -454,7 +453,7 @@ console.log(beasts.indexOf('giraffe'));
 // Expected output: -1
 ```
 
-### Array.prototype.flat()
+### Array.prototype.flat(depth)
 
 `flat(depth)` 方法会按照一个可指定的深度递归遍历数组，并将所有元素与遍历到的子数组中的元素合并为一个新数组返回。`flat(depth)` 方法会移除数组中的空项。
 
@@ -472,7 +471,7 @@ console.log(arr2.flat(2));
 // Expected output: Array [0, 1, 2, Array [3, 4]]
 ```
 
-### Array.prototype.fill()
+### Array.prototype.fill(value,start,end)
 
 `fill()`方法使用给定值，填充一个数组。
 
@@ -488,31 +487,38 @@ arr[0].name = "Ben";
 
 ### 会改变原数组的方法
 
-- push
-- pop
-- shift
-- unshift
-- splice
-- sort
-- reverse
+- `Array.prototype.push()`
+- `Array.prototype.pop()`
+- `Array.prototype.shift()`
+- `Array.prototype.unshift()`
+- `Array.prototype.splice()`
+- `Array.prototype.sort()`
+- `Array.prototype.reverse()`
 
 ### 数组转化为字符串的方法
 
-- join
+- `Array.prototype.join()`
+- `Array.prototype.toString()`
+- `String()`
 
 ### 类数组对象转化为数组
 
-- Array.prototype.slice.call(arguments)
-- Array.from(arguments)
-- [...arguments]
-- Array.prototype.concat.apply([], arguments)
+- `Array.prototype.slice.call(arguments)`
+- `Array.from(arguments)`
+- `[...arguments]`
+- `Array.prototype.concat.apply([], arguments)`
+
+类数组对象有下面两个特性
+
+1. 具有：指向对象元素的数字索引下标和 `length` 属性
+2. 不具有：比如 `push` 、`shift`、 `forEach` 以及 `indexOf` 等数组对象具有的方法
 
 ### 寻找数组中是否包含某个值
 
-- Array.prototype.indexOf()
-- Array.prototype.find() / Array.prototype.findLast()
-- Array.prototype.findIndex() / Array.prototype.findLastIndex()
-- Array.prototype.includes()
+- `Array.prototype.indexOf()`
+- `Array.prototype.find()` / `Array.prototype.findLast()`
+- `Array.prototype.findIndex()` / `Array.prototype.findLastIndex()`
+- `Array.prototype.includes()`
 
 ### 数组扁平化
 
@@ -521,9 +527,17 @@ let arr = [1, [2, [3, [4]]], 5];
 let str = JSON.stringify(arr);
 ```
 
-- Array.prototype.flat()
-- str.replace(/(\[|\])/g, '').split(',')
-- JSON.parse(`[${str.replace(/\[|\]/g,'')}]`)
+- `Array.prototype.flat()`
+- `str.replace(/(\[|\])/g, '').split(',')`
+- `JSON.parse(`[${str.replace(/\[|\]/g,'')}]`)`
+
+### 数组遍历
+
+- `for`循环
+- `forEach()`
+- `for...of`
+- `Array.prototype.map()`
+- 解构赋值
 
 ## 参考资料
 

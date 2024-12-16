@@ -46,3 +46,5 @@ Error(message, fileName, lineNumber)
 ## 参考资料
 
 [Error](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Error)
+
+[AggregateError in JavaScript](https://www.trevorlasn.com/blog/aggregate-error-in-javascript)

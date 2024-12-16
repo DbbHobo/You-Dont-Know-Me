@@ -141,14 +141,16 @@ var obj = {
 // 1 awesome 2 awesome 3 awesome
 ```
 
+### 箭头函数
+
+箭头函数不使用 this 的四种标准规则，而是根据外层(函数或者全局)作用域来决 定 this。箭头函数的绑定无法被修改。`new` 也不行！
+
 ### 基本的判断流程
 
 1. 函数是否在 `new` 中调用 ？ 如果是的话 `this` 绑定的是新创建的对象。
 2. 函数是否通过 `call`、 `apply`（显式绑定）或者硬绑定`bind`调用 ？ 如果是的话，`this` 绑定的是指定的对象。
 3. 函数是否在某个上下文对象中调用（隐式绑定） ？ 如果是的话，`this` 绑定的是那个上下文对象。
 4. 如果都不是的话，使用默认绑定。如果在严格模式下，就绑定到 `undefined`，否则绑定到全局对象。
-
-箭头函数的绑定无法被修改。`new` 也不行！
 
 ```js
 function foo() {
@@ -169,7 +171,7 @@ bar.call(obj2); // 2, 不是 3 ！因为箭头函数的绑定无法被修改
 
 ## call apply bind
 
-- `Function.prototype.call`
+### `Function.prototype.call`
 
 本质 `Function.prototype.call`。`call()` 提供新的 `this` 值给当前调用的函数/方法。你可以使用 `call` 来实现继承：写一个方法，然后让另外一个新的对象来继承它，而不是在新对象中再写一次这个方法。
 
@@ -187,7 +189,7 @@ invite.call(employee1, "Hello", "How are you?"); // Hello John Rodson, How are y
 invite.call(employee2, "Hello", "How are you?"); // Hello Jimmy Baily, How are you?
 ```
 
-- `Function.prototype.apply`
+### `Function.prototype.apply`
 
 本质 `Function.prototype.apply`。`apply()` 与 `call()` 非常相似，不同之处在于提供参数的方式。`apply()` 使用参数**数组**而不是一组参数列表。
 
@@ -205,7 +207,7 @@ invite.apply(employee1, ["Hello", "How are you?"]); // Hello John Rodson, How ar
 invite.apply(employee2, ["Hello", "How are you?"]); // Hello Jimmy Baily, How are you?
 ```
 
-- `Function.prototype.bind`
+### `Function.prototype.bind`
 
 本质 `Function.prototype.bind`。`bind()` 可以创建一个函数，不论怎么调用，这个函数都有同样的 `this` 值。
 
@@ -224,6 +226,8 @@ var inviteEmployee2 = invite.bind(employee2);
 inviteEmployee1("Hello", "How are you?"); // Hello John Rodson, How are you?
 inviteEmployee2("Hello", "How are you?"); // Hello Jimmy Baily, How are you?
 ```
+
+### 模拟call、apply、bind实现
 
 ```js
 Function.prototype.fakeCall = function (context = window, ...args) {
@@ -294,3 +298,9 @@ bindFn();
 [Function.prototype.apply()](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function/apply)
 
 [Function.prototype.bind()](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function/bind)
+
+[深度解析 call 和 apply 原理、使用场景及实现](https://github.com/yygmind/blog/issues/22)
+
+[深度解析bind原理、使用场景及模拟实现](https://github.com/yygmind/blog/issues/23)
+
+[You Don't Know JS Yet](https://github.com/getify/You-Dont-Know-JS)

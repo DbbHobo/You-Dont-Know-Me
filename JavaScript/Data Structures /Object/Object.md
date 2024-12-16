@@ -8,13 +8,13 @@
 
 值为 1。
 
-### Object.is()
+### Object.is(value1, value2)
 
 `Object.is()` 用来比较两个值是否严格相等，与严格比较运算符（`===`）的行为基本一致。=== 运算符（和 == 运算符）将数值 -0 和 +0 视为相等，但是会将 NaN 视为彼此不相等。
 
 ### 创建Object相关
 
-### Object.create()
+### Object.create(proto, propertiesObject)
 
 - The Object.create() static method creates a new object, using an existing object as the prototype of the newly created object.
 
@@ -55,7 +55,7 @@ console.log(returnedTarget);
 // expected output: Object { a: 1, b: 4, c: 5 }
 ```
 
-### Object.defineProperty() / Object.defineProperties()
+### Object.defineProperty(obj, prop, descriptor) / Object.defineProperties(obj, props)
 
 - `Object.defineProperty(obj, prop, descriptor)`
 - The Object.defineProperty() static method defines a new property directly on an object, or modifies an existing property on an object, and returns the object.
@@ -115,7 +115,7 @@ console.log(object2.property1);
 // Expected output: 42
 ```
 
-### Object.setPrototypeOf() / Object.getPrototypeOf()
+### Object.setPrototypeOf(obj, prototype) / Object.getPrototypeOf(obj)
 
 **__proto__**属性没有写入 ES6 的正文，而是写入了附录，原因是**__proto__**前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的 API，只是由于浏览器广泛支持，才被加入了 ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的 `Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
 
@@ -136,7 +136,7 @@ Object.setPrototypeOf(Bar.prototype, Foo.prototype);
 
 ### 属性相关
 
-### Object.getOwnPropertyNames()
+### Object.getOwnPropertyNames(obj)
 
 - The Object.getOwnPropertyNames() static method returns an array of all properties (including non-enumerable properties except for those which use Symbol) found directly in a given object.
 
@@ -153,7 +153,7 @@ console.log(Object.getOwnPropertyNames(object1));
 // Expected output: Array ["a", "b", "c"]
 ```
 
-### Object.getOwnPropertySymbols()
+### Object.getOwnPropertySymbols(obj)
 
 - The Object.getOwnPropertySymbols() static method returns an array of all symbol properties found directly upon a given object.
 
@@ -173,7 +173,7 @@ console.log(objectSymbols.length);
 // Expected output: 2
 ```
 
-### Object.getOwnPropertyDescriptor() / Object.getOwnPropertyDescriptors()
+### Object.getOwnPropertyDescriptor(obj,prop) / Object.getOwnPropertyDescriptors(obj)
 
 - The Object.getOwnPropertyDescriptor() static method returns an object describing the configuration of a specific property on a given object (that is, one directly present on an object and not in the object's prototype chain). The object returned is mutable but mutating it has no effect on the original property's configuration.
 
@@ -213,7 +213,7 @@ Object.getOwnPropertyDescriptor(arr,'length');
 // Expected output: {value: 0, writable: true, enumerable: false, configurable: false}
 ```
 
-### Object.preventExtensions() / Object.isExtensible()
+### Object.preventExtensions(obj) / Object.isExtensible(obj)
 
 - The Object.preventExtensions() static method prevents new properties from ever being added to an object. It also prevents the object's prototype from being re-assigned.
 
@@ -223,7 +223,7 @@ Object.getOwnPropertyDescriptor(arr,'length');
 
 `Object.isExtensible()`判断一个对象是否是可扩展的（是否可以在它上面添加新的属性）。
 
-### Object.seal() / Object.isSealed()
+### Object.seal(obj) / Object.isSealed(obj)
 
 - Sealing an object prevents extensions and makes existing properties non-configurable.
 
@@ -235,7 +235,7 @@ Object.getOwnPropertyDescriptor(arr,'length');
   
 `Object.isSealed()`判断一个对象是否被密封。密封对象是指那些不可扩展的，且所有自身属性都不可配置且因此不可删除（但不一定是不可写）的对象。
 
-### Object.freeze() / Object.isFrozen()
+### Object.freeze(obj) / Object.isFrozen(obj)
 
 - Freezing an object prevents extensions and makes existing properties non-writable and non-configurable.
 
@@ -250,7 +250,7 @@ Object.getOwnPropertyDescriptor(arr,'length');
 
 ### 属性遍历
 
-### Object.keys()
+### Object.keys(obj)
 
 - The Object.keys() static method returns an array of a given object's own enumerable string-keyed property names.
 
@@ -266,7 +266,7 @@ var obj = { 0: "a", 1: "b", 2: "c" };
 console.log(Object.keys(obj)); // console: ['0', '1', '2']
 ```
 
-### Object.values()
+### Object.values(obj)
 
 - The Object.values() static method returns an array of a given object's own enumerable string-keyed property values.
 
@@ -283,7 +283,7 @@ var an_obj = { 100: "a", 2: "b", 7: "c" };
 console.log(Object.values(an_obj)); // ['b', 'c', 'a']
 ```
 
-### Object.entries()
+### Object.entries(obj)
 
 - The Object.entries() static method returns an array of a given object's own enumerable string-keyed property key-value pairs.
 
@@ -299,7 +299,7 @@ const anObj = { 100: "a", 2: "b", 7: "c" };
 console.log(Object.entries(anObj)); // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
 ```
 
-### Object.fromEntries()
+### Object.fromEntries(obj)
 
 - The Object.fromEntries() static method transforms a list of key-value pairs into an object.
 
@@ -318,7 +318,7 @@ console.log(obj); // { foo: "bar", baz: 42 }
 
 ## Object 的实例方法
 
-### Object.prototype.hasOwnProperty()
+### Object.prototype.hasOwnProperty(prop)
 
 - The hasOwnProperty() method of Object instances returns a boolean indicating whether this object has the specified property as its own property (as opposed to inheriting it).
 
@@ -335,7 +335,7 @@ console.log(object1.hasOwnProperty("toString"));
 // expected output: false
 ```
 
-### Object.prototype.isPrototypeOf()
+### Object.prototype.isPrototypeOf(object)
 
 - The isPrototypeOf() method of Object instances checks if this object exists in another object's prototype chain.
 
@@ -356,7 +356,7 @@ console.log(Bar.prototype.isPrototypeOf(bar));
 
 ```
 
-### Object.prototype.propertyIsEnumerable()
+### Object.prototype.propertyIsEnumerable(prop)
 
 - The propertyIsEnumerable() method of Object instances returns a boolean indicating whether the specified property is this object's enumerable own property.
 

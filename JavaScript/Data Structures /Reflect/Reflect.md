@@ -46,7 +46,7 @@
 
 类似于 `Object.getOwnPropertyDescriptor()`。如果对象中存在该属性，则返回对应的属性描述符，否则返回 undefined。
 
-### Reflect.ownKeys (target)
+### Reflect.ownKeys(target)
 
 返回一个包含所有自身属性（不包含继承属性）的数组。(类似于 `Object.keys()`, 但不会受enumerable 影响)。
 
@@ -54,7 +54,7 @@
 
 类似于 `Object.preventExtensions()`。返回一个Boolean。
 
-### Reflect.isExtensible (target)
+### Reflect.isExtensible(target)
 
 类似于 `Object.isExtensible()`。
 

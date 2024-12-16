@@ -29,6 +29,7 @@ const add = (a,b) => a + b;
 - `compose` 函数可以接收任意的参数，所有的参数都是函数，且执行方向为自右向左。初始函数一定要放到参数的最右侧。
 
 ```js
+// 几种进行函数合成的方式如下：
 const compose = function (f, g) {
   return function (x) {
     return f(g(x));
@@ -53,6 +54,32 @@ const pipe = (x0, ...fns) => fns.reduce(
     (x, f) => f(x),
     x0
 );
+```
+
+```js
+// 函数合成使用实例如下：
+const pipe = (...fns) => x0 => fns.reduce((x, f) => f(x), x0);
+ 
+const trace = msg => x => {
+  console.log(msg, x);
+  return x;
+}
+ 
+const increment = n => n + 1;
+const double = n => n * 2;
+const square = n => n * n;
+ 
+const incDoubleSquare = pipe(
+  increment,
+  trace('before double'),
+  double,
+  trace('after double'),
+  square
+);
+incDoubleSquare(3); // 64
+// Also logs out:
+// before double 4
+// after double 8
 ```
 
 ## 函数柯里化
@@ -110,7 +137,17 @@ export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 高阶函数是对其他函数进行操作的函数，操作可以是将它们作为参数，或者是返回它们。 简单来说，高阶函数是一个接收**函数作为参数**或将**函数作为输出**返回的函数。
 
-例如，`Array.prototype.map`，`Array.prototype.filter`，`Array.prototype.sort()` 和 `Array.prototype.reduce` 是语言中内置的一些高阶函数。
+例如，`Array.prototype.map()`，`Array.prototype.filter()`，`Array.prototype.sort()` 和 `Array.prototype.reduce()` 是语言中内置的一些高阶函数。
+
+```js
+const mozart = numbers =>
+  numbers
+    .filter(n => n % 2 === 0)
+    .map(n => n * 2)
+    .reduce((a, b) => a + b, 0);
+ 
+mozart([1, 2, 3, 4, 5]); // 12
+```
 
 ## 不可变数据
 
@@ -149,3 +186,5 @@ const num2 = calc(100,200) // 缓存得到的结果
 [JAVASCRIPT FUNCTION COMPOSITION: WHAT’S THE BIG DEAL?](https://jrsinclair.com/articles/2022/javascript-function-composition-whats-the-big-deal/)
 
 [HOW TO COMPOSE JAVASCRIPT FUNCTIONS THAT TAKE MULTIPLE PARAMETERS (THE EPIC GUIDE)](https://jrsinclair.com/articles/2024/how-to-compose-functions-that-take-multiple-parameters-epic-guide/)
+
+[unleash-javascripts-potential-with-functional-programming](https://janhesters.com/blog/unleash-javascripts-potential-with-functional-programming)

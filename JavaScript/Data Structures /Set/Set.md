@@ -11,6 +11,8 @@ Set objects are collections of values. A value in the set may only occur once; i
 
 ## Set的静态属性、方法
 
+---
+
 ## Set的实例属性、方法
 
 `Set` 实例的方法分为两大类：操作方法（用于操作数据）和遍历方法（用于遍历成员）。`Set` 的遍历顺序就是插入顺序。
@@ -192,6 +194,86 @@ new Set(['foo', 'bar', undefined]).forEach(logSetElements);
 ```
 
 `keys`方法、`values`方法、`entries`方法返回的都是遍历器对象。由于 `Set` 结构没有键名，只有键值（或者说键名和键值是同一个值），所以`keys`方法和`values`方法的行为完全一致。
+
+### Set.prototype.difference()
+
+- The difference() method of Set instances takes a set and returns a new set containing elements in this set but not in the given set.
+
+Set 实例的 difference() 方法接受一个集合并返回一个新的集合，其中包含当前集合中存在但给定集合中不存在的所有元素。(差集)
+
+```js
+const odds = new Set([1, 3, 5, 7, 9]);
+const squares = new Set([1, 4, 9]);
+// odds中存在但squares中不存在的内容
+console.log(odds.difference(squares)); // Set(3) { 3, 5, 7 }
+```
+
+### Set.prototype.intersection()
+
+- The intersection() method of Set instances takes a set and returns a new set containing elements in both this set and the given set.
+
+Set 实例的 difference() 方法接受一个集合并返回一个新的集合，其中包含当前集合中存在且给定集合中也存在的所有元素。(交集)
+
+```js
+const odds = new Set([1, 3, 5, 7, 9]);
+const squares = new Set([1, 4, 9]);
+// odds中存在且squares中也存在的内容
+console.log(odds.intersection(squares)); // Set(2) { 1, 9 }
+```
+
+### Set.prototype.symmetricDifference()
+
+- The symmetricDifference() method of Set instances takes a set and returns a new set containing elements which are in either this set or the given set, but not in both.
+
+Set 实例的 difference() 方法接受一个集合并返回一个新的集合，其中包含元素要么在当前集合中要么在给定集合中但并不同时存在于两个集合。(补集)
+
+```js
+const evens = new Set([2, 4, 6, 8]);
+const squares = new Set([1, 4, 9]);
+console.log(evens.symmetricDifference(squares)); // Set(5) { 2, 6, 8, 1, 9 }
+```
+
+### Set.prototype.union()
+
+Set 实例的 union() 方法接受一个集合并返回包含当前集合与给定集合中存在的所有元素的新集合。（并集）
+
+```js
+const evens = new Set([2, 4, 6, 8]);
+const squares = new Set([1, 4, 9]);
+console.log(evens.union(squares)); // Set(6) { 2, 4, 6, 8, 1, 9 }
+```
+
+### Set.prototype.isDisjointFrom()
+
+- The isDisjointFrom() method of Set instances takes a set and returns a boolean indicating if this set has no elements in common with the given set.
+
+Set 实例的 isDisjointFrom() 方法接受一个集合并返回一个布尔值来指示当前集合与给定集合是否不存在公共元素。(集合不相交为true)
+
+```js
+const primes = new Set([2, 3, 5, 7, 11, 13, 17, 19]);
+const squares = new Set([1, 4, 9, 16]);
+console.log(primes.isDisjointFrom(squares)); // true
+```
+
+### Set.prototype.isSubsetOf()
+
+- The isSubsetOf() method of Set instances takes a set and returns a boolean indicating if all elements of this set are in the given set.
+
+```js
+const fours = new Set([4, 8, 12, 16]);
+const evens = new Set([2, 4, 6, 8, 10, 12, 14, 16, 18]);
+console.log(fours.isSubsetOf(evens)); // true
+```
+
+### Set.prototype.isSupersetOf()
+
+- The isSupersetOf() method of Set instances takes a set and returns a boolean indicating if all elements of the given set are in this set.
+
+```js
+const evens = new Set([2, 4, 6, 8, 10, 12, 14, 16, 18]);
+const fours = new Set([4, 8, 12, 16]);
+console.log(evens.isSupersetOf(fours)); // true
+```
 
 ## Set实例化
 

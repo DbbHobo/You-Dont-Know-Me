@@ -184,8 +184,13 @@ decorator.draw(); //画一个圆形，画一个红色边框
 策略模式 （Strategy Pattern）又称政策模式，其定义一系列的算法，把它们一个个封装起来，并且使它们可以互相替换。封装的策略算法一般是独立的，策略模式根据输入来调整采用哪个算法。关键是策略的实现和使用分离。
 
 使用场景： `Axios` 使用拦截器 `interceptor` 可以提前对 `request` 请求和 `response` 返回进行一些预处理
-  
+
 ## 参考资料
+
 [深入 JavaScript 设计模式，从此有了优化代码的理论依据](https://juejin.cn/post/6844903918330347533)
+
 [设计模式之美-前端](https://zhuanlan.zhihu.com/p/111553641)
+
 [7 JavaScript Design Patterns Every developer should know](https://codesource.io/javascript-design-patterns/)
+
+[Top design patterns for frontend](https://dev.to/superviz/top-design-patterns-for-frontend-1bk5?context=digest)
