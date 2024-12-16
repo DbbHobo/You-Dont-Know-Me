@@ -109,10 +109,10 @@ Set-Cookie: id=a3fWa; Max-Age=604800;
 
 一个通常的 `Session` 认证过程如下：
 
-1. 用户向服务器发送登录请求。
-2. 服务器对登录请求进行身份验证，将会话发送到数据库，并将包含会话ID的`Cookie`返回给用户。
-3. 然后，用户发送新的请求（带有`Cookie`）。
-4. 服务器在数据库中检查`Cookie`中的ID，如果找到ID，则将请求的页面发送给用户。
+1. 用户向服务器发送登录请求；
+2. 服务器对登录请求进行身份验证，将会话发送到数据库，并将包含会话ID的`Cookie`返回给用户；
+3. 然后，用户发送新的请求（带有`Cookie`）；
+4. 服务器在数据库中检查`Cookie`中的ID，如果找到ID，则将请求的页面发送给用户；
 
 由此可见：
 
@@ -137,16 +137,154 @@ Set-Cookie: id=a3fWa; Max-Age=604800;
 
 一个通常的 `Token` 认证过程如下：
 
-1. 客户端使用用户名跟密码请求登录
-2. 服务端收到请求，去验证用户名与密码
-3. 验证成功后，服务端会签发一个 token 并把这个 token 发送给客户端
-4. 客户端收到 token 以后，会把它存储起来，比如放在 cookie 里或者 localStorage 里
-5. 客户端每次向服务端请求资源的时候需要带着服务端签发的 token
-6. 服务端收到请求，然后去验证客户端请求里面带着的 token ，如果验证成功，就向客户端返回请求的数据
+1. 客户端使用用户名跟密码请求登录；
+2. 服务端收到请求，去验证用户名与密码；
+3. 验证成功后，服务端会签发一个 `token` 并把这个 `token` 发送给客户端；
+4. 客户端收到 `token` 以后，会把它存储起来，比如放在 `cookie` 里或者 `localStorage` 里；
+5. 客户端每次向服务端请求资源的时候需要带着服务端签发的 `token`；
+6. 服务端收到请求，然后去验证客户端请求里面带着的 `token` ，如果验证成功，就向客户端返回请求的数据；
+
+## 现代登录认证方案
+
+### Session 认证结合 cookie
+
+1. 用户通过用户名和密码登录应用；
+2. 服务器生成唯一的`session ID`并存储在`cookie`中；
+3. 浏览器每次请求都发送出`cookie`证明是该用户；
+
+```js
+const express = require('express');
+const session = require('express-session');
+const app = express();
+
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+}));
+
+app.post('/login', (req, res) => {
+  // Authenticate user
+  req.session.userId = user.id;
+  res.send('Welcome back!');
+});
+
+app.get('/dashboard', (req, res) => {
+  if (req.session.userId) {
+    res.send('Here's your personalized dashboard');
+  } else {
+    res.send('Please log in to view your dashboard');
+  }
+});
+
+app.listen(3000);
+```
+
+### JWT (JSON Web Token) 认证
+
+JWT 是一种紧凑、自包含的令牌格式，通常用于身份验证。与OAuth 2.0不同，JWT 更专注于身份验证场景。它通过生成一个包含用户信息的加密令牌，客户端可以通过该令牌来访问资源，避免每次请求都需要重复认证。
+
+工作流程：
+
+1. 用户登录：用户通过用户名和密码登录应用；
+2. 服务器生成`JWT`：服务器验证用户凭据，通过对用户信息（如用户ID）进行编码、签名生成`JWT`令牌，并将该令牌返回给客户端；
+3. 客户端存储`JWT`：客户端将`JWT`存储在Cookie或本地存储中；
+4. 请求附带`JWT`：每次客户端请求API或受保护资源时，都会将`JWT`放在请求头中发送给服务器；
+5. 服务器验证`JWT`：服务器验证`JWT`的签名和有效性，确认其合法后返回数据；
+
+JWT 结构：
+
+- `Header`：头部，包含签名算法信息。
+- `Payload`：有效负载，包含用户信息和其他声明（claims）。
+- `Signature`：签名，用于验证令牌未被篡改。
+
+```js
+const jwt = require('jsonwebtoken');
+
+app.post('/login', (req, res) => {
+  // Authenticate user
+  const token = jwt.sign(
+    { userId: user.id, email: user.email },
+    'your-secret-key',
+    { expiresIn: '1h' }
+  );
+  res.json({ token });
+});
+
+app.get('/dashboard', (req, res) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).send('Access denied');
+
+  try {
+    const verified = jwt.verify(token, 'your-secret-key');
+    res.send('Welcome to your dashboard, ' + verified.email);
+  } catch (err) {
+    res.status(400).send('Invalid token');
+  }
+});
+```
+
+### Single Sign-On (SSO) 单点登录
+
+SSO 是一种允许用户通过一次登录来访问多个应用程序或系统的身份验证机制。它的核心思想是，用户在登录一个系统后，可以无缝地访问其他相关系统，而不需要重新输入用户名和密码。
+
+工作流程：
+
+1. 用户访问应用A：用户尝试访问某个应用程序（例如应用A）；
+2. 重定向到认证服务器：如果用户没有登录，应用A会将用户重定向到一个中心化的身份认证服务器；
+3. 认证服务器处理登录：用户在认证服务器上输入用户名和密码；认证服务器验证用户凭据；
+4. 生成`Session`/`Token`：一旦用户被验证成功，认证服务器会生成一个`Session`或`Token`，并将其存储在用户浏览器的`Cookie`或本地存储中；
+5. 重定向回应用A：认证服务器会将用户重定向回应用A，并携带认证令牌；
+6. 访问其他应用：当用户访问其他相关应用（例如应用B）时，这些应用会自动识别用户的`SSO Token`，允许用户访问，无需再次登录；
+
+### OAuth 2.0 认证
+
+OAuth 2.0 是一种授权框架，旨在允许第三方应用在不暴露用户凭据的情况下，代表用户访问资源。它通常用于允许外部应用访问某个服务的受保护资源（例如，允许某个应用访问用户的Google账户中的联系人信息），而不要求用户提供密码。
+
+工作流程：
+
+1. 用户授权请求：用户想要通过第三方应用（例如某个社交媒体管理工具）访问资源（例如Google API）。第三方应用会请求用户授权；
+2. 用户重定向到授权服务器：用户被重定向到资源提供者的授权服务器（例如Google的OAuth服务器）；
+3. 用户同意授权：用户在授权服务器上同意授权，将访问权限授予第三方应用；
+4. 获取授权码：授权服务器生成授权码，并将其重定向回第三方应用；
+5. 获取访问令牌：第三方应用使用授权码向授权服务器申请访问令牌（Access Token）；
+6. 访问受保护资源：第三方应用携带访问令牌向资源服务器请求资源。资源服务器验证令牌，确认后授予访问权限；
+
+```js
+const express = require('express');
+const axios = require('axios');
+const app = express();
+
+app.get('/login', (req, res) => {
+  const authUrl = `https://oauth.example.com/authorize?client_id=your-client-id&redirect_uri=http://localhost:3000/callback&response_type=code&scope=read_user`;
+  res.redirect(authUrl);
+});
+
+app.get('/callback', async (req, res) => {
+  const { code } = req.query;
+  try {
+    const tokenResponse = await axios.post('https://oauth.example.com/token', {
+      code,
+      client_id: 'your-client-id',
+      client_secret: 'your-client-secret',
+      redirect_uri: 'http://localhost:3000/callback',
+      grant_type: 'authorization_code'
+    });
+    const { access_token } = tokenResponse.data;
+    // Use the access_token to make API requests
+    res.send('Authentication successful!');
+  } catch (error) {
+    res.status(500).send('Authentication failed');
+  }
+});
+
+app.listen(3000, () => console.log('Server running on port 3000'));
+```
 
 ## 总结
 
-使用 `Cookie` 时需要考虑的问题
+使用 `Cookie` 时需要考虑的问题：
 
 - 因为存储在客户端，容易被客户端篡改，使用前需要验证合法性
 - 不要存储敏感数据，比如用户密码，账户余额
@@ -157,16 +295,16 @@ Set-Cookie: id=a3fWa; Max-Age=604800;
 - 一个浏览器针对一个网站最多存 20 个 `Cookie`，浏览器一般只允许存放300个 `Cookie`
 - 移动端对 `cookie` 的支持不是很好，而 `session` 需要基于 `Cookie` 实现，所以移动端常用的是 `token`
 
-使用 `session` 时需要考虑的问题
+使用 `session` 时需要考虑的问题：
 
 - 将 `session` 存储在服务器里面，当用户同时在线量比较多时，这些 `session` 会占据较多的内存，需要在服务端定期的去清理过期的 `session`
 - 当网站采用集群部署的时候，会遇到多台 `web` 服务器之间如何做 `session` 共享的问题。因为 `session` 是由单个服务器创建的，但是处理用户请求的服务器不一定是那个创建 `session` 的服务器，那么该服务器就无法拿到之前已经放入到 `session` 中的登录凭证之类的信息了
 - 当多个应用要共享 `session` 时，除了以上问题，还会遇到跨域问题，因为不同的应用可能部署的主机不一样，需要在各个应用做好 `Cookie` 跨域的处理
 - `sessionId` 是存储在 `Cookie` 中的，假如浏览器禁止 `Cookie` 或不支持 `Cookie` 怎么办？ 一般会把 `sessionId` 跟在 `url` 参数后面即重写 `url`，所以 `session` 不一定非得需要靠 `Cookie` 实现
 
-使用 `token` 时需要考虑的问题
+使用 `token` 时需要考虑的问题：
 
-- 如果你认为用数据库来存储 `token` 会导致查询时间太长，可以选择放在内存当中，比如 `redis` 很适合你对 `token` 查询的需求
+- 如果你认为用数据库来存储 `token` 会导致查询时间太长，可以选择放在内存当中，比如 `redis` 很适合对 `token` 查询的需求
 - `token` 完全由应用管理，所以它可以避开同源策略
 - `token` 可以避免 `CSRF` 攻击，因为不需要 `Cookie` 了
 
@@ -179,3 +317,5 @@ Set-Cookie: id=a3fWa; Max-Age=604800;
 [傻傻分不清之 Cookie、Session、Token、JWT](https://juejin.cn/post/6844904034181070861)
 
 [Session vs Token Based Authentication](https://www.geeksforgeeks.org/session-vs-token-based-authentication/)
+
+[Authentication: Comparing Session, JWT, SSO, and OAuth 2.0 in 2024](https://dev.to/vyan/the-ultimate-guide-to-web-authentication-comparing-session-jwt-sso-and-oauth-20-in-2024-2og0?context=digest)

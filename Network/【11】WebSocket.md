@@ -41,6 +41,16 @@
 - `onmessage()`
 - `onopen()`
 
+## WebSocket实践
+
+```js
+const socket = new WebSocket('wss://xxx.com/ticket-updates');
+socket.onmessage = (event) => {
+  const { remainingTickets } = JSON.parse(event.data);
+  document.getElementById('remaining-tickets').innerText = `剩余票数: ${remainingTickets}`;
+};
+```
+
 ## 参考资料
 
 [WebSocket](https://zh.m.wikipedia.org/zh-hans/WebSocket)
