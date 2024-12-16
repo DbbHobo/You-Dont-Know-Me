@@ -1,6 +1,6 @@
 # 合成事件（SyntheticEvent）
 
-合成事件（SyntheticEvent）解决的问题：
+合成事件（`SyntheticEvent`）解决的问题：
 
 - 跨浏览器兼容性：不同浏览器对事件的实现和处理方式可能不一致，例如早期的 IE 浏览器使用自己的事件模型，而其他浏览器基于标准事件模型。因此，React 引入合成事件，将不同浏览器的事件行为标准化，避免开发者为兼容性做额外处理。
 - 性能优化：原生事件在 DOM 树中逐个绑定时会造成性能问题，尤其在大型应用中可能会有大量的事件监听器挂载到各个 DOM 元素上，影响内存和性能。React 的合成事件通过事件委托机制，将事件监听器统一挂载在根节点上，减少了事件处理器的数量，并简化了事件的管理。
@@ -310,7 +310,7 @@ addEventListener(type, listener, options);
 addEventListener(type, listener, useCapture);
 ```
 
-在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法。最后根据不同的`passive`、`capture`参数添加事件监听。
+在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/ReactDOMEventListener.js】
@@ -1381,7 +1381,7 @@ reset.addEventListener("click", () => document.location.reload());
 
 ## 参考资料
 
-[Common components (e.g. <div>)](https://react.dev/reference/react-dom/components/common)
+[Common components](https://react.dev/reference/react-dom/components/common)
 
 [EventTarget: addEventListener() method MDN](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
 

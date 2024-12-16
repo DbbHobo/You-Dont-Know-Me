@@ -4,7 +4,7 @@
 
 - 时间切片（Time Slicing）： 时间切片是React中`Concurrent`模式的核心概念之一。它允许React将渲染工作分割成小的、可中断的任务。通过这种方式，React可以在多个渲染周期之间交错执行任务，以避免在单个周期中阻塞主线程，从而提高用户体验。
 
-- Suspense组件： Suspense是另一个重要的概念，它使得React能够在等待异步数据加载时展示fallback UI。在`Concurrent`模式中，Suspense不仅仅用于数据加载，还用于代码分割和其他异步操作。这使得React能够更加智能地管理组件树的加载和显示。
+- `Suspense`组件： `Suspense`是另一个重要的概念，它使得React能够在等待异步数据加载时展示fallback UI。在`Concurrent`模式中，`Suspense`不仅仅用于数据加载，还用于代码分割和其他异步操作。这使得React能够更加智能地管理组件树的加载和显示。
 
 - 调度器（Scheduler）： React的`Concurrent`模式引入了新的调度器，负责决定哪个任务应该在某一时刻执行。调度器使用时间切片和其他机制来优先级调度任务，以确保高优先级的任务在低优先级任务之前执行。
 
@@ -29,10 +29,9 @@
 - `Scheduler priority` - used to prioritize tasks in scheduler
 - `Event priority` - to mark priority of user event
 
-<!-- 这块理解不知道对不对 -->
-- 页面和用户交互时产生需要更新的任务时会给对应节点加上这个任务，这个节点层级的任务的优先级用`Lane priority`标识。
-- 更新任务发生在当前应用层面的某次更新任务中，当前应用在任务调度过程中使用`Scheduler priority`标识。
-- 事件的优先级则用`Event priority`标识。
+- 页面和用户交互时产生需要更新的任务时会给对应节点加上这个任务，这个**节点层级**的任务的优先级用`Lane priority`标识。
+- 更新任务发生在当前应用层面的某次更新任务中，当前应用在**任务调度层级**中使用`Scheduler priority`标识。
+- **事件监听**的优先级则用`Event priority`标识。
 
 那么当一个任务产生到执行的过程大致如下：
 
@@ -41,9 +40,36 @@
 3. schedule the task to reconcile
 4. reconciliation happens, process the work from root
 
-<!-- TODO:getNextLanes()看一下到底怎么确定任务优先级的  -->
-
 ### Lane priority
+
+`Lane priority`我称之为节点层级的任务`Update`实例数据结构如下：
+
+```ts
+export const TotalLanes = 31;
+
+export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000;
+export const NoLane: Lane = /*                          */ 0b0000000000000000000000000000000;
+
+export const SyncHydrationLane: Lane = /*               */ 0b0000000000000000000000000000001;
+export const SyncLane: Lane = /*                        */ 0b0000000000000000000000000000010;
+
+export const InputContinuousHydrationLane: Lane = /*    */ 0b0000000000000000000000000000100;
+export const InputContinuousLane: Lane = /*             */ 0b0000000000000000000000000001000;
+
+export const DefaultHydrationLane: Lane = /*            */ 0b0000000000000000000000000010000;
+export const DefaultLane: Lane = /*                     */ 0b0000000000000000000000000100000;
+
+export const SyncUpdateLanes: Lane = /*                */ 0b0000000000000000000000000101010;
+// ...
+
+const update: Update<S, A> = {
+  lane,
+  action,
+  hasEagerState: false,
+  eagerState: null,
+  next: (null: any),
+};
+```
 
 我们知道在`fiber`节点上有`hook list`，然后对于`useState hook`之类的有一个`updateQueue`会在更新阶段调用各个任务。`lane`就是用于描述节点上不同的`update`任务优先级的。
 
@@ -562,7 +588,27 @@ function checkScheduledUpdateOrContext(
 
 ### Scheduler priority
 
-在调度`performConcurrentWorkOnRoot`之类的任务之前首先确定这个任务的优先级如下：
+`Scheduler priority`我称之为任务调度系统层级的任务`Task`实例数据结构如下：
+
+```ts
+export const NoPriority = 0;
+export const ImmediatePriority = 1;
+export const UserBlockingPriority = 2;
+export const NormalPriority = 3;
+export const LowPriority = 4;
+export const IdlePriority = 5;
+
+var newTask: Task = {
+  id: taskIdCounter++,
+  callback,
+  priorityLevel,
+  startTime,
+  expirationTime,
+  sortIndex: -1,
+}
+```
+
+在调度`performConcurrentWorkOnRoot`更新视图或者`flushPassiveEffects`副作用操作之类的任务之前首先需要确定这个任务的`Scheduler priority`优先级，由`Update`实例的`lanes`映射到`schedulerPriorityLevel`的五个层级如下：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -643,7 +689,286 @@ export function getHighestPriorityLane(lanes: Lanes): Lane {
 }
 ```
 
-## 任务调度Scheduler  
+确定了任务优先级就安排`Task`实例任务入队如下：
+
+```ts
+// 【packages/scheduler/src/forks/Scheduler.js】
+// Max 31 bit integer. The max integer size in V8 for 32-bit systems.
+// Math.pow(2, 30) - 1
+// 0b111111111111111111111111111111
+var maxSigned31BitInt = 1073741823;
+
+// Times out immediately
+var IMMEDIATE_PRIORITY_TIMEOUT = -1;
+// Eventually times out
+var USER_BLOCKING_PRIORITY_TIMEOUT = 250;
+var NORMAL_PRIORITY_TIMEOUT = 5000;
+var LOW_PRIORITY_TIMEOUT = 10000;
+// Never times out
+var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt;
+
+function unstable_scheduleCallback(
+  priorityLevel: PriorityLevel,
+  callback: Callback,
+  options?: {delay: number},
+): Task {
+  var currentTime = getCurrentTime();
+  // 【获取开始时间】
+  var startTime;
+  if (typeof options === 'object' && options !== null) {
+    var delay = options.delay;
+    if (typeof delay === 'number' && delay > 0) {
+      startTime = currentTime + delay;
+    } else {
+      startTime = currentTime;
+    }
+  } else {
+    startTime = currentTime;
+  }
+  // 【根据不同优先级确定不同的超时时间】
+  var timeout;
+  switch (priorityLevel) {
+    case ImmediatePriority:
+      timeout = IMMEDIATE_PRIORITY_TIMEOUT;
+      break;
+    case UserBlockingPriority:
+      timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
+      break;
+    case IdlePriority:
+      timeout = IDLE_PRIORITY_TIMEOUT;
+      break;
+    case LowPriority:
+      timeout = LOW_PRIORITY_TIMEOUT;
+      break;
+    case NormalPriority:
+    default:
+      timeout = NORMAL_PRIORITY_TIMEOUT;
+      break;
+  }
+
+  var expirationTime = startTime + timeout;
+  // 【创建任务，expirationTime代表过期时间】
+  var newTask: Task = {
+    id: taskIdCounter++,
+    callback,
+    priorityLevel,
+    startTime,
+    expirationTime,
+    sortIndex: -1,
+  };
+  if (enableProfiling) {
+    newTask.isQueued = false;
+  }
+  // 【未就绪任务入队timerQueue】
+  if (startTime > currentTime) {
+    // This is a delayed task.
+    newTask.sortIndex = startTime;
+    push(timerQueue, newTask);
+    if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
+      // All tasks are delayed, and this is the task with the earliest delay.
+      if (isHostTimeoutScheduled) {
+        // Cancel an existing timeout.
+        cancelHostTimeout();
+      } else {
+        isHostTimeoutScheduled = true;
+      }
+      // Schedule a timeout.
+      requestHostTimeout(handleTimeout, startTime - currentTime);
+    }
+  } else {
+    // 【已就绪任务入队taskQueue】
+    newTask.sortIndex = expirationTime;
+    push(taskQueue, newTask);
+    if (enableProfiling) {
+      markTaskStart(newTask, currentTime);
+      newTask.isQueued = true;
+    }
+    // Schedule a host callback, if needed. If we're already performing work,
+    // wait until the next time we yield.
+    // 【如果没有正在执行的任务就安排执行现有任务】
+    if (!isHostCallbackScheduled && !isPerformingWork) {
+      isHostCallbackScheduled = true;
+      requestHostCallback(flushWork);
+    }
+  }
+
+  return newTask;
+}
+```
+
+### Event priority
+
+`Event priority`我称之为事件层级的任务`Task`实例数据结构如下：
+
+```ts
+// 【packages/react-reconciler/src/ReactEventPriorities.js】
+export const NoEventPriority: EventPriority = NoLane;
+export const DiscreteEventPriority: EventPriority = SyncLane;
+export const ContinuousEventPriority: EventPriority = InputContinuousLane;
+export const DefaultEventPriority: EventPriority = DefaultLane;
+export const IdleEventPriority: EventPriority = IdleLane;
+
+```
+
+Event Priority 指 React 根据事件类型为事件分配的优先级，这直接影响事件处理的执行顺序以及在 React 中如何协调（Scheduling）更新：
+
+1. Discrete Events（离散事件）
+
+- 高优先级
+- 这些事件与用户的瞬时操作相关，例如点击、按键、鼠标按下/释放。
+
+2. Continuous Events（连续事件）
+
+- 低优先级
+- 这些事件通常是连续触发的，例如滚动、鼠标移动等。
+
+3. Default Events（默认事件）
+
+- 中等优先级
+- 不直接影响用户交互体验的事件，例如非用户触发的动画更新、空闲任务。
+
+React中的合成事件在绑定到根节点时就已经确定好优先级如下：
+
+```ts
+export function getEventPriority(domEventName: DOMEventName): EventPriority {
+  switch (domEventName) {
+    // Used by SimpleEventPlugin:
+    case 'beforetoggle':
+    case 'cancel':
+    case 'click':
+    case 'close':
+    case 'contextmenu':
+    case 'copy':
+    case 'cut':
+    case 'auxclick':
+    case 'dblclick':
+    case 'dragend':
+    case 'dragstart':
+    case 'drop':
+    case 'focusin':
+    case 'focusout':
+    case 'input':
+    case 'invalid':
+    case 'keydown':
+    case 'keypress':
+    case 'keyup':
+    case 'mousedown':
+    case 'mouseup':
+    case 'paste':
+    case 'pause':
+    case 'play':
+    case 'pointercancel':
+    case 'pointerdown':
+    case 'pointerup':
+    case 'ratechange':
+    case 'reset':
+    case 'resize':
+    case 'seeked':
+    case 'submit':
+    case 'toggle':
+    case 'touchcancel':
+    case 'touchend':
+    case 'touchstart':
+    case 'volumechange':
+    // Used by polyfills: (fall through)
+    case 'change':
+    case 'selectionchange':
+    case 'textInput':
+    case 'compositionstart':
+    case 'compositionend':
+    case 'compositionupdate':
+    // Only enableCreateEventHandleAPI: (fall through)
+    case 'beforeblur':
+    case 'afterblur':
+    // Not used by React but could be by user code: (fall through)
+    case 'beforeinput':
+    case 'blur':
+    case 'fullscreenchange':
+    case 'focus':
+    case 'hashchange':
+    case 'popstate':
+    case 'select':
+    case 'selectstart':
+      return DiscreteEventPriority;
+    case 'drag':
+    case 'dragenter':
+    case 'dragexit':
+    case 'dragleave':
+    case 'dragover':
+    case 'mousemove':
+    case 'mouseout':
+    case 'mouseover':
+    case 'pointermove':
+    case 'pointerout':
+    case 'pointerover':
+    case 'scroll':
+    case 'touchmove':
+    case 'wheel':
+    // Not used by React but could be by user code: (fall through)
+    case 'mouseenter':
+    case 'mouseleave':
+    case 'pointerenter':
+    case 'pointerleave':
+      return ContinuousEventPriority;
+    case 'message': {
+      // We might be in the Scheduler callback.
+      // Eventually this mechanism will be replaced by a check
+      // of the current priority on the native scheduler.
+      const schedulerPriority = getCurrentSchedulerPriorityLevel();
+      switch (schedulerPriority) {
+        case ImmediateSchedulerPriority:
+          return DiscreteEventPriority;
+        case UserBlockingSchedulerPriority:
+          return ContinuousEventPriority;
+        case NormalSchedulerPriority:
+        case LowSchedulerPriority:
+          // TODO: Handle LowSchedulerPriority, somehow. Maybe the same lane as hydration.
+          return DefaultEventPriority;
+        case IdleSchedulerPriority:
+          return IdleEventPriority;
+        default:
+          return DefaultEventPriority;
+      }
+    }
+    default:
+      return DefaultEventPriority;
+  }
+}
+```
+
+根据不同事件优先级的分类，调用不同的监听函数`dispatchDiscreteEvent`、`dispatchContinuousEvent`、`dispatchEvent`，所以后续监听事件进入的是不同的函数：
+
+```ts
+// 【packages/react-dom-bindings/src/events/ReactDOMEventListener.js】
+export function createEventListenerWrapperWithPriority(
+  targetContainer: EventTarget,
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+): Function {
+  const eventPriority = getEventPriority(domEventName);
+  let listenerWrapper;
+  switch (eventPriority) {
+    case DiscreteEventPriority:
+      listenerWrapper = dispatchDiscreteEvent;
+      break;
+    case ContinuousEventPriority:
+      listenerWrapper = dispatchContinuousEvent;
+      break;
+    case DefaultEventPriority:
+    default:
+      listenerWrapper = dispatchEvent;
+      break;
+  }
+  return listenerWrapper.bind(
+    null,
+    domEventName,
+    eventSystemFlags,
+    targetContainer,
+  );
+}
+```
+
+## 任务调度Scheduler流程
 
 React中有如下方法可能触发更新，每次更新都会构造一个`update`任务，然后调用`scheduleLegacySyncCallback`或者`scheduleCallback`对任务进行调度。
 
@@ -655,7 +980,7 @@ React中有如下方法可能触发更新，每次更新都会构造一个`updat
 
 ### 安排任务阶段
 
-`scheduleLegacySyncCallback`方法调度**同步任务**，将任务加入`syncQueue`任务栈。
+`scheduleLegacySyncCallback`/`scheduleSyncCallback`方法调度**同步任务**，将任务加入`syncQueue`任务栈。
 
 ```ts
 let syncQueue: Array<SchedulerCallback> | null = null;
@@ -680,7 +1005,7 @@ export function scheduleLegacySyncCallback(callback: SchedulerCallback) {
 }
 ```
 
-`scheduleCallback`方法由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrent`模式下以某个优先级异步调度一个callback函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如-1其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
+`scheduleCallback`方法调度**非同步任务**由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrent`模式下以某个优先级异步调度一个callback函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如-1其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
 
 - `IMMEDIATE_PRIORITY_TIMEOUT`: -1
 - `USER_BLOCKING_PRIORITY_TIMEOUT`: 250
@@ -890,7 +1215,7 @@ function unstable_scheduleCallback(
 
 ### 回调执行任务阶段
 
-`requestHostCallback`进入安排执行任务`flushWork`的过程，调用`schedulePerformWorkUntilDeadline`方法，`schedulePerformWorkUntilDeadline`通过三种方式调度异步任务`setImmediate`、`MessageChannel`、`setTimeout`，然后就会异步进入`performWorkUntilDeadline`：
+接下来`requestHostCallback`进入安排执行任务`flushWork`的过程，调用`schedulePerformWorkUntilDeadline`方法，`schedulePerformWorkUntilDeadline`通过三种方式调度异步任务`setImmediate`、`MessageChannel`、`setTimeout`，然后就会异步进入`performWorkUntilDeadline`：
 <!-- 【TODO：`MessageChannel`、`setTimeout`执行顺序】 -->
 
 ```ts
@@ -940,7 +1265,7 @@ if (typeof localSetImmediate === 'function') {
 }
 ```
 
-`performWorkUntilDeadline`进行一些判断工作后就进入到正式调用我们先前`在requestHostCallback`方法中安排的`scheduledHostCallback`也就是`callback`（`flushWork`）任务：
+`performWorkUntilDeadline`进行一些判断工作后就进入到正式调用我们先前在`requestHostCallback`方法中安排的`scheduledHostCallback`也就是回调`callback`（`flushWork`）任务：
 
 ```ts
 // 【packages/scheduler/src/forks/Scheduler.js】
@@ -1160,7 +1485,7 @@ function shouldYieldToHost(): boolean {
 }
 ```
 
-`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是函数说明当前任务还没执行完，需要在中断处继续执行，否则说明执行完了就把当前任务pop出来。`const continuationCallback = callback(didUserCallbackTimeout);`。例如最通常我们进行组件更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
+`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是**函数**说明当前任务还没执行完，需要在中断处继续执行，否则说明执行完了就把当前任务pop出来。`const continuationCallback = callback(didUserCallbackTimeout);`。例如最通常我们进行组件更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1173,7 +1498,7 @@ let exitStatus = shouldTimeSlice
   ? renderRootConcurrent(root, lanes)
   : renderRootSync(root, lanes);
 
-// 【！！！返回函数，performConcurrentWorkOnRoot本身，说明之前任务被打断了，需要继续执行】
+// 【！！！返回函数，performConcurrentWorkOnRoot本身，说明之前任务被打断了，需要继续执行，否则的话返回null表示任务全部结束】
 if (root.callbackNode === originalCallbackNode) {
   // The task node scheduled for this root is the same one that's
   // currently executed. Need to return a continuation.

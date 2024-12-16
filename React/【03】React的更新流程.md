@@ -249,7 +249,7 @@ function workLoopConcurrent() {
 }
 ```
 
-`workLoopSync`/`workLoopConcurrent`方法都是循环遍历调用`performUnitOfWork`依次处理`fiber`节点
+`workLoopSync`/`workLoopConcurrent`方法都是循环遍历调用`performUnitOfWork`依次处理`fiber`节点形成fiber树，最大的区别就是是否可暂停的，`workLoopConcurrent`方法可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】

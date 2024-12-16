@@ -1573,6 +1573,12 @@ function performSyncWorkOnRoot(root: FiberRoot) {
 
   // 【省略代码...】
 
+  // 【新的fiber树构造完成，挂在finishedWork上】
+  // We now have a consistent tree. Because this is a sync render, we
+  // will commit it even if something suspended.
+  const finishedWork: Fiber = (root.current.alternate: any);
+  root.finishedWork = finishedWork;
+  root.finishedLanes = lanes;
   // 【第二步：-----commit过程-----】
   commitRoot(
     root,
@@ -1724,6 +1730,8 @@ function performConcurrentWorkOnRoot(
 
       // 【省略代码...】
 
+      // 【新的fiber树构造完成，挂在finishedWork上】
+      const finishedWork: Fiber = (root.current.alternate: any);
       // We now have a consistent tree. The next step is either to commit it,
       // or, if something suspended, wait to commit it after a timeout.
       root.finishedWork = finishedWork;
@@ -2089,7 +2097,7 @@ export function finishQueueingConcurrentUpdates(): void {
 - 每一个`fiberNode`节点的`child`属性指向子节点，`return`属性指向父节点，`sibling`属性指向兄弟节点；
 - 每一个`fiberNode`节点的`alternate`属性指向对应的同级旧`fiberNode`节点或者说对应的同级新`fiberNode`节点，两者互为指向；
 
-#### `workLoopSync`
+#### `workLoopSync` / `workLoopConcurrent`
 
 确定好`workInProgress`指向后，接下来我们进入一步步构建`fiber`树的过程。`workLoopSync` 只要 `workInProgress` 存在就循环调用 `performUnitOfWork` 处理 `workInProgress`：
 
