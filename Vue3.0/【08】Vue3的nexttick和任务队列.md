@@ -96,13 +96,44 @@ const RECURSION_LIMIT = 100
 type CountMap = Map<SchedulerJob, number>
 ```
 
-### 任务 `EffectScheduler`
+### 任务 `SchedulerJob`
 
-`EffectScheduler` 其实就是一个匿名函数类型，通常用来包装`SchedulerJob`任务实例，为其安排合适的任务队列位置。
+`EffectScheduler` 其实就是一个匿名函数类型，通常用来包装安排`SchedulerJob`任务实例，为其安排合适的任务队列位置。
 
-在实例化`ReactiveEffect`的构造函数中我们可以看到，第一个参数是用于`effect.run()`里回调用的`fn`，第二个`scheduler`是在派发更新的时候如果有`scheduler`函数会调用`scheduler`函数否则调用`run`函数。
+在实例化`ReactiveEffect`的构造函数中我们可以看到，第一个参数是用于`effect.run()`里回调用的`fn`，第二个`scheduler`是在派发更新的时候如果有`scheduler`函数会调用`scheduler`函数否则直接调用`run`函数。
+
+`SchedulerJob`实例的属性有`id`、`pre`、`active`、`computed`、`allowRecurse`、`ownerInstance`等。
 
 ```ts
+export interface SchedulerJob extends Function {
+  id?: number
+  pre?: boolean
+  active?: boolean
+  computed?: boolean
+  /**
+   * Indicates whether the effect is allowed to recursively trigger itself
+   * when managed by the scheduler.
+   *
+   * By default, a job cannot trigger itself because some built-in method calls,
+   * e.g. Array.prototype.push actually performs reads as well (#1740) which
+   * can lead to confusing infinite loops.
+   * The allowed cases are component update functions and watch callbacks.
+   * Component update functions may update child component props, which in turn
+   * trigger flush: "pre" watch callbacks that mutates state that the parent
+   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
+   * triggers itself again, it's likely intentional and it is the user's
+   * responsibility to perform recursive state mutation that eventually
+   * stabilizes (#1727).
+   */
+  allowRecurse?: boolean
+  /**
+   * Attached by renderer.ts when setting up a component's render effect
+   * Used to obtain component information when reporting max recursive updates.
+   * dev only.
+   */
+  ownerInstance?: ComponentInternalInstance
+}
+
 export type EffectScheduler = (...args: any[]) => any
 
 constructor(
@@ -130,7 +161,7 @@ function triggerEffect(
 }
 ```
 
-对`EffectScheduler`实例的使用有如下场景：
+对`SchedulerJob`实例的使用有如下场景：
 
 - 可以看到在`mountComponent`组件挂载/更新过程中调用的`setupRenderEffect`方法里这样一段构造了一个`scheduler`，调用`queueJob`把当前任务加入主任务队列：
 
@@ -147,7 +178,7 @@ const effect = (instance.effect = new ReactiveEffect(
 ))
 ```
 
-- 在`watch`中也构造了一个`scheduler`，根据用户传入的参数是`post`/`pre`(默认`pre`)调用`queuePostRenderEffect`/`queueJob`把当前任务加入任务队列，若是`sync`则`scheduler`直接为当前`EffectScheduler`实例直接同步执行：
+- 在`watch`中也构造了一个`scheduler`，根据用户传入的参数是`post`/`pre`(默认`pre`)调用`queuePostRenderEffect`/`queueJob`把当前任务加入相应的任务队列，若是`sync`则`scheduler`直接为当前`SchedulerJob`实例直接同步执行：
 
 ```ts
 const job: SchedulerJob = () => {
@@ -338,7 +369,7 @@ export function flushPreFlushCbs(
 
 ### 执行当前任务队列 `flushJobs()`
 
-该方法负责处理执行队列任务，主要逻辑如下：
+该方法负责处理执行主队列任务，主要逻辑如下：
 
 1. 根据`id`给主队列中的任务进行排序
 2. 遍历执行主队列任务

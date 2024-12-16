@@ -573,7 +573,7 @@ function createBaseVNode(
 
 前文中讲到在 `componentUpdateFn` 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
 
-1. `renderComponentRoot`根据组件实例`instance`生成最新的`VNode`(subTree/nextTree)；
+1. `renderComponentRoot`根据组件实例`instance`生成最新的`VNode`(`subTree`/`nextTree`)；
 2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`；
 
 ```ts
