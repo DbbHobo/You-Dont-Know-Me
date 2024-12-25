@@ -300,7 +300,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
 在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`ThemeContext.Provider`的类型是`ContextProvider`，所以就会进入`updateContextProvider`方法：
 
 1. 首先调用`pushProvider()`方法更新值，并将新值和`fiber`入栈`valueStack`、`fiberStack`；
-2. 如果新旧值（`pendingProps.value`和`memoizedProps.value`）没有变化，提前退出，如果有变化调用`propagateContextChange()`；
+2. 如果新旧值（`pendingProps.value`和`memoizedProps.value`）没有变化，提前退出，如果有变化调用`propagateContextChange()`方法去给消费的子组件`fiber`以及子组件`fiber.dependencies`打上`lanes`标记后续强制更新，并且调用`scheduleContextWorkOnParentPath`像冒泡一样将祖先节点的`childLanes`都打上标记；
 3. 继续处理子节点`reconcileChildren()`；
 
 ```ts
@@ -1105,10 +1105,10 @@ export function prepareToReadContext(
 
 #### propagateContextChange
 
-`updateContextProvider`中有这样一个方法`propagateContextChange`，这个方法用于在`provider`提供的数据变化时去更新所有`consumer`组件：
+在`Provider`的`beginWork`阶段`updateContextProvider`中有这样一个方法`propagateContextChange`，这个方法用于在`provider`提供的数据变化时去更新所有`consumer`组件：
 
 1. 从`provider`组件开始往下寻找所有消费这个`provider`的`consumer`组件，并给这个`consumer`组件标志`lanes`属性表示需要更新；
-2. 调用`scheduleContextWorkOnParentPath`方法从`consumer`组件往上给所有的父组件标记`childLanes`属性，这个方法类似【5】文中提到的`markUpdateLaneFromFiberToRoot`方法；
+2. 调用`scheduleContextWorkOnParentPath`方法从`consumer`组件往上给所有的组件节点标记`childLanes`属性，这个方法类似【5】文中提到的`markUpdateLaneFromFiberToRoot`方法；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】

@@ -663,7 +663,7 @@ export type Fiber = {
 
 ## Hook 通用方法
 
-每一个`hook`在`mount`和`rerender`过程中都会经历两个方法，`mountWorkInProgressHook`和`updateWorkInProgressHook`，前者用于创建`hook`，后者用于找到对应`hook`。
+每一个`hook`在`mount`和`rerender`过程中都会经历两个方法，`mountWorkInProgressHook`和`updateWorkInProgressHook`，前者用于创建`hook`，后者用于找到对应`hook`并更新。
 
 ### mountWorkInProgressHook
 

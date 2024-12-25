@@ -39,8 +39,6 @@
 
 ### useEffect 入口
 
-<!-- 【TODO：运行两次原因？】 -->
-
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 export function renderWithHooks<Props, SecondArg>(
@@ -308,7 +306,7 @@ export type Effect = {
 
 1. 首先构造一个空`Hook`对象并且作为全局唯一的 `workInProgressHook`，如果已有`hook`就用`next`链接，用例中已有一个`useState`对应的`Hook`，所以用`next`链接到其后；
 2. 给当前`fiber`的`flags`添加`PassiveEffect` | `PassiveStaticEffect`标志；
-3. 然后调用`pushEffect`方法构造一个`effect`实例对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`effect`对象插入进去，`updateQueue`始终都是一个单向的链表，同时存入`Hook`对象的`memoizedState`属性；
+3. 然后调用`pushEffect`方法构造一个`effect`实例对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`effect`对象插入进去，`updateQueue`始终都是一个单向的循环链表，同时存入`Hook`对象的`memoizedState`属性；
 
 ```ts
 let currentlyRenderingFiber: Fiber = (null: any);
@@ -2038,8 +2036,8 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 
 `useEffect`和`useLayoutEffect`区别：
 
-- `useEffect`是异步调度，等页面渲染完成后再去执行，不会阻塞页面渲染。
-- `useLayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在DOM更新之后。
+- `useEffect`是异步调度，DOM 更新完成且浏览器绘制完成后再去执行，不会阻塞页面渲染。
+- `useLayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在 DOM 更新后、浏览器绘制前同步执行。
 - `useEffect`的`effect.destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。
 - `useLayoutEffect`的`effect.destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成DOM挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
 - `useEffect`是`commitHookPassiveMountEffects` => `commitHookEffectListMount`异步发生在`commit`三阶段之后。
@@ -2058,6 +2056,18 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 7. `useEffect`和`useLayoutEffect`两者的销毁函数作用时机也不同，`useEffect`和的`effect`实例的`destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。`useLayoutEffect`的`effect`实例的`destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成DOM挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
 
 ![react](./assets/useEffect/useEffect.png)
+
+`useEffect` 主要用于执行不需要立即影响页面布局的副作用，常见的使用场景包括：
+
+- 数据获取：例如发起网络请求，从服务器获取数据。
+- 订阅：例如设置事件监听器、WebSocket 订阅等。
+- 清理副作用：例如清理定时器、移除事件监听器等。
+- 外部库集成：比如集成第三方库，通常不会直接影响页面布局。
+
+`useLayoutEffect` 主要用于那些需要在 DOM 更新之后、绘制之前完成的副作用，常见的使用场景包括：
+
+- 测量 DOM 元素的大小和位置：例如获取元素的宽度、高度、滚动位置等，防止布局跳动。
+- 同步操作 DOM：例如同步修改 DOM 元素的样式或执行布局相关的计算。
 
 ## 参考资料
 

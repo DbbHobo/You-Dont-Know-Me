@@ -1692,7 +1692,7 @@ function workLoopSync() {
 
 ---
 
-`performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack`+`workLoopSync`/`workLoopConcurrent`：
+`performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack` + `workLoopSync`/`workLoopConcurrent`：
 
 如果是`performConcurrentWorkOnRoot`可能会走向`renderRootConcurrent`继而走向`workLoopConcurrent`方法，可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
 
@@ -3600,7 +3600,9 @@ export const HostSingleton = 27;
 
 ### Commit - 第三步：根据fiber进行DOM操作和处理副作用过程
 
-`performSyncWorkOnRoot`/`performSyncWorkOnRoot` => `commitRoot`：
+`performSyncWorkOnRoot` => `renderRootSync` + `commitRoot`
+
+`performConcurrentWorkOnRoot`  => `renderRootSync`/`renderRootConcurrent` + `finishConcurrentRender` => `commitRoot`
 
 经历过`render`过程，我们此时已经有了一个完整的`fiber`树，树上的节点都会有`flags`属性表明后续`commit`需要进行的不同类型的操作，`workInProgress`就指向这棵树，然后进入`commitRoot`过程去把这棵树渲染到页面上：
 
@@ -4184,7 +4186,7 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
 ![react](./assets/mount/commitBeforeMutationEffects1.png)
 ![react](./assets/mount/commitBeforeMutationEffects2.png)
 
-2. 中序`commitMutationEffects(root, finishedWork, lanes)`此方法调用完成时也就是 `DOM` 渲染完成的过程，首先进入`commitMutationEffectsOnFiber`方法，然后根据tag类型进入不同的处理方法，比如`HostRoot`/`HostComponent`类型的节点会先调用`recursivelyTraverseMutationEffects`遍历。`subtreeFlags`是`MutationMask`的节点就是需要`mutation`的节点然后深入调用`commitMutationEffectsOnFiber`，继而调用`commitReconciliationEffects`，在`commitReconciliationEffects`方法中会根据`fiber node`的`flags`类型进行合适的DOM操作。这个阶段完成了DOM渲染显示到页面上，`root.current = finishedWork;`current指向最新的fiber树；
+2. 中序`commitMutationEffects(root, finishedWork, lanes)`此方法调用完成时也就是 `DOM` 更新完成的过程，首先进入`commitMutationEffectsOnFiber`方法，然后根据tag类型进入不同的处理方法，比如`HostRoot`/`HostComponent`类型的节点会先调用`recursivelyTraverseMutationEffects`遍历。`subtreeFlags`是`MutationMask`的节点就是需要`mutation`的节点然后深入调用`commitMutationEffectsOnFiber`，继而调用`commitReconciliationEffects`，在`commitReconciliationEffects`方法中会根据`fiber node`的`flags`类型进行合适的DOM操作。这个阶段完成了DOM更新，`root.current = finishedWork;`current指向最新的fiber树；
 
 关键：`commitMutationEffects` => `commitMutationEffectsOnFiber` => `recursivelyTraverseMutationEffects` + `commitReconciliationEffects`
 

@@ -287,7 +287,7 @@ export function memo<Props>(
 }
 ```
 
-后续在进行`fiber`构建的`beginWork`阶段，遇到`memo``包裹的组件就会进入updateMemoComponent` 或者 `updateSimpleMemoComponent`方法：
+后续在进行`fiber`构建的`beginWork`阶段，遇到`memo`包裹的组件就会进入`updateMemoComponent` 或者 `updateSimpleMemoComponent`方法：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】

@@ -137,11 +137,11 @@ function dispatchSetState<S, A>(
 
 `scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` + `commitRoot`
 
-前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程**render流程**（`renderRootSync`/`renderRootConcurrent`）和**commit流程**（`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前渲染的内容的`fiber`树，然后调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
+前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程**render流程**（`renderRootSync`/`renderRootConcurrent`）和**commit流程**（`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前渲染的内容的`fiber`树，然后`prepareFreshStack`中会去调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
 
-`renderRootSync` => `prepareFreshStack` + `workLoopSync` + `finishQueueingConcurrentUpdates`
+`renderRootSync` => `prepareFreshStack` + `workLoopSync` => `finishQueueingConcurrentUpdates`
 
-`renderRootConcurrent` => `prepareFreshStack` + `workLoopSync`/`workLoopConcurrent` + `finishQueueingConcurrentUpdates`
+`renderRootConcurrent` => `prepareFreshStack` + `workLoopSync`/`workLoopConcurrent` => `finishQueueingConcurrentUpdates`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -2559,7 +2559,7 @@ function updateHostComponent(
 
 ## commit流程
 
-`scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootSync` + `commitRoot`
+`scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootConcurrent`/`renderRootSync` + `commitRoot`
 
 `commitRoot` => `commitRootImpl` => `scheduleCallback(flushPassiveEffects)` => `commitBeforeMutationEffects` + `commitMutationEffects` + `commitLayoutEffects`
 
@@ -2721,6 +2721,8 @@ export function commitMutationEffects(
    - `DOM` 变化后。主要处理节点标记（`flags`）为`Update` , `Callback`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`create`。
 
 ### commitBeforeMutationEffects
+
+`commitBeforeMutationEffects` 阶段发生在 `DOM` 变更之前。这个阶段主要是为了执行一些副作用操作，这些副作用需要在 DOM 发生实际变更之前执行。这个阶段可以处理所有和 DOM 更新无关的副作用，比如更新 ref、清理操作或将数据同步到外部系统等。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
@@ -2938,6 +2940,8 @@ function commitBeforeMutationEffectsDeletion(deletion: Fiber) {
 ![react](./assets/update/update_commit1.png)
 
 ### commitMutationEffects
+
+`commitMutationEffects` 阶段是主要是处理 DOM 节点的实际更新，应用组件树中需要修改的 DOM 元素。
 
 `commitRoot` => `commitRootImpl` => `commitMutationEffects` => `commitMutationEffectsOnFiber` => `recursivelyTraverseMutationEffects` + `commitReconciliationEffects`
 
@@ -3842,7 +3846,9 @@ export function updateFiberProps(
 
 ### commitLayoutEffects
 
-在整个渲染过程中, 有可能产生新的`update`(比如在`componentDidMount`函数中, 再次调用`setState()`)。
+`commitLayoutEffects` 阶段发生在 DOM 变更和浏览器绘制之后。这个阶段主要用于执行那些需要在 DOM 更新后立即执行、但在浏览器绘制之前执行的副作用。这个阶段可以处理所有的布局副作用，即那些需要访问或修改布局（例如获取 DOM 元素的大小、位置等）或执行 DOM 操作的副作用。
+
+并且在整个渲染过程中, 有可能产生新的`update`(比如在`componentDidMount`函数中, 再次调用`setState()`)。
 
 - 如果是常规(异步)任务, 不用特殊处理, 调用`ensureRootIsScheduled`确保任务已经注册到调度中心即可。
 - 如果是同步任务, 则主动调用`flushSyncCallbackQueue`(无需再次等待 `scheduler` 调度), 再次进入 `fiber` 树构造循环。

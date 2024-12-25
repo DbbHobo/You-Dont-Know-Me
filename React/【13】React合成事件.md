@@ -465,7 +465,7 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
 1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法；
 2. `findInstanceBlockingEvent` 方法根据该原生事件查找到当前原生 `DOM` 节点和对应的 `fiber` 节点；
 3. 触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
-4. `extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法向上收集 `fiber` 树上监听相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
+4. `extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
 5. 最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
 
 `dispatchEvent` => `findInstanceBlockingEvent` + `dispatchEventForPluginEventSystem` => `dispatchEventsForPlugins` => `extractEvents` + `processDispatchQueue`
@@ -1373,7 +1373,7 @@ reset.addEventListener("click", () => document.location.reload());
 
 合成事件分为注册、触发事件回调调用两个流程
 
-合成事件的注册主要是在`container`根容器上调用`addEventListener`添加事件监听，目前的`React`版本中包含81个原生事件，监听的事件回调根据事件的优先级分为3类`dispatch`事件，但是最终都会调用`dispatchEvent`，`dispatchEvent`是`React`对用户回调函数的包装。
+合成事件的注册主要是在root根容器上调用`addEventListener`添加事件监听，目前的`React`版本中包含81个原生事件，监听的事件回调根据事件的优先级分为3类`dispatch`事件，但是最终都会调用`dispatchEvent`，`dispatchEvent`是`React`对用户回调函数的包装。
 
 合成事件触发之后就会进入回调函数`dispatchEvent`，然后进入事件插件派发系统，找到所有注册了的事件回调并有序调用。
 

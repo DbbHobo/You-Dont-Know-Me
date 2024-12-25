@@ -1,4 +1,8 @@
-# Suspense & Lazy
+# `<Suspense>` & lazy
+
+## Suspense原理
+
+### Suspense介绍
 
 `<Suspense>` lets you display a fallback until its children have finished loading.
 
@@ -10,6 +14,16 @@
 - Indicating that a Transition is happening
 - Resetting Suspense boundaries on navigation
 - Providing a fallback for server errors and client-only content
+
+Only Suspense-enabled data sources will activate the `<Suspense>` component. They include:
+
+- Data fetching with Suspense-enabled frameworks like `Relay` and `Next.js`
+- Lazy-loading component code with `lazy`
+- Reading the value of a cached Promise with `use`
+
+`<Suspense>` does not detect when data is fetched inside an Effect or event handler.
+
+`<Suspense>`测试用例：
 
 ```html
 <html>
@@ -74,7 +88,7 @@
 </html>
 ```
 
-## Suspense原理
+### Suspense原理深入
 
 前文已知`render`阶段要对节点进行`beginWork`和`completeWork`，然后我们来看`beginWork`是如何处理`<Suspense>`组件的，可以看到会进入`updateSuspenseComponent`方法：
 
@@ -1369,7 +1383,7 @@ if (__DEV__ && replayFailedUnitOfWorkWithInvokeGuardedCallback) {
 }
 ```
 
-接下来进入到除了抛出异常的方法`handleThrow`：
+每当前被`suspended`的组件`fiber`的`beginWork`完成之后，接下来进入到除了抛出异常的方法`handleThrow`：
 
 1. `handleThrow`首先判断`error`类型，本例中`Promise`进入普通`error`处理分支；
 2. `error.then`如果是方法（`thenable`）则`isWakeable`为`true`，`workInProgressSuspendedReason`就设置为`SuspendedOnDeprecatedThrowPromise`；
@@ -1627,10 +1641,10 @@ function unwindSuspendedUnitOfWork(unitOfWork: Fiber, thrownValue: mixed) {
 
 `unwindSuspendedUnitOfWork`方法里的两个关键步骤：`throwException()` & `completeUnitOfWork()`
 
-1. 调用`throwException`方法，首先给当前组件`fiber`标记`Incomplete`，然后找到离当前组件**最近**的`suspenseBoundary`也就是`Suspense`组件；
+1. 调用`throwException`方法，首先给当前被suspended的组件`fiber`标记`Incomplete`，然后找到离当前组件**最近**的`suspenseBoundary`也就是`Suspense`组件；
 2. 将当前抛出的`Promise`加入`suspenseBoundary`的`updateQueue`队列；
-3. `Concurrent`模式下调用`attachPingListener(root, wakeable, rootRenderLanes)`，在`root上`添加`root.pingCache`，这个是后面`Promise`被`resolve`之后去通知进行`fiber`切换的重要前置条件；
-4. 结束`throwException`方法回到`unwindSuspendedUnitOfWork`，继续没有完成的`completeUnitOfWork(unitOfWork)`；
+3. `Concurrent`模式下调用`attachPingListener(root, wakeable, rootRenderLanes)`，在`root`上添加`root.pingCache`，并且给当前这个Promise添加`.then(ping, ping)`也就是`ping`方法监听，这个是后面`Promise`被`resolve`之后去通知进行`fiber`切换的重要前置条件；
+4. 结束`throwException`方法回到`unwindSuspendedUnitOfWork`，继续当前被suspended的组件没有完成的`completeUnitOfWork(unitOfWork)`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberThrow.js】
@@ -2584,7 +2598,7 @@ export function unhideInstance(instance: Instance, props: Props): void {
 
 ---
 
-当 `Promise resolve` 之后，就会调用`then`回调事件`ping`，前面已知`attachPingListener`除了将`wakeable（Promise）`加入根fiber节点的`pingCache`属性存储的`WeakMap`之外还会给这个`wakeable`绑定`then`回调事件`ping`，所以之前抛出的`Promise`在`resolve`之后其实会调用`ping`方法也就是`pingSuspendedRoot`方法如下：
+当 `Promise resolve` 之后，就会调用`then`回调事件`ping`，前面已知`attachPingListener`除了将`wakeable（Promise）`加入根root fiber节点的`pingCache`属性存储的`WeakMap`之外还会给这个`wakeable`绑定`then`回调事件`ping`，所以之前抛出的`Promise`在`resolve`之后其实会调用`ping`方法也就是`pingSuspendedRoot`方法如下：
 
 1. 从`root.pingCache`取出当前`wakeable（Promise）`；
 2. `markRootPinged`标记`ping`成功；
@@ -2663,8 +2677,6 @@ function pingSuspendedRoot(
 ```
 
 ---
-
-<!-- TODO：会执行两遍performSyncWorkOnRoot？ -->
 
 `performSyncWorkOnRoot` => ... => `commitMutationEffectsOnFiber` => `attachSuspenseRetryListeners` => `resolveRetryWakeable` =>  `retryTimedOutBoundary` => `ensureRootIsScheduled` => `performSyncWorkOnRoot`... => `updateSuspenseComponent` => `updateSuspensePrimaryChildren`
 
@@ -2766,14 +2778,358 @@ function retryTimedOutBoundary(boundaryFiber: Fiber, retryLane: Lane) {
 }
 ```
 
-## Lazy原理
+## lazy原理
 
-<!-- TODO -->
+### lazy介绍
+
+Usually, you import components with the static import declaration:
+
+```ts
+import MarkdownPreview from './MarkdownPreview.js';
+```
+
+To defer loading this component’s code until it’s rendered for the first time, replace this import with:
+
+```ts
+import { lazy } from 'react';
+
+const MarkdownPreview = lazy(() => import('./MarkdownPreview.js'));
+```
+
+This code relies on dynamic `import()`, which might require support from your bundler or framework. Using this pattern requires that the lazy component you’re importing was exported as the default export.
+
+Now that your component’s code loads on demand, you also need to specify what should be displayed while it is loading. You can do this by wrapping the lazy component or any of its parents into a `<Suspense>` boundary:
+
+```JSX
+<Suspense fallback={<Loading />}>
+  <h2>Preview</h2>
+  <MarkdownPreview />
+</Suspense>
+```
+
+### lazy原理深入
+
+当我们在调用`React.lazy`这个API时构造了一个`REACT_LAZY_TYPE`类型的React-Element所以在后续进行`beginWork`和`completeWork`时进入`LazyComponent`这个分支进行处理，入口如下：
+
+```ts
+// 【packages/react/src/ReactLazy.js】
+export type LazyComponent<T, P> = {
+  $$typeof: symbol | number,
+  _payload: P,
+  _init: (payload: P) => T,
+  _debugInfo?: null | ReactDebugInfo,
+};
+
+export function lazy<T>(
+  ctor: () => Thenable<{default: T, ...}>,
+): LazyComponent<T, Payload<T>> {
+  // 【ctor是用户传入的内容，通常是个thenable对象，后续用于throw Error进而进入handleError】
+  const payload: Payload<T> = {
+    // We use these fields to store the result.
+    _status: Uninitialized,
+    _result: ctor,
+  };
+
+  const lazyType: LazyComponent<T, Payload<T>> = {
+    $$typeof: REACT_LAZY_TYPE,
+    _payload: payload,
+    _init: lazyInitializer,
+  };
+
+  if (!disableDefaultPropsExceptForClasses) {
+    if (__DEV__) {
+      // In production, this would just set it on the object.
+      let defaultProps;
+      // $FlowFixMe[prop-missing]
+      Object.defineProperties(lazyType, {
+        defaultProps: {
+          configurable: true,
+          get() {
+            return defaultProps;
+          },
+          // $FlowFixMe[missing-local-annot]
+          set(newDefaultProps) {
+            console.error(
+              'It is not supported to assign `defaultProps` to ' +
+                'a lazy component import. Either specify them where the component ' +
+                'is defined, or create a wrapping component around it.',
+            );
+            defaultProps = newDefaultProps;
+            // Match production behavior more closely:
+            // $FlowFixMe[prop-missing]
+            Object.defineProperty(lazyType, 'defaultProps', {
+              enumerable: true,
+            });
+          },
+        },
+      });
+    }
+  }
+
+  return lazyType;
+}
+```
+
+### 作为Suspense的Primary Child解析
+
+在`beginWork`阶段会进入`LazyComponent`分支继而进入`mountLazyComponent`方法：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+function beginWork(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+): Fiber | null {
+
+  if (current !== null) {
+    // 【省略代码...】
+  } else {
+    // 【省略代码...】
+  }
+
+  // Before entering the begin phase, clear pending update priority.
+  // TODO: This assumes that we're about to evaluate the component and process
+  // the update queue. However, there's an exception: SimpleMemoComponent
+  // sometimes bails out later in the begin phase. This indicates that we should
+  // move this assignment out of the common path and into each branch.
+  workInProgress.lanes = NoLanes;
+
+  switch (workInProgress.tag) {
+    // 【省略代码...】
+    // 【---处理LazyComponent组件---】
+    case LazyComponent: {
+      const elementType = workInProgress.elementType;
+      return mountLazyComponent(
+        current,
+        workInProgress,
+        elementType,
+        renderLanes,
+      );
+    }
+    // 【省略代码...】
+  }
+}
+```
+
+根据`LazyComponent`对应的`React-Element`上获取的`elementType`，调用`init(payload)`得到`LazyComponent`组件的构造函数`Component`：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+function mountLazyComponent(
+  _current: null | Fiber,
+  workInProgress: Fiber,
+  elementType: any,
+  renderLanes: Lanes,
+) {
+  resetSuspendedCurrentOnMountInLegacyMode(_current, workInProgress);
+
+  const props = workInProgress.pendingProps;
+  const lazyComponent: LazyComponentType<any, any> = elementType;
+  let Component;
+  if (__DEV__) {
+    Component = callLazyInitInDEV(lazyComponent);
+  } else {
+    const payload = lazyComponent._payload;
+    const init = lazyComponent._init;
+    Component = init(payload);
+  }
+  // 【调用init(payload)获取lazy组件的构造函数】
+  // Store the unwrapped component in the type.
+  workInProgress.type = Component;
+
+  if (typeof Component === 'function') {
+    if (isFunctionClassComponent(Component)) {
+      const resolvedProps = resolveClassComponentProps(Component, props, false);
+      workInProgress.tag = ClassComponent;
+      if (__DEV__) {
+        workInProgress.type = Component =
+          resolveClassForHotReloading(Component);
+      }
+      return updateClassComponent(
+        null,
+        workInProgress,
+        Component,
+        resolvedProps,
+        renderLanes,
+      );
+    } else {
+      const resolvedProps = disableDefaultPropsExceptForClasses
+        ? props
+        : resolveDefaultPropsOnNonClassComponent(Component, props);
+      workInProgress.tag = FunctionComponent;
+      if (__DEV__) {
+        validateFunctionComponentInDev(workInProgress, Component);
+        workInProgress.type = Component =
+          resolveFunctionForHotReloading(Component);
+      }
+      return updateFunctionComponent(
+        null,
+        workInProgress,
+        Component,
+        resolvedProps,
+        renderLanes,
+      );
+    }
+  } else if (Component !== undefined && Component !== null) {
+    const $$typeof = Component.$$typeof;
+    if ($$typeof === REACT_FORWARD_REF_TYPE) {
+      const resolvedProps = disableDefaultPropsExceptForClasses
+        ? props
+        : resolveDefaultPropsOnNonClassComponent(Component, props);
+      workInProgress.tag = ForwardRef;
+      if (__DEV__) {
+        workInProgress.type = Component =
+          resolveForwardRefForHotReloading(Component);
+      }
+      return updateForwardRef(
+        null,
+        workInProgress,
+        Component,
+        resolvedProps,
+        renderLanes,
+      );
+    } else if ($$typeof === REACT_MEMO_TYPE) {
+      const resolvedProps = disableDefaultPropsExceptForClasses
+        ? props
+        : resolveDefaultPropsOnNonClassComponent(Component, props);
+      workInProgress.tag = MemoComponent;
+      return updateMemoComponent(
+        null,
+        workInProgress,
+        Component,
+        disableDefaultPropsExceptForClasses
+          ? resolvedProps
+          : resolveDefaultPropsOnNonClassComponent(
+              Component.type,
+              resolvedProps,
+            ), // The inner type can have defaults too
+        renderLanes,
+      );
+    }
+  }
+
+  let hint = '';
+  if (__DEV__) {
+    if (
+      Component !== null &&
+      typeof Component === 'object' &&
+      Component.$$typeof === REACT_LAZY_TYPE
+    ) {
+      hint = ' Did you wrap a component in React.lazy() more than once?';
+    }
+  }
+
+  // This message intentionally doesn't mention ForwardRef or MemoComponent
+  // because the fact that it's a separate type of work is an
+  // implementation detail.
+  throw new Error(
+    `Element type is invalid. Received a promise that resolves to: ${Component}. ` +
+      `Lazy element type must resolve to a class or function.${hint}`,
+  );
+}
+```
+
+`lazyInitializer`函数如下，它的入参是`lazyComponent._payload`由lazy API构造，初始`_status`是`Uninitialized`，`_result`是用户传入的`ctor`函数。因为初始`_status`是`Uninitialized`所以会去调用`ctor`函数得到一个Promise对象或者是thenable对象，并为其添加then回调。并且最后抛出`throw payload._result;`就会被`trycatch`捕捉并进入`handleThrow`方法。接下来的流程就如Suspense组件中讲的了。
+
+```ts
+// 【packages/react/src/ReactLazy.js】
+const payload: Payload<T> = {
+  // We use these fields to store the result.
+  _status: Uninitialized,
+  _result: ctor,
+}
+
+function lazyInitializer<T>(payload: Payload<T>): T {
+  if (payload._status === Uninitialized) {
+    const ctor = payload._result;
+    const thenable = ctor();
+    // Transition to the next state.
+    // This might throw either because it's missing or throws. If so, we treat it
+    // as still uninitialized and try again next time. Which is the same as what
+    // happens if the ctor or any wrappers processing the ctor throws. This might
+    // end up fixing it if the resolution was a concurrency bug.
+    thenable.then(
+      moduleObject => {
+        if (
+          (payload: Payload<T>)._status === Pending ||
+          payload._status === Uninitialized
+        ) {
+          // Transition to the next state.
+          const resolved: ResolvedPayload<T> = (payload: any);
+          resolved._status = Resolved;
+          resolved._result = moduleObject;
+        }
+      },
+      error => {
+        if (
+          (payload: Payload<T>)._status === Pending ||
+          payload._status === Uninitialized
+        ) {
+          // Transition to the next state.
+          const rejected: RejectedPayload = (payload: any);
+          rejected._status = Rejected;
+          rejected._result = error;
+        }
+      },
+    );
+    if (payload._status === Uninitialized) {
+      // In case, we're still uninitialized, then we're waiting for the thenable
+      // to resolve. Set it as pending in the meantime.
+      const pending: PendingPayload = (payload: any);
+      pending._status = Pending;
+      pending._result = thenable;
+    }
+  }
+  if (payload._status === Resolved) {
+    const moduleObject = payload._result;
+    if (__DEV__) {
+      if (moduleObject === undefined) {
+        console.error(
+          'lazy: Expected the result of a dynamic imp' +
+            'ort() call. ' +
+            'Instead received: %s\n\nYour code should look like: \n  ' +
+            // Break up imports to avoid accidentally parsing them as dependencies.
+            'const MyComponent = lazy(() => imp' +
+            "ort('./MyComponent'))\n\n" +
+            'Did you accidentally put curly braces around the import?',
+          moduleObject,
+        );
+      }
+    }
+    if (__DEV__) {
+      if (!('default' in moduleObject)) {
+        console.error(
+          'lazy: Expected the result of a dynamic imp' +
+            'ort() call. ' +
+            'Instead received: %s\n\nYour code should look like: \n  ' +
+            // Break up imports to avoid accidentally parsing them as dependencies.
+            'const MyComponent = lazy(() => imp' +
+            "ort('./MyComponent'))",
+          moduleObject,
+        );
+      }
+    }
+    return moduleObject.default;
+  } else {
+    throw payload._result;
+  }
+}
+```
 
 ## 总结
 
+`<Suspense>`组件：
+
 1. `fallback fiber`由`Fragment`包裹，`primaryChild fiber`由`Offscreen`包裹；
+2. 根据是否要显示`fallback fiber`还是直接显示`primaryChild fiber`，`primaryChildProps`的`mode`是`visible`或者`hidden`用于显示或者隐藏`primaryChild fiber`；
+3. 先显示`fallback fiber`的时候，给`fallback fiber`构造一个`Fragment`壳，并在`Fragment`壳上打上`Placement`标记，这个`Fragment`作为`Offscreen`的兄弟节点存在，`return`指向`Suspense fiber`，`Suspense fiber`会在`memoizedState`标记`SUSPENDED_MARKER`表明当前内容显示的是fallback；
+4. 处理完`fallback fiber`的`beginWork`和`completeWork`阶段，回到`Suspense fiber`的`completeWork`阶段，此时会在`Suspense fiber`的`updateQueue`上会存储阻止我们显示`primaryChild fiber`的`Promise`实例，并且给`Suspense fiber`打上`Update`标记，完成一切后进入commit阶段；
+5. `commit`的第二阶段`commitMutationEffects`过程中完成DOM的构建，此时会调用一个方法`attachSuspenseRetryListeners`；
+
+`lazy`API：
+
+1. lazy可以结合`<Suspense>`组件使用；
+2. lazy构造了`LazyComponent`，会手动进行throw Error，继而进入`handleThrow`流程；
 
 ![react](./assets/Suspense/Suspense.png)
-
-<!-- 【TODO：完成Lazy源码理解】 -->

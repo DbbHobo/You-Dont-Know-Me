@@ -1162,6 +1162,23 @@ function updateRef<T>(initialValue: T): {current: T} {
 2. `detach`在`commitMutationEffectsOnFiber`阶段，是`commitLayoutEffectOnFiber`之前的阶段，有些类似`useEffect`里先调用`effect.destory()`再调用`effect.create()`，清空再获取最新内容的意思；
 3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个flags在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`beginWork`阶段的`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
 
+- `markRef`在`beginWork`阶段根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
+function markRef(current: Fiber | null, workInProgress: Fiber) {
+  const ref = workInProgress.ref;
+  if (
+    (current === null && ref !== null) ||
+    (current !== null && current.ref !== ref)
+  ) {
+    // Schedule a Ref effect
+    workInProgress.flags |= Ref;
+    workInProgress.flags |= RefStatic;
+  }
+}
+```
+
 - `attach`在`commit`第三阶段`commitLayoutEffects`
 
 ```ts
@@ -1325,23 +1342,6 @@ function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
       // $FlowFixMe unable to narrow type to RefObject
       ref.current = null;
     }
-  }
-}
-```
-
-- `markRef`在`beginWork`阶段根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
-
-```ts
-// 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function markRef(current: Fiber | null, workInProgress: Fiber) {
-  const ref = workInProgress.ref;
-  if (
-    (current === null && ref !== null) ||
-    (current !== null && current.ref !== ref)
-  ) {
-    // Schedule a Ref effect
-    workInProgress.flags |= Ref;
-    workInProgress.flags |= RefStatic;
   }
 }
 ```
