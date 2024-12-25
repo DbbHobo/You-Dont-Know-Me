@@ -139,7 +139,30 @@ console.log(typeof Object(symbol1).valueOf());
 
 - `Symbol.iterator`
 
-对象的`Symbol.iterator`属性，指向该对象的默认遍历器方法。
+对象的`Symbol.iterator`属性，指向该对象的默认遍历器方法。这让我们可以用`for...of`去遍历对象。
+
+```js
+// Making an object iterable with Symbol.iterator
+const tasks = {
+  items: ['write code', 'review PR', 'fix bugs'],
+  [Symbol.iterator]() {
+    let index = 0;
+    return {
+      next: () => {
+        if (index < this.items.length) {
+          return { value: this.items[index++], done: false };
+        }
+        return { value: undefined, done: true };
+      }
+    };
+  }
+};
+
+// Now we can use for...of
+for (let task of tasks) {
+  console.log(task); // 'write code', 'review PR', 'fix bugs'
+}
+```
 
 - `Symbol.match`
 
@@ -174,6 +197,33 @@ console.log(typeof Object(symbol1).valueOf());
 - `Number`：该场合需要转成数值
 - `String`：该场合需要转成字符串
 - `Default`：该场合可以转成数值，也可以转成字符串
+
+```js
+const user = {
+  name: 'Alex',
+  score: 42,
+  [Symbol.toPrimitive](hint) {
+    // JavaScript tells us what type it wants with the 'hint' parameter
+    // hint can be: 'number', 'string', or 'default'
+
+    switch (hint) {
+      case 'number':
+        return this.score;    // When JavaScript needs a number (like +user)
+
+      case 'string':
+        return this.name;     // When JavaScript needs a string (like `${user}`)
+
+      default:
+        return `${this.name} (${this.score})`; // For other operations (like user + '')
+    }
+  }
+};
+
+// Examples of how JavaScript uses these conversions:
+console.log(+user);        // + operator wants a number, gets 42
+console.log(`${user}`);    // Template literal wants a string, gets "Alex"
+console.log(user + '');    // + with string uses default, gets "Alex (42)"
+```
 
 - `Symbol.toStringTag`
 
@@ -237,21 +287,26 @@ let message = { text: expectedTextButGotJSON };
 
 ### 应用二：私有属性
 
-借助`Symbol`类型的不可枚举，我们可以在类中模拟私有属性，控制变量读写：
+当用`Symbol`作为对象的属性时，`Object.keys()`和`for...in`并不能遍历到这个属性，只有`Object.getOwnPropertySymbols()`可以，所以可以和其他属性分离开作为私有属性存在：
 
 ```js
-const privateField = Symbol();
-class myClass {
-  constructor(){
-    this[privateField] = 'ConardLi';
-  }
-  getField(){
-    return this[privateField];
-  }
-  setField(val){
-    this[privateField] = val;
-  }
+const nameKey = Symbol('name');
+const person = {
+  [nameKey]: 'Alex',
+  city: 'London'
+};
+
+// Regular enumeration won't show Symbol properties
+console.log(Object.keys(person));     // ['city']
+console.log(Object.entries(person));  // [['city', 'London']]
+
+for (let key in person) {
+  console.log(key);                   // Only logs: 'city'
 }
+
+// But we can still access Symbol properties
+console.log(Object.getOwnPropertySymbols(person));  // [Symbol(name)]
+console.log(person[nameKey]);         // 'Alex'
 ```
 
 ### 应用三：防止属性污染
@@ -275,8 +330,76 @@ Function.prototype.myCall = function (context) {
 
 我们需要在某个对象上临时调用一个方法，又不能造成属性污染，`Symbol`是一个很好的选择。
 
+### 注意事项
+
+对象转化为JSON时
+
+```js
+const API_KEY = Symbol('apiKey');
+
+// Use that Symbol as a property key
+const userData = {
+ [API_KEY]: 'abc123xyz',      // Hidden API key using our Symbol
+ username: 'alex'             // Normal property anyone can see
+};
+
+// Later, we can access the API key using our saved Symbol
+console.log(userData[API_KEY]); // prints: 'abc123xyz'
+
+// But when we save to JSON, it still disappears
+const savedData = JSON.stringify(userData);
+console.log(savedData);         // Only shows: {"username":"alex"}
+```
+
+和字符串使用时
+
+```js
+const label = Symbol('myLabel');
+
+// This throws an error
+console.log(label + ' is my label'); // TypeError
+
+// Instead, you must explicitly convert to string
+console.log(String(label) + ' is my label'); // "Symbol(myLabel) is my label"
+```
+
+垃圾回收时
+
+```js
+// Regular Symbol can be garbage collected
+let regularSymbol = Symbol('temp');
+regularSymbol = null; // Symbol can be cleaned up
+
+// Registry Symbol persists
+Symbol.for('permanent'); // Creates registry entry
+// Even if we don't keep a reference, it stays in registry
+console.log(Symbol.for('permanent') === Symbol.for('permanent')); // true
+```
+
+跨模块使用时
+
+```js
+// In module A
+const SHARED_KEY = Symbol.for('app.sharedKey');
+const moduleA = {
+  [SHARED_KEY]: 'secret value'
+};
+
+// In module B - even in a different file
+const sameKey = Symbol.for('app.sharedKey');
+console.log(SHARED_KEY === sameKey);                // true
+console.log(moduleA[sameKey]);                      // 'secret value'
+
+// Regular Symbols don't share
+const regularSymbol = Symbol('regular');
+const anotherRegular = Symbol('regular');
+console.log(regularSymbol === anotherRegular);      // false
+```
+
 ## 参考资料
 
 [Symbol-MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)
 
 [内置的 Symbol 值](https://www.bookstack.cn/read/es6-3rd/spilt.8.docs-symbol.md)
+
+[Exploring JavaScript Symbols](https://www.trevorlasn.com/blog/symbols-in-javascript)
