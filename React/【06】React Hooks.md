@@ -846,3 +846,7 @@ export default MyComponent;
 ## 参考资料
 
 [Built-in React Hooks](https://react.dev/reference/react/hooks)
+
+[How Does setState Know What to Do?](https://overreacted.io/how-does-setstate-know-what-to-do/)
+
+[Why Do React Hooks Rely on Call Order?](https://overreacted.io/why-do-hooks-rely-on-call-order/)

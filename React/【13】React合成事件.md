@@ -6,6 +6,28 @@
 - 性能优化：原生事件在 DOM 树中逐个绑定时会造成性能问题，尤其在大型应用中可能会有大量的事件监听器挂载到各个 DOM 元素上，影响内存和性能。React 的合成事件通过事件委托机制，将事件监听器统一挂载在根节点上，减少了事件处理器的数量，并简化了事件的管理。
 - 更好地管理生命周期：React 的合成事件在事件触发后会进入一个回收机制，通过自动清理和回收，避免了内存泄漏等问题。
 
+举例来说，在原生 JavaScript 中，不同浏览器对鼠标点击事件 `onClick` 的 `event.button` 属性的值处理方式有所不同。在 左键点击 时，IE 和旧版本的浏览器可能会返回 1。现代浏览器（如 Chrome、Firefox）会返回 0。
+
+```js
+document.addEventListener("click", function (event) {
+  if (event.button === 0) {
+    console.log("Left button clicked (Modern browsers)");
+  } else if (event.button === 1) {
+    console.log("Middle button clicked");
+  } else if (event.button === 2) {
+    console.log("Right button clicked");
+  } else {
+    console.log("Unknown button");
+  }
+});
+```
+
+在 React 中，无论是在 Chrome、Firefox 还是 IE 中，`event.button` 的值都被标准化：
+
+- 0 表示左键。
+- 1 表示中键。
+- 2 表示右键。
+
 `React` 的事件处理机制可以分为两个阶段：
 
 1. 初始化渲染时在`root`节点上注册事件；

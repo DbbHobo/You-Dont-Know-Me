@@ -428,6 +428,10 @@ Didact.render(element, container)
 1. 首先下载最新版本的React项目
 2. 
 
+## React版本更新
+
+[React v19](https://react.dev/blog/2024/12/05/react-19?ck_subscriber_id=2869254244&utm_source=convertkit&utm_medium=email&utm_campaign=%E2%9A%9B%EF%B8%8F%20This%20Week%20In%20React%20#whats-new-in-react-19)
+
 ## 总结
 
 ![react](./assets/react_flow.png)

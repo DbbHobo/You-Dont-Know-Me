@@ -11,7 +11,7 @@ export type Source = {
 };
 
 export type ReactElement = {
-  $$typeof: any,//【通常用Symbol，出于安全考虑？这样不会给任何自主创建的“ReactElement”对象给渲染上】
+  $$typeof: any,//【通常用Symbol，出于安全考虑，这样不会给任何自主创建的“ReactElement”对象给渲染上】
   type: any,
   key: any,
   ref: any,
@@ -26,6 +26,21 @@ export type ReactElement = {
   _source: Source,
 };
 ```
+
+```ts
+{
+  type: 'marquee',
+  props: {
+    bgcolor: '#ffa7c4',
+    children: 'hi',
+  },
+  key: null,
+  ref: null,
+  $$typeof: Symbol.for('react.element'),
+}
+```
+
+如果服务器存在漏洞，可能导致返回恶意构造的数据。由于 `JSON` 无法传递 `Symbol`，恶意数据中无法包含正确的 `$$typeof` 标识符。`React` 检测到这一问题后，会拒绝处理该元素，从而起到一定的安全防护作用，防止恶意数据引发不可预知的问题。这之所以有效，是因为你不能直接将 `Symbol` 放入 `JSON` 中。因此，即便服务器存在安全漏洞而返回 `JSON` 而不是纯文本，这个 `JSON` 也无法包含 `Symbol.for('react.element')`。`React` 会检查元素的 `$$typeof` 属性，并在该属性缺失或无效时拒绝处理该元素。
 
 ## FiberNode
 
@@ -628,3 +643,7 @@ export type ReactContext<T> = {
   ...
 };
 ```
+
+## 参考资料
+
+[Why Do React Elements Have a $$typeof Property?](https://overreacted.io/why-do-react-elements-have-typeof-property/)
