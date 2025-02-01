@@ -1,18 +1,27 @@
 # Iterator
 
-遍历器（`Iterator`）就是一种接口，为各种不同的数据结构提供统一的访问机制。任何数据结构只要部署 `Iterator` 接口，就可以完成遍历操作（即依次处理该数据结构的所有成员）。`Iterator` 接口主要供`for...of`消费。
+## Iterator定义
 
-默认的 `Iterator` 接口部署在数据结构的`Symbol.iterator`属性，或者说，一个数据结构只要具有`Symbol.iterator`属性，就可以认为是“可遍历的”（iterable）。`Symbol.iterator`属性本身是一个函数，就是当前数据结构默认的**遍历器生成函数**。执行这个函数，就会返回一个遍历器。至于属性名`Symbol.iterator`，它是一个表达式，返回`Symbol`对象的`iterator`属性，这是一个预定义好的、类型为 `Symbol` 的特殊值，所以要放在方括号内。
+遍历器（`Iterator`）就是一种接口，为各种不同的数据结构提供统一的访问机制。任何数据结构只要部署 `Iterator` 接口，就可以完成遍历操作（即依次处理该数据结构的所有成员）。
+
+`Iterator` 接口主要供 `for...of` 消费。
+
+默认的 `Iterator` 接口部署在数据结构的`Symbol.iterator`属性，或者说，一个数据结构只要具有`Symbol.iterator`属性，就可以认为是“可遍历的”（iterable）。
+
+对象的 `Symbol.iterator` 属性本身是一个函数，就是当前数据结构默认的**遍历器生成函数**。执行这个函数，就会返回一个遍历器。
+
+至于属性名`Symbol.iterator`，它是一个表达式，返回`Symbol`对象的`iterator`属性，这是一个预定义好的、类型为 `Symbol` 的特殊值，所以要放在方括号内。
 
 原生具备 `Iterator` 接口的数据结构如下：
 
-- Array
-- Map
-- Set
-- String
-- TypedArray
-- 函数的 arguments 对象
-- NodeList 对象
+- `Array`
+- `Map`
+- `Set`
+- `String`
+- `Generator`
+- `TypedArray`
+- `arguments` 对象
+- `DOM NodeList` 对象
 
 `Iterator` 的遍历过程是这样的。
 
@@ -48,7 +57,105 @@ iterator.next()  // { value: undefined, done: true }
 
 遍历器对象除了具有`next`方法，还可以具有`return`方法和`throw`方法。如果你自己写遍历器对象生成函数，那么`next`方法是必须部署的，`return`方法和`throw`方法是否部署是可选的。
 
+## for...of
+
+```js
+// -----遍历Map-----
+const map = new Map([["key1", "value1"],["key2", "value2"]])
+for (let value of map) {
+  console.log(value)
+}
+
+// ["key1", "value1"]
+// ["key2", "value2"]
+
+for (let key of map.keys()) {
+  console.log(key)
+}
+// key1
+// key2
+
+for (let value of map.values()) {
+  console.log(value)
+}
+// value1
+// value2
+
+for (let [key, value] of map.entries()) {
+  console.log(key + ":" + value)
+}
+// key1:value1
+// key2:value2
+```
+
+```js
+// -----遍历Set-----
+const set = new Set(["value1", "value2", "value3"])
+
+for (let value of set) {
+  console.log(value)
+}
+// value1
+// value2
+// value3
+
+for (let key of set.keys()) {
+  console.log(key)
+}
+// value1
+// value2
+// value3
+
+for (let value of set.values()) {
+  console.log(value)
+}
+// value1
+// value2
+// value3
+
+for (let [key,value] of set.entries()) {
+  console.log(key + ":" + value)
+}
+// [ "value1", "value1" ]
+// [ "value2", "value2" ]
+// [ "value3", "value3" ]
+```
+
+```js
+// -----遍历Array-----
+var arr = ["red", "green", "blue"];
+
+for (let value of arr) {
+    console.log(value);
+}
+// 0
+// 1
+// 2
+
+for (let key of arr.keys()) {
+    console.log(key);
+}
+// 0
+// 1
+// 2
+
+for (let value of arr.values()) {
+    console.log(value);
+}
+// red
+// green
+// blue
+
+for (let [key,value] of arr.entries()) {
+    console.log(key + ":" + value)
+}
+// [ 0, "red" ]
+// [ 1, "green" ]
+// [ 2, "blue" ]
+```
+
 ## 参考资料
 
 [Iterator 和 for…of 循环](https://www.bookstack.cn/read/es6-3rd/spilt.1.docs-iterator.md)
+
 [迭代器和生成器](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Iterators_and_generators)

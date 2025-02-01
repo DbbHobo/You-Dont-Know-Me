@@ -6,7 +6,7 @@
 
 ### Array.isArray()
 
-确定传递的值是否是一个 Array。
+确定传递的值是否是一个 Array
 
 - determines whether the passed value is an Array.
 
@@ -538,6 +538,47 @@ let str = JSON.stringify(arr);
 - `for...of`
 - `Array.prototype.map()`
 - 解构赋值
+
+## 类数组对象
+
+所谓的类数组对象就是拥有一个 length 属性和若干索引属性的对象。举例如下：
+
+- `arguments` 对象就是一个类数组对象
+- 一些 DOM 方法(`document.getElementsByTagName()`等)也返回类数组对象
+
+```js
+var array = ['name', 'age', 'sex'];
+
+var arrayLike = {
+    0: 'name',
+    1: 'age',
+    2: 'sex',
+    length: 3
+}
+```
+
+这类对象不能直接调用数组的方法，但是可以通过间接调用的方式：
+
+```js
+var arrayLike = {0: 'name', 1: 'age', 2: 'sex', length: 3 }
+// 1. slice
+Array.prototype.slice.call(arrayLike); // ["name", "age", "sex"] 
+// 2. splice
+Array.prototype.splice.call(arrayLike, 0); // ["name", "age", "sex"] 
+// 3. ES6 Array.from
+Array.from(arrayLike); // ["name", "age", "sex"] 
+// 4. apply
+Array.prototype.concat.apply([], arrayLike)
+// 5. join
+Array.prototype.join.call(arrayLike, '&'); // name&age&sex
+// 6. slice可以做到类数组转数组
+Array.prototype.slice.call(arrayLike, 0); // ["name", "age", "sex"] 
+// 7. map
+Array.prototype.map.call(arrayLike, function(item){
+    return item.toUpperCase();
+}); 
+// ["NAME", "AGE", "SEX"]
+```
 
 ## 参考资料
 

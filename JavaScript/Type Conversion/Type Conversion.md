@@ -235,6 +235,91 @@ false == {}; // false
 false == []; //true
 ```
 
+## 类型判断
+
+### typeof
+
+```js
+typeof 42                // "number"
+typeof "hello"           // "string"
+typeof true              // "boolean"
+typeof { name: "Alice" } // "object"
+typeof Symbol()          // "symbol"
+typeof 10n               // "bigint"
+// 比较特殊的几种typeof判断
+typeof function() {} // "function"
+typeof NaN           // "number" (NaN is a special case of number)
+typeof [1, 2, 3]     // "object" (arrays are technically objects in JavaScript)
+typeof null          // "object" (this is a known quirk in JavaScript)
+typeof undefined     // "undefined"
+```
+
+### Object.prototype.toString
+
+```js
+// 以下是11种：
+let number = 1;          // [object Number]
+let string = 'string';      // [object String]
+let boolean = true;      // [object Boolean]
+let und = undefined;     // [object Undefined]
+let nu = null;          // [object Null]
+let obj = {foo: 1}         // [object Object]
+let array = [1, 2, 3];   // [object Array]
+let date = new Date();   // [object Date]
+let error = new Error(); // [object Error]
+let reg = /a/g;          // [object RegExp]
+let fn = function doSth(){}; // [object Function]
+
+function checkType(sth) {
+  console.log(Object.prototype.toString.call(sth))
+}
+
+console.log(Object.prototype.toString.call(Math)); // [object Math]
+console.log(Object.prototype.toString.call(JSON)); // [object JSON]
+console.log(Object.prototype.toString.call(arguments)); // [object Arguments]
+```
+
+`Vue`源码中的类型判断就是通过`Object.prototype.toString`方法：
+
+```ts
+export const objectToString: typeof Object.prototype.toString =
+  Object.prototype.toString
+export const toTypeString = (value: unknown): string =>
+  objectToString.call(value)
+
+export const toRawType = (value: unknown): string => {
+  // extract "RawType" from strings like "[object RawType]"
+  return toTypeString(value).slice(8, -1)
+}
+export const isPlainObject = (val: unknown): val is object =>
+  toTypeString(val) === '[object Object]'
+
+export const isArray: typeof Array.isArray = Array.isArray
+export const isMap = (val: unknown): val is Map<any, any> =>
+  toTypeString(val) === '[object Map]'
+export const isSet = (val: unknown): val is Set<any> =>
+  toTypeString(val) === '[object Set]'
+
+export const isDate = (val: unknown): val is Date =>
+  toTypeString(val) === '[object Date]'
+export const isRegExp = (val: unknown): val is RegExp =>
+  toTypeString(val) === '[object RegExp]'
+export const isFunction = (val: unknown): val is Function =>
+  typeof val === 'function'
+export const isString = (val: unknown): val is string => typeof val === 'string'
+export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
+export const isObject = (val: unknown): val is Record<any, any> =>
+  val !== null && typeof val === 'object'
+
+export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
+  return (
+    (isObject(val) || isFunction(val)) &&
+    isFunction((val as any).then) &&
+    isFunction((val as any).catch)
+  )
+}
+```
+
 ## 总结
 
 四则运算符隐式转换准则：
@@ -269,3 +354,7 @@ false == []; //true
 [JavaScript 深入之头疼的类型转换(上)](https://github.com/mqyqingfeng/Blog/issues/159)
 
 [Re-implementing JavaScript's == in JavaScript](https://evanhahn.com/re-implementing-javascript-double-equals-in-javascript/)
+
+[JavaScript专题之类型判断(上)](https://juejin.cn/post/6844903485348020237)
+
+[JavaScript专题之类型判断(下)](https://juejin.cn/post/6844903486317035534)

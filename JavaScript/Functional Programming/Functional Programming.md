@@ -20,6 +20,32 @@
 const add = (a,b) => a + b;
 ```
 
+## 函数缓存
+
+函数缓存，就是将函数运算过的结果进行缓存，本质上就是用空间（缓存存储）换时间（计算过程），常用于缓存数据计算结果和缓存对象。
+
+- 对于昂贵的函数调用，执行复杂计算的函数
+- 对于具有有限且高度重复输入范围的函数
+- 对于具有重复输入值的递归函数
+- 对于纯函数，即每次使用特定输入调用时返回相同输出的函数
+
+```js
+const memoize = function (func, content) {
+  let cache = Object.create(null)
+  content = content || this
+  return (...key) => {
+    if (!cache[key]) {
+      cache[key] = func.apply(content, key)
+    }
+    return cache[key]
+  }
+}
+
+const calc = memoize(add)
+const num1 = calc(100,200)
+const num2 = calc(100,200) // 缓存得到的结果
+```
+
 ## 函数的合成
 
 如果一个值要经过多个函数，才能变成另外一个值，就可以把所有中间步骤合并成一个函数，这叫做"函数的合成"（`compose`）。
@@ -84,7 +110,7 @@ incDoubleSquare(3); // 64
 
 ## 函数柯里化
 
-函数柯里化就是将 `f(a,b,c)` 调用形式转化为 `f(a)(b)(c)` 调用形式的一种转化方法。
+函数柯里化就是将 `f(a,b,c)` 调用形式转化为 `f(a)(b)(c)` 调用形式的一种转化方法。柯里化是一种将使用多个参数的一个函数转换成一系列使用一个参数的函数的技术。
 
 ### 柯里化转化方法
 
@@ -149,34 +175,6 @@ const mozart = numbers =>
 mozart([1, 2, 3, 4, 5]); // 12
 ```
 
-## 不可变数据
-
-## 函数缓存
-
-函数缓存，就是将函数运算过的结果进行缓存，本质上就是用空间（缓存存储）换时间（计算过程），常用于缓存数据计算结果和缓存对象。
-
-- 对于昂贵的函数调用，执行复杂计算的函数
-- 对于具有有限且高度重复输入范围的函数
-- 对于具有重复输入值的递归函数
-- 对于纯函数，即每次使用特定输入调用时返回相同输出的函数
-
-```js
-const memoize = function (func, content) {
-  let cache = Object.create(null)
-  content = content || this
-  return (...key) => {
-    if (!cache[key]) {
-      cache[key] = func.apply(content, key)
-    }
-    return cache[key]
-  }
-}
-
-const calc = memoize(add)
-const num1 = calc(100,200)
-const num2 = calc(100,200) // 缓存得到的结果
-```
-
 ## 参考资料
 
 [学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
@@ -188,3 +186,9 @@ const num2 = calc(100,200) // 缓存得到的结果
 [HOW TO COMPOSE JAVASCRIPT FUNCTIONS THAT TAKE MULTIPLE PARAMETERS (THE EPIC GUIDE)](https://jrsinclair.com/articles/2024/how-to-compose-functions-that-take-multiple-parameters-epic-guide/)
 
 [unleash-javascripts-potential-with-functional-programming](https://janhesters.com/blog/unleash-javascripts-potential-with-functional-programming)
+
+[JavaScript 专题之函数记忆](https://juejin.cn/post/6844903494256705543)
+
+[JavaScript专题之函数组合](https://juejin.cn/post/6844903493740789774)
+
+[JavaScript 专题之函数柯里化](https://juejin.cn/post/6844903490771222542)

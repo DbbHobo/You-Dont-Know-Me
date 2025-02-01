@@ -1,2 +1,2 @@
-let fooFn = require("./foo").foo;
-fooFn();
+let fooFn = require("./foo").foo
+fooFn()

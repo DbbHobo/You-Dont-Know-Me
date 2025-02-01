@@ -70,13 +70,26 @@ var exports = module.exports;
 - 如果指定的模块文件没有发现，Node 会尝试为文件名添加`.js`、`.json`、`.node`后，再去搜索。`.js`件会以文本格式的 `js` 脚本文件解析，`.json` 文件会以 `JSON` 格式的文本文件解析，`.node` 文件会以编译后的二进制文件解析。
 - 如果想得到 `require` 命令加载的确切文件名，使用 `require.resolve()` 方法。
 
+`CommonJS` 的一个模块，就是一个脚本文件。`require`命令第一次加载该脚本，就会执行整个脚本，然后**在内存生成一个对象 `module` 对象**。
+
+```js
+{
+  id: '...',
+  exports: { ... },
+  loaded: true,
+  ...
+}
+```
+
 ## ES6
 
-ES6 模块的设计思想是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。
+`ES6` 模块的设计思想是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。
 
-ES6 中的模块是**编译时加载**，ES6 模块不是对象，而是通过 `export` 命令显式指定输出的代码，`import` 时采用静态命令的形式。即在 `import` 时可以指定加载某个输出值，而不是加载整个模块。
+`ES6` 中的模块是**编译时加载**，ES6 模块不是对象，而是通过 `export` 命令显式指定输出的代码，`import` 时采用静态命令的形式。即在 `import` 时可以指定加载某个输出值，而不是加载整个模块。
 
-ES6 在语言标准的层面上，实现了模块功能，浏览器和服务器通用的模块解决方案。`export` 命令用于规定模块的对外接口，`import` 命令用于输入其他模块提供的功能。
+`ES6` 在语言标准的层面上，实现了模块功能，浏览器和服务器通用的模块解决方案。`export` 命令用于规定模块的对外接口，`import` 命令用于输入其他模块提供的功能。
+
+`ES6` 模块是动态引用，如果使用`import`从一个模块加载变量（即`import foo from 'foo'`），那些变量不会被缓存，而是成为**一个指向被加载模块的引用**，需要开发者自己保证，真正取值的时候能够取到值。
 
 关键命令：`export`、`export default`、`import`。
 
@@ -111,6 +124,7 @@ define(["./a", "./b"], function (a, b) {
   a.do();
   b.do();
 });
+
 // CMD
 define(function (require, exports, module) {
   // 加载模块
@@ -133,6 +147,115 @@ define(function (require, exports, module) {
 - Webpack module: transpile and bundle of CJS, AMD, ES modules
 - Babel module: transpile ES module
 - TypeScript: module and namespace
+
+## 浏览器加载模块
+
+JavaScript 现在有两种模块。一种是 `ES6` 模块，简称 **`ESM`**；另一种是 `CommonJS` 模块，简称 **`CJS`**。
+
+`CommonJS` 模块使用`require()`和`module.exports`，`ES6` 模块使用`import`和`export`。
+
+Node.js 要求 `ES6` 模块采用`.mjs`后缀文件名。也就是说，只要脚本文件里面使用`import`或者`export`命令，那么就必须采用`.mjs`后缀名。Node.js 遇到`.mjs`文件，就认为它是 `ES6` 模块，默认启用严格模式，不必在每个模块文件顶部指定`"use strict"`。如果不希望将后缀名改成`.mjs`，可以在项目的`package.json`文件中，指定`type`字段为`module`。
+
+`.mjs`文件总是以 `ES6` 模块加载，`.cjs`文件总是以 `CommonJS` 模块加载，`.js`文件的加载取决于`package.json`里面`type`字段的设置。
+
+```js
+{
+  "type": "module"
+}
+```
+
+`package.json`文件有两个字段可以指定模块的入口文件：`main`和`exports`。比较简单的模块，可以只使用`main`字段，指定模块加载的入口文件。
+
+```js
+// ./node_modules/es-module-package/package.json
+{
+  "type": "module",
+  "main": "./src/index.js"
+}
+```
+
+`package.json` 文件中的 `exports` 字段用于定义模块在不同环境下（如 `CommonJS`、`ESM` 等）如何暴露和解析。它是一个较新的特性，旨在替代 `main` 和 `module` 字段，提供更加精细的控制，尤其是在支持多种模块系统时（例如，支持同时发布 CommonJS 和 ES 模块）。
+
+1. 子目录别名
+
+`package.json`文件的`exports`字段可以指定脚本或子目录的别名。
+
+```js
+// ./node_modules/es-module-package/package.json
+{
+  "exports": {
+    "./features/": "./src/features/"
+  }
+}
+
+import feature from 'es-module-package/features/x.js';
+// 加载 ./node_modules/es-module-package/src/features/x.js
+```
+
+2. `main` 的别名
+
+`exports`字段的别名如果是`.`，就代表模块的主入口，优先级高于`main`字段，并且可以直接简写成`exports`字段的值。
+
+```js
+// 兼容旧版本入口
+{
+  "main": "./main-legacy.cjs",
+  "exports": {
+    ".": "./main-modern.cjs"
+  }
+}
+```
+
+3. 支持多种模块格式
+
+```js
+// 指明两种格式模块各自的加载入口。
+{
+  "exports": {
+    "import": "./src/index.mjs",
+    "require": "./src/index.cjs"
+  }
+}
+```
+
+### 传统JavaScript模块加载
+
+HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<script>`标签打开`defer`或`async`属性，脚本就会**异步加载**。渲染引擎遇到这一行命令，就会开始下载外部脚本，但不会等它下载和执行，而是直接执行后面的命令。
+
+`defer`与`async`的区别是：`defer`要等到整个页面在内存中正常渲染结束（DOM 结构完全生成，以及其他脚本执行完成），才会执行；`async`一旦下载完，渲染引擎就会中断渲染，执行这个脚本以后，再继续渲染。一句话，`defer`是“渲染完再执行”，`async`是“下载完就执行”。另外，如果有多个`defer`脚本，会按照它们在页面出现的顺序加载，而多个`async`脚本是不能保证加载顺序的。
+
+```js
+<!-- 页面内嵌的脚本 -->
+<script type="application/javascript">
+  // module code
+</script>
+
+<!-- 外部脚本 -->
+<script type="application/javascript" src="path/to/myModule.js">
+</script>
+
+<script src="path/to/myModule.js" defer></script>
+<script src="path/to/myModule.js" async></script>
+```
+
+### ES6模块加载
+
+浏览器加载 ES6 模块，也使用`<script>`标签，但是要加入`type="module"`属性。浏览器对于带有`type="module"`的`<script>`，都是异步加载，不会造成堵塞浏览器，即等到整个页面渲染完，再执行模块脚本，等同于打开了`<script>`标签的`defer`属性。
+
+```js
+<script type="module" src="./foo.js"></script>
+```
+
+利用顶层的`this`等于`undefined`这个语法点，可以侦测当前代码是否在 `ES6` 模块之中。
+
+```js
+const isNotModuleScript = this !== undefined;
+```
+
+### ES6和CommonJS的混用
+
+```js
+```
 
 ## 参考资料
 

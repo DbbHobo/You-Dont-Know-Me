@@ -6,9 +6,9 @@
 const p = new Proxy(target, handler)
 ```
 
-- `new Proxy()`表示生成一个Proxy实例
-- `target` 要使用 `Proxy` 包装的目标对象（可以是任何类型的对象，包括原生数组，函数，甚至另一个代理）。
-- `handler` 一个通常以函数作为属性的对象，各属性中的函数分别定义了在执行各种操作时代理 p 的行为。
+- `new Proxy(target,handler)` 表示生成一个Proxy实例
+- `target` 要使用 `Proxy` 包装的目标对象（可以是任何类型的对象，包括原生数组，函数，甚至另一个代理）
+- `handler` 一个通常以函数作为属性的对象，各属性中的函数分别定义了在执行各种操作时代理 p 的行为
 
 ```js
 let obj = new Proxy({}, {
@@ -65,6 +65,10 @@ let obj = new Proxy({}, {
 
 拦截`Object.preventExtensions(proxy)`，返回一个布尔值。
 
+### `isExtensible(target)`
+
+拦截`Object.isExtensible(proxy)`，返回一个布尔值。
+
 ### `getPrototypeOf(target)`
 
 拦截以下操作，返回一个对象。
@@ -74,10 +78,6 @@ let obj = new Proxy({}, {
 - `Object.getPrototypeOf()`
 - `Reflect.getPrototypeOf()`
 - `instanceof`
-
-### `isExtensible(target)`
-
-拦截`Object.isExtensible(proxy)`，返回一个布尔值。
 
 ### `setPrototypeOf(target, proto)`
 

@@ -1,5 +1,7 @@
 # Promise
 
+## Promise定义
+
 把 `Promise` 看成一个状态机。初始是 `pending` 状态，可以通过函数 `resolve` 和 `reject` ，将状态转变为 `resolved` 或者 `rejected` 状态，状态一旦改变就不能再次变化。
 
 ```js
@@ -90,7 +92,6 @@ Promise.all([promise1, promise2, promise3]).then((values) => {
   console.log(values);
 });
 // Expected output: Array [3, 42, "foo"]
-
 ```
 
 ### Promise.allSettled()
@@ -160,7 +161,7 @@ Promise.any(promises).then((value) => console.log(value));
 
 ### Promise.resolve()
 
-`Promise.resolve(value)`方法：可以将现有对象转为 `Promise` 实例，其状态为已完成。`Promise.resolve(x)` 可以看作是 `new Promise(resolve => resolve(x))` 的简写，可以用于快速封装字面量对象或其他对象，将其封装成 `Promise` 实例。
+`Promise.resolve(value)`方法：可以将现有对象转为 `Promise` 实例，其状态为**fulfilled（已成功）**。`Promise.resolve(x)` 可以看作是 `new Promise(resolve => resolve(x))` 的简写，可以用于快速封装字面量对象或其他对象，将其封装成 `Promise` 实例。
 
 ```js
 Promise.resolve("foo");
@@ -170,7 +171,7 @@ new Promise((resolve) => resolve("foo"));
 
 ### Promise.reject()
 
-`Promise.reject(reason)`方法：会返回一个新的 `Promise` 实例，该实例的状态为 `rejected`，拒绝原因为入参。
+`Promise.reject(reason)`方法：会返回一个新的 `Promise` 实例，该实例的状态为 **rejected（已失败）**，拒绝原因为入参。
 
 ```js
 const p = Promise.reject("出错了");
@@ -202,7 +203,7 @@ async function* readableToAsyncIterable(stream) {
 
 ## Promise应用
 
-## 并发指定数量的请求
+### 并发指定数量的请求
 
 ```js
 function mockRequest(id) {
@@ -216,31 +217,24 @@ function mockRequest(id) {
 }
 
 async function promiseQueue(requests, maxConcurrent) {
-  let results = [];
-  let executing = [];
-  let index = 0;
+  const results = []
+  const executing = []
 
-  const enqueue = () => {
-    if (index === requests.length) {
-      return Promise.resolve();
-    }
+  for (const request of requests) {
+    const p = request().then((result) => {
+      // 执行成功后从executing队列中删除
+      executing.splice(executing.indexOf(p), 1)
+      return result
+    })
+    results.push(p)
+    executing.push(p)
 
-    const promise = requests[index++]().then(result => {
-      results.push(result);
-      executing.splice(executing.indexOf(promise), 1);
-    });
-
-    executing.push(promise);
-
-    let r = Promise.resolve();
     if (executing.length >= maxConcurrent) {
-      r = Promise.race(executing);
+      await Promise.race(executing)
     }
+  }
 
-    return r.then(enqueue);
-  };
-
-  return enqueue().then(() => Promise.all(executing)).then(() => results);
+  return Promise.all(results)
 }
 
 // 创建一个包含 10 个请求的数组
@@ -255,7 +249,7 @@ promiseQueue(requests, maxConcurrent).then(results => {
 });
 ```
 
-## 取消Promise
+### 取消Promise
 
 - `Promise.withResolvers`
 
@@ -346,6 +340,49 @@ const ret = buildCancelableFetch(async signal => {
 setTimeout(() => {
   ret.cancel();
 }, 500);
+```
+
+### 红绿灯问题
+
+红灯三秒亮一次，绿灯一秒亮一次，黄灯2秒亮一次；如何让三个灯不断交替重复亮灯？
+
+```js
+function red() {
+  console.log("red")
+}
+function green() {
+  console.log("green")
+}
+function yellow() {
+  console.log("yellow")
+}
+
+const light = (timeout, cb) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      cb()
+      resolve()
+    }, timeout)
+  })
+}
+
+const runLight = () => {
+  Promise.resolve()
+    .then(() => {
+      return light(3000, red)
+    })
+    .then(() => {
+      return light(1000, green)
+    })
+    .then(() => {
+      return light(2000, yellow)
+    })
+    .then(() => {
+      runLight()
+    })
+}
+
+runLight()
 ```
 
 ## 参考资料

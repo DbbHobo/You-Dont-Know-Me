@@ -26,11 +26,11 @@ hw.next()
 // { value: undefined, done: true }
 ```
 
-调用遍历器对象的 `next` 方法，使得指针移向下一个状态。也就是说，每次调用 `next` 方法，内部指针就从函数头部或上一次停下来的地方开始执行，直到遇到下一个 `yield` 表达式（或 `return` 语句）为止。换言之，**`Generator` 函数是分段执行的，yield 表达式是暂停执行的标记，而 next 方法可以恢复执行**。
+调用遍历器对象的 `next()` 方法，使得指针移向下一个状态。也就是说，每次调用 `next()` 方法，内部指针就从函数头部或上一次停下来的地方开始执行，直到遇到下一个 `yield` 表达式（或 `return` 语句）为止。换言之，**`Generator` 函数是分段执行的，yield 表达式是暂停执行的标记，而 next 方法可以恢复执行**。
 
 `Generator` 函数可以**暂停执行**和**恢复执行**，这是它能封装异步任务的根本原因。除此之外，它还有两个特性，使它可以作为异步编程的完整解决方案：函数体内外的数据交换和错误处理机制。
 
-`next` 方法返回值的 `value` 属性，是 `Generator` 函数向外输出数据；`next` 方法还可以接受参数，向 `Generator` 函数体内输入数据。
+`next()` 方法返回值的 `value` 属性，是 `Generator` 函数向外输出数据；`next()` 方法还可以接受参数，向 `Generator` 函数体内输入数据。
 
 ## Generator的实例方法
 
@@ -50,6 +50,7 @@ var a = foo(5);
 a.next() // Object{value:6, done:false}
 a.next() // Object{value:NaN, done:false}
 a.next() // Object{value:NaN, done:true}
+
 var b = foo(5);
 b.next() // { value:6, done:false }
 b.next(12) // { value:8, done:false }
@@ -60,15 +61,48 @@ b.next(13) // { value:42, done:true }
 
 如果向`next`方法提供参数，返回结果就完全不一样了。上面代码第一次调用b的`next`方法时，返回x+1的值6；第二次调用`next`方法，将上一次`yield`表达式的值设为12，因此y等于24，返回y / 3的值8；第三次调用`next`方法，将上一次`yield`表达式的值设为13，因此z等于13，这时x等于5，y等于24，所以return语句的值等于42。
 
-注意，由于`next`方法的参数表示上一个`yield`表达式的返回值，所以在第一次使用`next`方法时，传递参数是无效的。V8 引擎直接忽略第一次使用`next`方法时的参数，只有从第二次使用`next`方法开始，参数才是有效的。从语义上讲，第一个`next`方法用来启动遍历器对象，所以不用带有参数。
+注意，由于`next`方法的参数表示**上一个`yield`表达式的返回值**，所以在第一次使用`next`方法时，传递参数是无效的。V8 引擎直接忽略第一次使用`next`方法时的参数，只有从第二次使用`next`方法开始，参数才是有效的。从语义上讲，第一个`next`方法用来启动遍历器对象，所以不用带有参数。
 
 ### Generator.prototype.throw()
 
 `Generator.prototype.throw()`方法：Generator 函数返回的遍历器对象，都有一个throw方法，可以在函数体外抛出错误，然后在 Generator 函数体内捕获。
 
+```js
+function* gen() {
+  while (true) {
+    try {
+      yield 42;
+    } catch (e) {
+      console.log("Error caught!");
+    }
+  }
+}
+
+const g = gen();
+g.next();
+// { value: 42, done: false }
+g.throw(new Error("Something went wrong"));
+// "Error caught!"
+// { value: 42, done: false }
+```
+
 ### Generator.prototype.return()
 
 `Generator.prototype.return()`方法：Generator 函数返回的遍历器对象，还有一个return方法，可以返回给定的值，并且终结遍历 Generator 函数。
+
+```js
+function* gen() {
+  yield 1;
+  yield 2;
+  yield 3;
+}
+
+const g = gen();
+
+g.next(); // { value: 1, done: false }
+g.return("foo"); // { value: "foo", done: true }
+g.next(); // { value: undefined, done: true }
+```
 
 ### 共同点
 

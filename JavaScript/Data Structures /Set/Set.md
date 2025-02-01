@@ -1,13 +1,13 @@
 # Set
 
-`Set`对象是**值的集合**，你可以按照插入的**顺序**迭代它的元素。`Set` 中的元素只会出现一次，即 `Set` 中的元素是**唯一**的。`Set`和`Map`类似，也是一组key的集合，但不存储value。由于key不能重复，所以，在`Set`中，没有重复的key。
+`Set`对象是**值的集合**，你可以按照插入的**顺序**迭代它的元素。`Set` 中的元素只会出现一次，即 `Set` 中的元素是**唯一**的。`Set`和`Map`类似，也是一组值的集合，但不存储其他信息。由于值不能重复，所以，在`Set`中，没有重复的值。
 
 向 `Set` 加入值的时候，不会发生类型转换，所以5和"5"是两个不同的值。`Set` 内部判断两个值是否不同，使用的算法叫做“Same-value-zero equality”，它类似于精确相等运算符（`===`），主要的区别是向 `Set` 加入值时认为 `NaN` 等于自身，而精确相等运算符认为 `NaN` 不等于自身。
 
-Set objects are collections of values. A value in the set may only occur once; it is unique in the set's collection. You can iterate through the elements of a set in insertion order. The insertion order corresponds to the order in which each element was inserted into the set by the add() method successfully (that is, there wasn't an identical element already in the set when add() was called).
-
 - `Set`的遍历顺序就是插入顺序。这个特性有时非常有用，比如使用 `Set` 保存一个回调函数列表，调用时就能保证按照添加顺序调用。
 - `Array.from()` 方法可以将 `Set` 结构转为数组。
+
+Set objects are collections of values. A value in the set may only occur once; it is unique in the set's collection. You can iterate through the elements of a set in insertion order. The insertion order corresponds to the order in which each element was inserted into the set by the add() method successfully (that is, there wasn't an identical element already in the set when add() was called).
 
 ## Set的静态属性、方法
 
@@ -16,6 +16,20 @@ Set objects are collections of values. A value in the set may only occur once; i
 ## Set的实例属性、方法
 
 `Set` 实例的方法分为两大类：操作方法（用于操作数据）和遍历方法（用于遍历成员）。`Set` 的遍历顺序就是插入顺序。
+
+操作方法有：
+
+- `add(value)`：添加某个值，返回 Set 结构本身。
+- `delete(value)`：删除某个值，返回一个布尔值，表示删除是否成功。
+- `has(value)`：返回一个布尔值，表示该值是否为 Set 的成员。
+- `clear()`：清除所有成员，无返回值。
+
+遍历方法有：
+
+- `keys()`：返回键名的遍历器
+- `values()`：返回键值的遍历器
+- `entries()`：返回键值对的遍历器
+- `forEach()`：使用回调函数遍历每个成员，无返回值
 
 ### Set.prototype.size
 
@@ -116,6 +130,8 @@ console.log(set1.size);
 // Expected output: 0
 ```
 
+---
+
 ### Set.prototype.keys()
 
 - The keys() method of Set instances is an alias for the values() method.
@@ -194,6 +210,8 @@ new Set(['foo', 'bar', undefined]).forEach(logSetElements);
 ```
 
 `keys`方法、`values`方法、`entries`方法返回的都是遍历器对象。由于 `Set` 结构没有键名，只有键值（或者说键名和键值是同一个值），所以`keys`方法和`values`方法的行为完全一致。
+
+---
 
 ### Set.prototype.difference()
 
@@ -296,7 +314,7 @@ const set = new
 `WeakSet` 结构与 `Set` 类似，也是不重复的值的集合。但是，它与 `Set` 有两个区别。
 
 - `WeakSet` 的成员只能是**对象**，而不能是其他类型的值。
-- `WeakSet` 中的对象都是弱引用，即垃圾回收机制不考虑 `WeakSet` 对该对象的引用，也就是说，如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，不考虑该对象还存在于 `WeakSet` 之中。`WeakSet` 适合临时存放一组对象，以及存放跟对象绑定的信息。只要这些对象在外部消失，它在 `WeakSet` 里面的引用就会自动消失。
+- `WeakSet` 中的对象都是**弱引用**，即垃圾回收机制不考虑 `WeakSet` 对该对象的引用，也就是说，如果其他对象都不再引用该对象，那么垃圾回收机制会自动回收该对象所占用的内存，不考虑该对象还存在于 `WeakSet` 之中。`WeakSet` 适合临时存放一组对象，以及存放跟对象绑定的信息。只要这些对象在外部消失，它在 `WeakSet` 里面的引用就会自动消失。
 - `WeakSet` 的一个用处，是储存 `DOM` 节点，而不用担心这些节点从文档移除时，会引发内存泄漏。
 
 ## 参考资料
