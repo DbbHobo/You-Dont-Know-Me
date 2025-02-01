@@ -30,14 +30,45 @@
 ```js
 // 简易实现-每次触发事件时都取消之前的延时调用方法
 function debounce(fn, delay) {
-  let timer = null;
+  let timer ,result;
   return function (...args) {
     let context = this;
     if (timer) clearTimeout(timer);
     timer = setTimeout(function () {
-      fn.apply(context, args);
+      result = fn.apply(context, args);
     }, delay);
+
+    return result;
   };
+}
+```
+
+```js
+// 简易实现-首次触发会执行，后续每次等到停止触发n秒后再触发
+function debounce(func, wait, immediate) {
+    var timeout, result;
+
+    return function () {
+        var context = this;
+        var args = arguments;
+
+        if (timeout) clearTimeout(timeout);
+        if (immediate) {
+            // 如果已经执行过，不再执行
+            var callNow = !timeout;
+            timeout = setTimeout(function(){
+                timeout = null;
+            }, wait)
+            if (callNow) result = func.apply(context, args)
+        }
+        else {
+            timeout = setTimeout(function(){
+                result = func.apply(context, args)
+            }, wait);
+        }
+
+        return result;
+    }
 }
 ```
 

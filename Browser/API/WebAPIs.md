@@ -88,3 +88,5 @@ Notification：用于显示浏览器通知。
 [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API)
 
 [The Web Platform: Browser technologies](https://html-now.github.io/)
+
+[Browser APIs: Must-Know Secrets for Every Frontend Developer!](https://dev.to/mukhilpadmanabhan/browser-apis-must-know-secrets-for-every-frontend-developer-55lk?context=digest)

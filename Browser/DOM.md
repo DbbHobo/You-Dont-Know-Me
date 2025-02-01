@@ -128,7 +128,7 @@ HTML 元素类的总体继承关系如下：
 事件触发有三个阶段
 
 - `document` 往事件触发处传播，遇到注册的**捕获**事件会触发
-- 传播到事件触发处时触发注册的事件
+- 传播到事件触发处时**触发**注册的事件
 - 从事件触发处往 `document` 传播，遇到注册的**冒泡**事件会触发
 
 事件触发一般来说会按照上面的顺序进行，但也有特例，如果给一个目标节点同时注册冒泡和捕获事件，事件触发会按照注册的顺序执行
@@ -155,8 +155,8 @@ node.addEventListener(
 
 我们设定一种场景，如下代码，一个`<div>`中包含了若干个`<a>`，而且还能继续增加。那如何快捷方便地为所有`<a>`绑定事件呢？
 
-```js
-<div id="div1">
+```html
+<div id="list">
     <a href="#">a1</a>
     <a href="#">a2</a>
     <a href="#">a3</a>
@@ -168,8 +168,8 @@ node.addEventListener(
 这里就会用到事件代理。我们要监听`<a>`的事件，但要把具体的事件绑定到`<div>`上，然后看事件的触发点是不是`<a>`。
 
 ```js
-var div1 = document.getElementById("div1");
-div1.addEventListener("click", function (e) {
+var list = document.getElementById("list");
+list.addEventListener("click", function (e) {
   // e.target 可以监听到触发点击事件的元素是哪一个
   var target = e.target;
   if (e.nodeName === "A") {
@@ -434,3 +434,5 @@ onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay�
 [Document](https://developer.mozilla.org/zh-CN/docs/Web/API/Document)
 
 [Window](https://developer.mozilla.org/zh-CN/docs/Web/API/Window)
+
+[Mastering JavaScript Event Delegation](https://dev.to/shafayeat/mastering-javascript-event-delegation-3k2k?context=digest)
