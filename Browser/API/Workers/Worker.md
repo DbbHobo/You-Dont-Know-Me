@@ -14,7 +14,7 @@
 - `SharedWorkerGlobalScope` 用于 `shared worker`
 - `ServiceWorkerGlobalScope` 用于 `service worker`
 
-`Web Workers API` 包含有如下API：
+`Web Workers API` 包含有如下 API：
 
 - `Worker`
 - `SharedWorker`
@@ -34,10 +34,10 @@
 - 每个 `Worker` 是独立的，不能与其他 `Worker` 共享状态
 - 主线程和 `Worker` 通过消息传递（`postMessage` 和 `onmessage`）进行通信
 
-使用场景:复杂的计算任务，如数据处理、图像处理、大量的 DOM 操作等
+使用场景：复杂的计算任务，如数据处理、图像处理、大量的 DOM 操作等
 
 ```js
-const worker = new Worker('worker.js');
+const worker = new Worker("worker.js")
 ```
 
 ### Worker 的实例方法
@@ -51,28 +51,28 @@ const worker = new Worker('worker.js');
 // worker.js
 
 // 监听主线程的消息
-self.onmessage = function(event) {
-  const number = event.data;  // 获取传递过来的数据
-  const result = fibonacci(number);  // 计算斐波那契数
-  postMessage(result);  // 将结果发送回主线程
-};
+self.onmessage = function (event) {
+  const number = event.data // 获取传递过来的数据
+  const result = fibonacci(number) // 计算斐波那契数
+  postMessage(result) // 将结果发送回主线程
+}
 
 // 斐波那契数列计算函数
 function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
+  if (n <= 1) return n
+  return fibonacci(n - 1) + fibonacci(n - 2)
 }
 ```
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Web Worker Example</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Web Worker Example</h1>
     <p>Enter a number to calculate the Fibonacci number:</p>
     <input type="number" id="numberInput" />
@@ -82,29 +82,29 @@ function fibonacci(n) {
     <p id="result"></p>
 
     <script>
-        let worker;
+      let worker
 
-        // 初始化 Worker
-        if (window.Worker) {
-            worker = new Worker('worker.js');
-            
-            // 监听 Worker 的消息
-            worker.onmessage = function(event) {
-                document.getElementById('result').textContent = event.data;
-            };
-        } else {
-            console.log('Your browser does not support Web Workers.');
-        }
+      // 初始化 Worker
+      if (window.Worker) {
+        worker = new Worker("worker.js")
 
-        // 发送任务给 Worker 进行计算
-        function calculateFibonacci() {
-            const number = document.getElementById('numberInput').value;
-            if (worker) {
-                worker.postMessage(number);  // 向 worker 发送消息
-            }
+        // 监听 Worker 的消息
+        worker.onmessage = function (event) {
+          document.getElementById("result").textContent = event.data
         }
+      } else {
+        console.log("Your browser does not support Web Workers.")
+      }
+
+      // 发送任务给 Worker 进行计算
+      function calculateFibonacci() {
+        const number = document.getElementById("numberInput").value
+        if (worker) {
+          worker.postMessage(number) // 向 worker 发送消息
+        }
+      }
     </script>
-</body>
+  </body>
 </html>
 ```
 
@@ -127,27 +127,29 @@ function fibonacci(n) {
 
 ```js
 // 注册 Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').then(registration => {
-        console.log('Service Worker registered with scope:', registration.scope);
-    }).catch(error => {
-        console.log('Service Worker registration failed:', error);
-    });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/service-worker.js")
+    .then((registration) => {
+      console.log("Service Worker registered with scope:", registration.scope)
+    })
+    .catch((error) => {
+      console.log("Service Worker registration failed:", error)
+    })
 }
 
 // 在 service-worker.js 中
-self.addEventListener('install', event => {
-    console.log('Service Worker installing.');
-});
+self.addEventListener("install", (event) => {
+  console.log("Service Worker installing.")
+})
 
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
-        })
-    );
-});
-
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request)
+    })
+  )
+})
 ```
 
 ### ServiceWorker 的实例属性
@@ -173,23 +175,23 @@ self.addEventListener('fetch', event => {
 
 ```js
 // 在多个页面中创建并共享 SharedWorker
-const sharedWorker = new SharedWorker('shared-worker.js');
+const sharedWorker = new SharedWorker("shared-worker.js")
 
 // 与 SharedWorker 通信
-sharedWorker.port.postMessage('Hello, Shared Worker!');
+sharedWorker.port.postMessage("Hello, Shared Worker!")
 
-sharedWorker.port.onmessage = function(event) {
-    console.log('Message from Shared Worker:', event.data);
-};
+sharedWorker.port.onmessage = function (event) {
+  console.log("Message from Shared Worker:", event.data)
+}
 
 // 在 shared-worker.js 中
-self.onconnect = function(event) {
-    const port = event.ports[0];
-    port.onmessage = function(event) {
-        console.log('Message from main thread:', event.data);
-        port.postMessage('Hello, Main thread!');
-    };
-};
+self.onconnect = function (event) {
+  const port = event.ports[0]
+  port.onmessage = function (event) {
+    console.log("Message from main thread:", event.data)
+    port.postMessage("Hello, Main thread!")
+  }
+}
 ```
 
 ### SharedWorker 的实例属性

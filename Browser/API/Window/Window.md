@@ -134,6 +134,25 @@ history.back();
 history.forward();
 ```
 
+## window.requestAnimationFrame()
+
+`window.requestAnimationFrame()` 方法会告诉浏览器你希望执行一个动画。它要求浏览器在下一次重绘之前，调用用户提供的回调函数。
+
+`requestAnimationFrame` 的回调函数会在所有同步 JavaScript 代码执行完毕后、浏览器进行布局和绘制之前执行。
+
+```js
+requestAnimationFrame(callback)
+```
+
+## window.requestIdleCallback()
+
+`window.requestIdleCallback()` 方法插入一个函数，这个函数将在浏览器空闲时期被调用。这使开发者能够在主事件循环上执行后台和低优先级工作，而不会影响延迟关键事件，如动画和输入响应。函数一般会按先进先调用的顺序执行，然而，如果回调函数指定了执行超时时间timeout，则有可能为了在超时前执行函数而打乱执行顺序。
+
+```js
+requestIdleCallback(callback)
+requestIdleCallback(callback, options)
+```
+
 ## window
 
 `window` 对象表示一个包含 `DOM` 文档的窗口，其 `document` 属性指向窗口中载入的 `DOM` 文档。代表了脚本正在运行的窗口的 `window` 全局变量，被暴露给 `Javascript` 代码。
@@ -141,24 +160,6 @@ history.forward();
 本接口从 `EventTarget` 接口继承属性。
 
 `window` => `Window` => `EventTarget`
-
-## EventTarget
-
-`EventTarget` 接口由可以接收事件、并且可以创建侦听器的对象实现。换句话说，任何事件目标都会实现与该接口有关的这三个方法。
-
-`Element` 及其子项、`document` 和 `window` 是最常见的事件目标，但其他对象也可以是事件目标。比如 `XMLHttpRequest`、`AudioNode` 和 `AudioContext` 等等。
-
-- `EventTarget.addEventListener()`
-
-在 `EventTarget` 上注册特定事件类型的事件处理程序。
-
-- `EventTarget.removeEventListener()`
-
-`EventTarget` 中删除事件侦听器。
-
-- `EventTarget.dispatchEvent()`
-
-将事件分派到此 `EventTarget`。
 
 ## 参考资料
 

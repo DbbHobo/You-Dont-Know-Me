@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>worker</title>
+    <title>service worker</title>
     <script type="text/javascript" src="./worker.js"></script>
   </head>
   <body>
@@ -21,22 +21,14 @@
       const btn = document.getElementById("btn")
       const result = document.getElementById("result")
 
-      btn.addEventListener("click", () => {
-        // 注册worker
-        const worker = new Worker("./worker.js")
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("./service-worker.js", { scope: "/" })
+          .then((reg) => console.log("注册成功:", reg))
+          .catch((err) => console.error("注册失败:", err))
+      }
 
-        // 向 Worker 发送消息
-        worker.postMessage(input.value)
-
-        // 接收来自 Worker 的消息
-        worker.addEventListener("message", (e) => {
-          console.log("接收来自 Worker 的消息", e)
-          result.innerHTML = e.data
-
-          // 使用完 Worker 后记得关闭
-          worker.terminate()
-        })
-      })
+      btn.addEventListener("click", () => {})
     </script>
   </body>
 </html>

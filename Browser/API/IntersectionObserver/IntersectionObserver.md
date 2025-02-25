@@ -2,6 +2,8 @@
 
 `IntersectionObserver` 接口提供了一种异步观察目标元素与其祖先元素或顶级文档视口（viewport）交叉状态的方法。其祖先元素或视口被称为根（root）。
 
+`IntersectionObserver`则可以观察元素和浏览器视窗相交的情况。
+
 ```js
 const observer = new IntersectionObserver(callback[, options])
 
@@ -23,16 +25,16 @@ observer.observe(target,{
 ## IntersectionObserver 的实例属性
 
 - `root`
-  
+
   用于检查可见性的祖先元素。默认情况下，它被设置为浏览器视口。
 
 - `rootMargin`
-  
-  一个字符串，指定root周围的边距。它允许你扩展或缩小root的有效边界框，用来扩展或缩小视口的边界。
+
+  一个字符串，指定 root 周围的边距。它允许你扩展或缩小 root 的有效边界框，用来扩展或缩小视口的边界。
 
 - `thresholds`
-  
-  一个介于0和1之间的数字或数字数组，表示目标可见性的百分比，在该百分比下应该触发回调函数。
+
+  一个介于 0 和 1 之间的数字或数字数组，表示目标可见性的百分比，在该百分比下应该触发回调函数。
 
 ## IntersectionObserver 的实例方法
 
@@ -46,68 +48,76 @@ observer.observe(target,{
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IntersectionObserver Example</title>
-  <style>
-    .image-container {
-      height: 200px;
-      margin-bottom: 20px;
-      background-color: #f3f3f3;
-    }
-    .lazy-image {
-      width: 100%;
-      height: 100%;
-      display: block;
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-    .loaded {
-      opacity: 1;
-    }
-  </style>
-</head>
-<body>
-  <div class="image-container">
-    <img data-src="https://via.placeholder.com/400" class="lazy-image" alt="Lazy Loaded Image">
-  </div>
-  <div class="image-container">
-    <img data-src="https://via.placeholder.com/400" class="lazy-image" alt="Lazy Loaded Image">
-  </div>
-  <!-- More image containers as needed -->
-  <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IntersectionObserver Example</title>
+    <style>
+      .image-container {
+        height: 200px;
+        margin-bottom: 20px;
+        background-color: #f3f3f3;
+      }
+      .lazy-image {
+        width: 100%;
+        height: 100%;
+        display: block;
+        opacity: 0;
+        transition: opacity 0.5s;
+      }
+      .loaded {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="image-container">
+      <img
+        data-src="https://via.placeholder.com/400"
+        class="lazy-image"
+        alt="Lazy Loaded Image"
+      />
+    </div>
+    <div class="image-container">
+      <img
+        data-src="https://via.placeholder.com/400"
+        class="lazy-image"
+        alt="Lazy Loaded Image"
+      />
+    </div>
+    <!-- More image containers as needed -->
+    <script src="script.js"></script>
+  </body>
 </html>
 ```
 
 ```js
-document.addEventListener('DOMContentLoaded', function () {
-  const lazyImages = document.querySelectorAll('.lazy-image');
+document.addEventListener("DOMContentLoaded", function () {
+  const lazyImages = document.querySelectorAll(".lazy-image")
 
   const options = {
     root: null, // 默认是浏览器视口
-    rootMargin: '0px',
-    threshold: 0.1 // 当至少10%的图片进入视口时触发回调
-  };
+    rootMargin: "0px",
+    threshold: 0.1, // 当至少10%的图片进入视口时触发回调
+  }
 
   const imageObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       if (entry.isIntersecting) {
-        const img = entry.target;
-        img.src = img.getAttribute('data-src');
+        const img = entry.target
+        img.src = img.getAttribute("data-src")
         img.onload = () => {
-          img.classList.add('loaded');
-        };
-        observer.unobserve(img); // 加载完成后停止观察
+          img.classList.add("loaded")
+        }
+        observer.unobserve(img) // 加载完成后停止观察
       }
-    });
-  }, options);
+    })
+  }, options)
 
-  lazyImages.forEach(image => {
-    imageObserver.observe(image);
-  });
-});
+  lazyImages.forEach((image) => {
+    imageObserver.observe(image)
+  })
+})
 ```
 
 可能可以使用的场景如下：
