@@ -113,7 +113,7 @@ setTimeout(o.fn, 1000); // 0
 
 ### 显式绑定
 
-call/apply/bind
+`call`/`apply`/`bind`
 
 ```js
 function foo() {

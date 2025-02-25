@@ -47,6 +47,12 @@ getJSON("/post/1.json").then(function(post) {
 
 一般来说，不要在 `then()` 方法里面定义 `Reject` 状态的回调函数（即 `then` 的第二个参数），总是使用 `catch` 方法。如果没有使用 `catch()` 方法指定错误处理的回调函数，`Promise` 对象抛出的错误不会传递到外层代码，即不会有任何反应。
 
+```js
+promise.catch(onRejected)
+// 等同于
+promise.then(null, onRejected)
+```
+
 ### Promise.prototype.finally()
 
 `Promise.prototype.finally()`方法：用于指定不管 `Promise` 对象最后状态如何，都会执行的操作，与状态无关。
@@ -390,3 +396,5 @@ runLight()
 [ES6 入门](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/promise)
 
 [Promise MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Promise)
+
+[JavaScript Visualized: Promise Execution](https://www.lydiahallie.com/blog/promise-execution)

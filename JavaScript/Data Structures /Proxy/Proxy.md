@@ -91,6 +91,106 @@ let obj = new Proxy({}, {
 
 拦截 `Proxy` 实例作为构造函数调用的操作，比如`new proxy(...args)`。
 
+## Proxy 应用
+
+### 动态拦截操作
+
+通过 `Proxy` 可以拦截对象的访问方式，并实现动态行为。
+
+```js
+const target = {};
+const handler = {
+  get: (target, prop, receiver) => {
+    if (prop === 'name') {
+      return 'John Doe';
+    }
+    return prop in target ? target[prop] : `Property ${prop} not found`;
+  },
+  set: (target, prop, value) => {
+    console.log(`Setting ${prop} to ${value}`);
+    target[prop] = value;
+    return true; // 返回 true 表示操作成功
+  }
+};
+
+const proxy = new Proxy(target, handler);
+
+console.log(proxy.name); // "John Doe"
+console.log(proxy.age);  // "Property age not found"
+proxy.age = 30;         // "Setting age to 30"
+```
+
+### 属性访问日志
+
+通过 `Proxy` 你可以实现属性访问的日志功能。
+
+```js
+const target = { message: "Hello" };
+const handler = {
+  get(target, prop, receiver) {
+    console.log(`Getting ${prop}`);
+    return target[prop];
+  },
+  set(target, prop, value, receiver) {
+    console.log(`Setting ${prop} to ${value}`);
+    target[prop] = value;
+    return true;
+  }
+};
+
+const proxy = new Proxy(target, handler);
+console.log(proxy.message); // Getting message
+proxy.message = "World";   // Setting message to World
+```
+
+### 防止对象被修改（seal、freeze）
+
+你可以使用 `Proxy` 来防止对象被修改或者删除属性。
+
+```js
+const target = { name: "Alice" };
+const handler = {
+  set(target, prop, value) {
+    if (prop === "name") {
+      console.log("Cannot change the 'name' property.");
+      return false;
+    }
+    target[prop] = value;
+    return true;
+  }
+};
+
+const proxy = new Proxy(target, handler);
+proxy.name = "Bob"; // Cannot change the 'name' property.
+```
+
+### 虚拟代理
+
+通过 `Proxy` 可以实现虚拟代理，比如在需要惰性加载某些数据时，使用代理来延迟实际对象的初始化。
+
+```js
+const largeObject = {
+  data: new Array(1000).fill('Data'),
+  fetchData() {
+    console.log('Fetching large data...');
+    return this.data;
+  }
+};
+
+const handler = {
+  get(target, prop) {
+    if (prop === 'fetchData') {
+      console.log('Proxying fetchData...');
+      return () => target.fetchData();
+    }
+    return target[prop];
+  }
+};
+
+const proxy = new Proxy(largeObject, handler);
+console.log(proxy.fetchData()); // Proxying fetchData... Fetching large data...
+```
+
 ## 参考资料
 
 [Proxy](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy)

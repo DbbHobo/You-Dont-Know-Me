@@ -26,25 +26,25 @@ exports.add = function () {
   var sum = 0,
     i = 0,
     args = arguments,
-    l = args.length;
+    l = args.length
   while (i < l) {
-    sum += args[i++];
+    sum += args[i++]
   }
-  return sum;
-};
+  return sum
+}
 
 // increment.js
-var add = require("math").add;
+var add = require("math").add
 exports.increment = function (val) {
-  return add(val, 1);
-};
+  return add(val, 1)
+}
 
 // program.js
-var inc = require("increment").increment;
-var a = 1;
-inc(a); // 2
+var inc = require("increment").increment
+var a = 1
+inc(a) // 2
 
-module.id == "program";
+module.id == "program"
 ```
 
 `module` 每个模块内部，都有一个 `module` 对象，代表当前模块。
@@ -58,7 +58,7 @@ module.id == "program";
 - `exports` Node 为每个模块提供一个 `exports` 变量，指向 `module.exports`。不能直接将 `exports` 变量指向一个值，因为这样等于切断了 `exports` 与 `module.exports` 的联系。这等同在每个模块头部，有一行这样的命令。
 
 ```js
-var exports = module.exports;
+var exports = module.exports
 ```
 
 `require` 命令用于加载文件，后缀名默认为`.js`。根据参数的不同格式，`require` 命令去不同路径寻找模块文件。
@@ -100,15 +100,15 @@ export function b() {}
 // file b.js
 export default function () {}
 
-import { a, b } from "./a.js";
-import XXX from "./b.js";
+import { a, b } from "./a.js"
+import XXX from "./b.js"
 ```
 
 ## CommonJS 和 ES6 模块的区别
 
 - `CommonJS` 模块是**运行时**加载，而 `ES6` 模块是**编译时**输出接口，使得对 JS 的模块进行静态分析成为了可能。`CommonJS` 其实加载的是一个对象，这个对象只有在脚本运行时才会生成，而且只会生成一次。但是 `ES6` 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成，这样我们就可以使用各种工具对 JS 模块进行依赖分析，优化代码；
 - `CommonJS` 的 `require` 语法是同步的，所以就导致了 `CommonJS` 模块规范只适合用在服务端，而 `ES6` 模块无论是在浏览器端还是服务端都是可以使用的，但是在服务端中，还需要遵循一些特殊的规则才能使用；
-- `CommonJS` 模块输出的是一个**值的拷贝**，一旦输出一个值，模块内部的变化就影响不到这个值。而 `ES6` 模块输出的是**值的引用**，原始值变了，import加载的值也会跟着变；
+- `CommonJS` 模块输出的是一个**值的拷贝**，一旦输出一个值，模块内部的变化就影响不到这个值。而 `ES6` 模块输出的是**值的引用**，原始值变了，import 加载的值也会跟着变；
 - 因为两个模块加载机制的不同，所以在对待循环加载的时候，它们会有不同的表现。`CommonJS` 遇到循环依赖的时候，只会输出已经执行的部分，后续的输出或者变化，是不会影响已经输出的变量。而 `ES6` 模块相反，使用 `import` 加载一个变量，变量不会被缓存，真正取值的时候就能取到最终的值；
 - 关于模块顶层的 `this` 指向问题，在 `CommonJS` 顶层，`this` 指向当前模块；而在 `ES6` 模块中，`this` 指向 `undefined`；
 - 关于两个模块互相引用的问题，在 `ES6` 模块当中，是支持加载 `CommonJS` 模块的。但是反过来，`CommonJS` 并不能 `require ES6` 模块，在 NodeJS 中，两种模块方案是分开处理的；
@@ -121,17 +121,17 @@ import XXX from "./b.js";
 // AMD
 define(["./a", "./b"], function (a, b) {
   // 加载模块完毕可以使用
-  a.do();
-  b.do();
-});
+  a.do()
+  b.do()
+})
 
 // CMD
 define(function (require, exports, module) {
   // 加载模块
   // 可以把 require 写在函数体的任意地方实现延迟加载
-  var a = require("./a");
-  a.doSomething();
-});
+  var a = require("./a")
+  a.doSomething()
+})
 ```
 
 ## JavaScript 中的模块化方案
@@ -218,11 +218,13 @@ import feature from 'es-module-package/features/x.js';
 }
 ```
 
-### 传统JavaScript模块加载
+### 传统 JavaScript 模块加载
 
 HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<script>`标签打开`defer`或`async`属性，脚本就会**异步加载**。渲染引擎遇到这一行命令，就会开始下载外部脚本，但不会等它下载和执行，而是直接执行后面的命令。
 
 `defer`与`async`的区别是：`defer`要等到整个页面在内存中正常渲染结束（DOM 结构完全生成，以及其他脚本执行完成），才会执行；`async`一旦下载完，渲染引擎就会中断渲染，执行这个脚本以后，再继续渲染。一句话，`defer`是“渲染完再执行”，`async`是“下载完就执行”。另外，如果有多个`defer`脚本，会按照它们在页面出现的顺序加载，而多个`async`脚本是不能保证加载顺序的。
+
+![defer&async](../assets/defer&async.png)
 
 ```js
 <!-- 页面内嵌的脚本 -->
@@ -238,7 +240,7 @@ HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<scr
 <script src="path/to/myModule.js" async></script>
 ```
 
-### ES6模块加载
+### ES6 模块加载
 
 浏览器加载 ES6 模块，也使用`<script>`标签，但是要加入`type="module"`属性。浏览器对于带有`type="module"`的`<script>`，都是异步加载，不会造成堵塞浏览器，即等到整个页面渲染完，再执行模块脚本，等同于打开了`<script>`标签的`defer`属性。
 
@@ -249,12 +251,7 @@ HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<scr
 利用顶层的`this`等于`undefined`这个语法点，可以侦测当前代码是否在 `ES6` 模块之中。
 
 ```js
-const isNotModuleScript = this !== undefined;
-```
-
-### ES6和CommonJS的混用
-
-```js
+const isNotModuleScript = this !== undefined
 ```
 
 ## 参考资料
@@ -264,3 +261,5 @@ const isNotModuleScript = this !== undefined;
 [Understanding (all) JavaScript module formats and tools](https://weblogs.asp.net/dixin/understanding-all-javascript-module-formats-and-tools)
 
 [ES6 In Depth: Modules](https://hacks.mozilla.org/2015/08/es6-in-depth-modules/)
+
+[Script Tag - async & defer](https://stackoverflow.com/questions/10808109/script-tag-async-defer#)
