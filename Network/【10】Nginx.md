@@ -60,7 +60,6 @@ worker_processes  1;
 #error_log  logs/error.log;
 #error_log  logs/error.log  notice;
 #error_log  logs/error.log  info;
-
 #pid        logs/nginx.pid;
 
 #events配置
@@ -143,3 +142,5 @@ server {
 [What Is Nginx? A Basic Look at What It Is and How It Works](https://kinsta.com/knowledgebase/what-is-nginx/)
 
 [Nginx 配置详解](https://www.runoob.com/w3cnote/nginx-setup-intro.html)
+
+[一份简单够用的 Nginx Location 配置讲解](https://juejin.cn/post/7048952689601806366)

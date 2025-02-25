@@ -8,8 +8,8 @@
 
 `HTTP` 请求报文 和 `HTTP` 响应报文都由 `Header + Body` 组成：
 
-- 在请求中， HTTP 报文由 **方法**、 **URI**、 **HTTP版本**、 **HTTP请求首部字段**、**空行**、**实体**等部分构成。
-- 在响应中， HTTP 报文由 **HTTP版本**、 **状态码（ 数字和原因短语）** 、**HTTP响应首部字段**、**空行**、**实体**等部分构成。
+- 在请求中， HTTP 报文由 **方法**、 **URI**、 **HTTP 版本**、 **HTTP 请求首部字段**、**空行**、**实体**等部分构成。
+- 在响应中， HTTP 报文由 **HTTP 版本**、 **状态码（ 数字和原因短语）** 、**HTTP 响应首部字段**、**空行**、**实体**等部分构成。
 
 ![web](./assets/http4.png)
 
@@ -26,7 +26,7 @@
 - 首部字段
 
 包含表示请求和响应的各种条件和属性的各类首部。
-一般有4种首部，分别是： 通用首部、 请求首部、 响应首部 、实体首部。
+一般有 4 种首部，分别是： 通用首部、 请求首部、 响应首部 、实体首部。
 
 - 其他
 
@@ -66,7 +66,7 @@ user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 
 ```text
 /* 状态行 */
-Status Code: 200 
+Status Code: 200
 Remote Address: 59.81.65.33:443
 Referrer Policy: strict-origin-when-cross-origin
 
@@ -115,7 +115,7 @@ via: CHN-SH-CUCC3-CACHE19[49],CHN-SH-CUCC3-CACHE19[ovl,48]
 
 ![web](./assets/http3.png)
 
-## HTTP请求方法
+## HTTP 请求方法
 
 - `GET`: 通常用来获取资源
 - `POST`: 提交数据，即上传数据
@@ -164,102 +164,102 @@ type/subtype
 - Type application:
 
 ```text
-  application/java-archive
-  application/EDI-X12   
-  application/EDIFACT   
-  application/javascript   
-  application/octet-stream   
-  application/ogg   
-  application/pdf  
-  application/xhtml+xml   
-  application/x-shockwave-flash    
-  application/json  
-  application/ld+json  
-  application/xml   
-  application/zip  
-  application/x-www-form-urlencoded  
+application/java-archive
+application/EDI-X12
+application/EDIFACT
+application/javascript
+application/octet-stream
+application/ogg
+application/pdf
+application/xhtml+xml
+application/x-shockwave-flash
+application/json
+application/ld+json
+application/xml
+application/zip
+application/x-www-form-urlencoded
 ```
 
 - Type audio:
 
 ```text
-  audio/mpeg   
-  audio/x-ms-wma   
-  audio/vnd.rn-realaudio   
-  audio/x-wav   
+audio/mpeg
+audio/x-ms-wma
+audio/vnd.rn-realaudio
+audio/x-wav
 ```
 
 - Type image:
 
 ```text
-  image/gif   
-  image/jpeg   
-  image/png   
-  image/tiff    
-  image/vnd.microsoft.icon    
-  image/x-icon   
-  image/vnd.djvu   
-  image/svg+xml    
+image/gif
+image/jpeg
+image/png
+image/tiff
+image/vnd.microsoft.icon
+image/x-icon
+image/vnd.djvu
+image/svg+xml
 ```
 
 - Type multipart:
 
 ```text
-  multipart/mixed    
-  multipart/alternative   
-  multipart/related (using by MHTML (HTML mail).)  
-  multipart/form-data  
+multipart/mixed
+multipart/alternative
+multipart/related (using by MHTML (HTML mail).)
+multipart/form-data
 ```
 
 - Type text:
 
 ```text
-  text/css    
-  text/csv    
-  text/html    
-  text/javascript (obsolete)    
-  text/plain    
-  text/xml   
+text/css
+text/csv
+text/html
+text/javascript (obsolete)
+text/plain
+text/xml
 ```
 
 - Type video:
 
 ```text
-  video/mpeg    
-  video/mp4    
-  video/quicktime    
-  video/x-ms-wmv    
-  video/x-msvideo    
-  video/x-flv   
-  video/webm   
+video/mpeg
+video/mp4
+video/quicktime
+video/x-ms-wmv
+video/x-msvideo
+video/x-flv
+video/webm
 ```
 
 - Type vnd:
 
 ```text
-  application/vnd.android.package-archive
-  application/vnd.oasis.opendocument.text    
-  application/vnd.oasis.opendocument.spreadsheet  
-  application/vnd.oasis.opendocument.presentation   
-  application/vnd.oasis.opendocument.graphics   
-  application/vnd.ms-excel    
-  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet   
-  application/vnd.ms-powerpoint    
-  application/vnd.openxmlformats-officedocument.presentationml.presentation    
-  application/msword   
-  application/vnd.openxmlformats-officedocument.wordprocessingml.document   
-  application/vnd.mozilla.xul+xml   
+application/vnd.android.package-archive
+application/vnd.oasis.opendocument.text
+application/vnd.oasis.opendocument.spreadsheet
+application/vnd.oasis.opendocument.presentation
+application/vnd.oasis.opendocument.graphics
+application/vnd.ms-excel
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+application/vnd.ms-powerpoint
+application/vnd.openxmlformats-officedocument.presentationml.presentation
+application/msword
+application/vnd.openxmlformats-officedocument.wordprocessingml.document
+application/vnd.mozilla.xul+xml
 ```
 
-`application/x-www-form-urlencoded`：会在url上拼接字符串，如：k=123&c=12241，同时对于中文还会转码。
-`application/json`：直接会在请求体中添加object对象，如： { a: 123, b: 456 }
-`multipart/form-data`: 在network中可以看到添加带数据类型等各类标识的文件类型字符串请求体告诉服务器端接收对象是一个文件数据流
+`application/x-www-form-urlencoded`：会在 url 上拼接字符串，如：k=123&c=12241，同时对于中文还会转码。
+`application/json`：直接会在请求体中添加 object 对象，如： { a: 123, b: 456 }
+`multipart/form-data`: 在 network 中可以看到添加带数据类型等各类标识的文件类型字符串请求体告诉服务器端接收对象是一个文件数据流
 
 ## 参考资料
 
-《图解HTTP》
+《图解 HTTP》
 
-《Web性能权威指南》
+《Web 性能权威指南》
 
 [MIME 类型](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Basics_of_HTTP/MIME_Types)
 
