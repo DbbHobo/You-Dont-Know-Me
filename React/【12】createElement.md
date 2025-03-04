@@ -1,6 +1,8 @@
 # createElement
 
-## createElement原理
+<!-- TODO -->
+
+## createElement 原理
 
 `createElement`入口在`packages/react/index.js`，在`React`中我们知道`JSX`会通过`Babel`转译为
 `React.createElement`从而生成`React-Element`对象，可以看到最后返回的是`ReactElement`方法生成的对象：
@@ -23,38 +25,38 @@ export function createElement(type, config, children) {
       //
       // We warn in this case but don't throw. We expect the element creation to
       // succeed and there will likely be errors in render.
-      let info = '';
+      let info = ""
       if (
         type === undefined ||
-        (typeof type === 'object' &&
+        (typeof type === "object" &&
           type !== null &&
           Object.keys(type).length === 0)
       ) {
         info +=
-          ' You likely forgot to export your component from the file ' +
-          "it's defined in, or you might have mixed up default and named imports.";
+          " You likely forgot to export your component from the file " +
+          "it's defined in, or you might have mixed up default and named imports."
       }
 
-      let typeString;
+      let typeString
       if (type === null) {
-        typeString = 'null';
+        typeString = "null"
       } else if (isArray(type)) {
-        typeString = 'array';
+        typeString = "array"
       } else if (type !== undefined && type.$$typeof === REACT_ELEMENT_TYPE) {
-        typeString = `<${getComponentNameFromType(type.type) || 'Unknown'} />`;
+        typeString = `<${getComponentNameFromType(type.type) || "Unknown"} />`
         info =
-          ' Did you accidentally export a JSX literal instead of a component?';
+          " Did you accidentally export a JSX literal instead of a component?"
       } else {
-        typeString = typeof type;
+        typeString = typeof type
       }
 
       console.error(
-        'React.createElement: type is invalid -- expected a string (for ' +
-          'built-in components) or a class/function (for composite ' +
-          'components) but got: %s.%s',
+        "React.createElement: type is invalid -- expected a string (for " +
+          "built-in components) or a class/function (for composite " +
+          "components) but got: %s.%s",
         typeString,
-        info,
-      );
+        info
+      )
     } else {
       // This is a valid element type.
 
@@ -64,59 +66,59 @@ export function createElement(type, config, children) {
       // prod. (Rendering will throw with a helpful message and as soon as the
       // type is fixed, the key warnings will appear.)
       for (let i = 2; i < arguments.length; i++) {
-        validateChildKeys(arguments[i], type);
+        validateChildKeys(arguments[i], type)
       }
     }
 
     // Unlike the jsx() runtime, createElement() doesn't warn about key spread.
   }
 
-  let propName;
+  let propName
 
   // Reserved names are extracted
-  const props = {};
+  const props = {}
 
-  let key = null;
-  let ref = null;
+  let key = null
+  let ref = null
 
   if (config != null) {
     if (__DEV__) {
       if (
         !didWarnAboutOldJSXRuntime &&
-        '__self' in config &&
+        "__self" in config &&
         // Do not assume this is the result of an oudated JSX transform if key
         // is present, because the modern JSX transform sometimes outputs
         // createElement to preserve precedence between a static key and a
         // spread key. To avoid false positive warnings, we never warn if
         // there's a key.
-        !('key' in config)
+        !("key" in config)
       ) {
-        didWarnAboutOldJSXRuntime = true;
+        didWarnAboutOldJSXRuntime = true
         console.warn(
-          'Your app (or one of its dependencies) is using an outdated JSX ' +
-            'transform. Update to the modern JSX transform for ' +
-            'faster performance: https://react.dev/link/new-jsx-transform',
-        );
+          "Your app (or one of its dependencies) is using an outdated JSX " +
+            "transform. Update to the modern JSX transform for " +
+            "faster performance: https://react.dev/link/new-jsx-transform"
+        )
       }
     }
 
     if (hasValidRef(config)) {
       if (!enableRefAsProp) {
-        ref = config.ref;
+        ref = config.ref
         if (!disableStringRefs) {
-          ref = coerceStringRef(ref, getOwner(), type);
+          ref = coerceStringRef(ref, getOwner(), type)
         }
       }
 
       if (__DEV__ && !disableStringRefs) {
-        warnIfStringRefCannotBeAutoConverted(config, config.__self);
+        warnIfStringRefCannotBeAutoConverted(config, config.__self)
       }
     }
     if (hasValidKey(config)) {
       if (__DEV__) {
-        checkKeyStringCoercion(config.key);
+        checkKeyStringCoercion(config.key)
       }
-      key = '' + config.key;
+      key = "" + config.key
     }
 
     // Remaining properties are added to a new props object
@@ -124,19 +126,19 @@ export function createElement(type, config, children) {
       if (
         hasOwnProperty.call(config, propName) &&
         // Skip over reserved prop names
-        propName !== 'key' &&
-        (enableRefAsProp || propName !== 'ref') &&
+        propName !== "key" &&
+        (enableRefAsProp || propName !== "ref") &&
         // Even though we don't use these anymore in the runtime, we don't want
         // them to appear as props, so in createElement we filter them out.
         // We don't have to do this in the jsx() runtime because the jsx()
         // transform never passed these as props; it used separate arguments.
-        propName !== '__self' &&
-        propName !== '__source'
+        propName !== "__self" &&
+        propName !== "__source"
       ) {
-        if (enableRefAsProp && !disableStringRefs && propName === 'ref') {
-          props.ref = coerceStringRef(config[propName], getOwner(), type);
+        if (enableRefAsProp && !disableStringRefs && propName === "ref") {
+          props.ref = coerceStringRef(config[propName], getOwner(), type)
         } else {
-          props[propName] = config[propName];
+          props[propName] = config[propName]
         }
       }
     }
@@ -144,42 +146,42 @@ export function createElement(type, config, children) {
 
   // Children can be more than one argument, and those are transferred onto
   // the newly allocated props object.
-  const childrenLength = arguments.length - 2;
+  const childrenLength = arguments.length - 2
   if (childrenLength === 1) {
-    props.children = children;
+    props.children = children
   } else if (childrenLength > 1) {
-    const childArray = Array(childrenLength);
+    const childArray = Array(childrenLength)
     for (let i = 0; i < childrenLength; i++) {
-      childArray[i] = arguments[i + 2];
+      childArray[i] = arguments[i + 2]
     }
     if (__DEV__) {
       if (Object.freeze) {
-        Object.freeze(childArray);
+        Object.freeze(childArray)
       }
     }
-    props.children = childArray;
+    props.children = childArray
   }
 
   // Resolve default props
   if (type && type.defaultProps) {
-    const defaultProps = type.defaultProps;
+    const defaultProps = type.defaultProps
     for (propName in defaultProps) {
       if (props[propName] === undefined) {
-        props[propName] = defaultProps[propName];
+        props[propName] = defaultProps[propName]
       }
     }
   }
   if (__DEV__) {
     if (key || (!enableRefAsProp && ref)) {
       const displayName =
-        typeof type === 'function'
-          ? type.displayName || type.name || 'Unknown'
-          : type;
+        typeof type === "function"
+          ? type.displayName || type.name || "Unknown"
+          : type
       if (key) {
-        defineKeyPropWarningGetter(props, displayName);
+        defineKeyPropWarningGetter(props, displayName)
       }
       if (!enableRefAsProp && ref) {
-        defineRefPropWarningGetter(props, displayName);
+        defineRefPropWarningGetter(props, displayName)
       }
     }
   }
@@ -192,9 +194,9 @@ export function createElement(type, config, children) {
     undefined,
     getOwner(),
     props,
-    __DEV__ && enableOwnerStacks ? Error('react-stack-top-frame') : undefined,
-    __DEV__ && enableOwnerStacks ? createTask(getTaskName(type)) : undefined,
-  );
+    __DEV__ && enableOwnerStacks ? Error("react-stack-top-frame") : undefined,
+    __DEV__ && enableOwnerStacks ? createTask(getTaskName(type)) : undefined
+  )
 }
 ```
 
@@ -231,25 +233,25 @@ function ReactElement(
   owner,
   props,
   debugStack,
-  debugTask,
+  debugTask
 ) {
-  let ref;
+  let ref
   if (enableRefAsProp) {
     // When enableRefAsProp is on, ignore whatever was passed as the ref
     // argument and treat `props.ref` as the source of truth. The only thing we
     // use this for is `element.ref`, which will log a deprecation warning on
     // access. In the next release, we can remove `element.ref` as well as the
     // `ref` argument.
-    const refProp = props.ref;
+    const refProp = props.ref
 
     // An undefined `element.ref` is coerced to `null` for
     // backwards compatibility.
-    ref = refProp !== undefined ? refProp : null;
+    ref = refProp !== undefined ? refProp : null
   } else {
-    ref = _ref;
+    ref = _ref
   }
 
-  let element;
+  let element
   if (__DEV__ && enableRefAsProp) {
     // In dev, make `ref` a non-enumerable property with a warning. It's non-
     // enumerable so that test matchers and serializers don't access it and
@@ -268,12 +270,12 @@ function ReactElement(
 
       // Record the component responsible for creating this element.
       _owner: owner,
-    };
+    }
     if (ref !== null) {
-      Object.defineProperty(element, 'ref', {
+      Object.defineProperty(element, "ref", {
         enumerable: false,
         get: elementRefGetterWithDeprecationWarning,
-      });
+      })
     } else {
       // Don't warn on access if a ref is not given. This reduces false
       // positives in cases where a test serializer uses
@@ -288,10 +290,10 @@ function ReactElement(
       // A bit sketchy, but this is what we've done for the `props.key` and
       // `props.ref` accessors for years, which implies it will be good enough
       // for `element.ref`, too. Let's see if anyone complains.
-      Object.defineProperty(element, 'ref', {
+      Object.defineProperty(element, "ref", {
         enumerable: false,
         value: null,
-      });
+      })
     }
   } else if (!__DEV__ && disableStringRefs) {
     // In prod, `ref` is a regular property and _owner doesn't exist.
@@ -305,7 +307,7 @@ function ReactElement(
       ref,
 
       props,
-    };
+    }
   } else {
     // In prod, `ref` is a regular property. It will be removed in a
     // future release.
@@ -322,7 +324,7 @@ function ReactElement(
 
       // Record the component responsible for creating this element.
       _owner: owner,
-    };
+    }
   }
 
   if (__DEV__) {
@@ -330,53 +332,50 @@ function ReactElement(
     // an external backing store so that we can freeze the whole object.
     // This can be replaced with a WeakMap once they are implemented in
     // commonly used development environments.
-    element._store = {};
+    element._store = {}
 
     // To make comparing ReactElements easier for testing purposes, we make
     // the validation flag non-enumerable (where possible, which should
     // include every environment we run tests in), so the test framework
     // ignores it.
-    Object.defineProperty(element._store, 'validated', {
+    Object.defineProperty(element._store, "validated", {
       configurable: false,
       enumerable: false,
       writable: true,
       value: 0,
-    });
+    })
     // debugInfo contains Server Component debug information.
-    Object.defineProperty(element, '_debugInfo', {
+    Object.defineProperty(element, "_debugInfo", {
       configurable: false,
       enumerable: false,
       writable: true,
       value: null,
-    });
+    })
     if (enableOwnerStacks) {
-      Object.defineProperty(element, '_debugStack', {
+      Object.defineProperty(element, "_debugStack", {
         configurable: false,
         enumerable: false,
         writable: true,
         value: debugStack,
-      });
-      Object.defineProperty(element, '_debugTask', {
+      })
+      Object.defineProperty(element, "_debugTask", {
         configurable: false,
         enumerable: false,
         writable: true,
         value: debugTask,
-      });
+      })
     }
     if (Object.freeze) {
-      Object.freeze(element.props);
-      Object.freeze(element);
+      Object.freeze(element.props)
+      Object.freeze(element)
     }
   }
 
-  return element;
+  return element
 }
 ```
 
 ## 元素和组件
-
-```ts
-```
 
 ## 总结
 

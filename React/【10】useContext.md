@@ -10,19 +10,19 @@
     <script src="https://unpkg.com/babel-standalone@6/babel.js"></script>
     <div id="container"></div>
     <script type="text/babel">
-      const ThemeContext = React.createContext(null);
+      const ThemeContext = React.createContext(null)
 
       function App() {
-        const [theme, setTheme] = React.useState('light');
+        const [theme, setTheme] = React.useState("light")
         return (
           <ThemeContext.Provider value={theme}>
             <Form />
             <label>
               <input
                 type="checkbox"
-                checked={theme === 'dark'}
+                checked={theme === "dark"}
                 onChange={(e) => {
-                  setTheme(e.target.checked ? 'dark' : 'light')
+                  setTheme(e.target.checked ? "dark" : "light")
                 }}
               />
               Use dark mode
@@ -37,12 +37,12 @@
             <Button>Sign up</Button>
             <Button>Log in</Button>
           </Panel>
-        );
+        )
       }
 
       function Panel({ title, children }) {
-        const theme = React.useContext(ThemeContext);
-        const className = 'panel-' + theme;
+        const theme = React.useContext(ThemeContext)
+        const className = "panel-" + theme
         return (
           <section className={className}>
             <h1>{title}</h1>
@@ -52,69 +52,64 @@
       }
 
       function Button({ children }) {
-        const theme = React.useContext(ThemeContext);
-        const className = 'button-' + theme;
-        return (
-          <button className={className}>
-            {children}
-          </button>
-        );
+        const theme = React.useContext(ThemeContext)
+        const className = "button-" + theme
+        return <button className={className}>{children}</button>
       }
 
-
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
   <style>
     * {
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: sans-serif;
       margin: 20px;
       padding: 0;
     }
-    
+
     h1 {
       margin-top: 0;
       font-size: 22px;
     }
-    
+
     h2 {
       margin-top: 0;
       font-size: 20px;
     }
-    
+
     h3 {
       margin-top: 0;
       font-size: 18px;
     }
-    
+
     h4 {
       margin-top: 0;
       font-size: 16px;
     }
-    
+
     h5 {
       margin-top: 0;
       font-size: 14px;
     }
-    
+
     h6 {
       margin-top: 0;
       font-size: 12px;
     }
-    
+
     code {
       font-size: 1.2em;
     }
-    
+
     ul {
       padding-inline-start: 20px;
     }
-    
+
     .panel-light,
     .panel-dark {
       border: 1px solid black;
@@ -126,12 +121,12 @@
       color: #222;
       background: #fff;
     }
-    
+
     .panel-dark {
       color: #fff;
       background: rgb(23, 32, 42);
     }
-    
+
     .button-light,
     .button-dark {
       border: 1px solid #777;
@@ -139,18 +134,17 @@
       margin-right: 10px;
       margin-top: 10px;
     }
-    
+
     .button-dark {
       background: #222;
       color: #fff;
     }
-    
+
     .button-light {
       background: #fff;
       color: #222;
     }
-    
-    </style>
+  </style>
 </html>
 ```
 
@@ -295,7 +289,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
 
 ### Provider
 
-#### Provider的`beginWork`
+#### Provider 的`beginWork`
 
 在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`ThemeContext.Provider`的类型是`ContextProvider`，所以就会进入`updateContextProvider`方法：
 
@@ -369,7 +363,7 @@ function updateContextProvider(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ) {
-  
+
   const providerType: ReactProviderType<any> = workInProgress.type;
   const context: ReactContext<any> = providerType._context;
 
@@ -576,21 +570,21 @@ function propagateContextChanges<T>(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
-const valueCursor: StackCursor<mixed> = createCursor(null);//【一个对象，包含一个current属性】
+const valueCursor: StackCursor<mixed> = createCursor(null) //【一个对象，包含一个current属性】
 
 export function pushProvider<T>(
   providerFiber: Fiber,
   context: ReactContext<T>,
-  nextValue: T,
+  nextValue: T
 ): void {
   if (isPrimaryRenderer) {
     // 【valueCursor的current属性入栈valueStack，并更新为context._currentValue，providerFiber入栈fiberStack】
-    push(valueCursor, context._currentValue, providerFiber);
+    push(valueCursor, context._currentValue, providerFiber)
     // 【context._currentValue更新为最新值】
-    context._currentValue = nextValue;
+    context._currentValue = nextValue
 
     if (__DEV__) {
-      push(rendererCursorDEV, context._currentRenderer, providerFiber);
+      push(rendererCursorDEV, context._currentRenderer, providerFiber)
 
       if (
         context._currentRenderer !== undefined &&
@@ -598,18 +592,18 @@ export function pushProvider<T>(
         context._currentRenderer !== rendererSigil
       ) {
         console.error(
-          'Detected multiple renderers concurrently rendering the ' +
-            'same context provider. This is currently unsupported.',
-        );
+          "Detected multiple renderers concurrently rendering the " +
+            "same context provider. This is currently unsupported."
+        )
       }
-      context._currentRenderer = rendererSigil;
+      context._currentRenderer = rendererSigil
     }
   } else {
-    push(valueCursor, context._currentValue2, providerFiber);
+    push(valueCursor, context._currentValue2, providerFiber)
 
-    context._currentValue2 = nextValue;
+    context._currentValue2 = nextValue
     if (__DEV__) {
-      push(renderer2CursorDEV, context._currentRenderer2, providerFiber);
+      push(renderer2CursorDEV, context._currentRenderer2, providerFiber)
 
       if (
         context._currentRenderer2 !== undefined &&
@@ -617,11 +611,11 @@ export function pushProvider<T>(
         context._currentRenderer2 !== rendererSigil
       ) {
         console.error(
-          'Detected multiple renderers concurrently rendering the ' +
-            'same context provider. This is currently unsupported.',
-        );
+          "Detected multiple renderers concurrently rendering the " +
+            "same context provider. This is currently unsupported."
+        )
       }
-      context._currentRenderer2 = rendererSigil;
+      context._currentRenderer2 = rendererSigil
     }
   }
 }
@@ -637,26 +631,26 @@ export function pushProvider<T>(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberStack.js】
-const valueStack: Array<any> = [];
-let fiberStack: Array<Fiber | null>;
-let index = -1;
+const valueStack: Array<any> = []
+let fiberStack: Array<Fiber | null>
+let index = -1
 
 function push<T>(cursor: StackCursor<T>, value: T, fiber: Fiber): void {
-  index++;
+  index++
 
-  valueStack[index] = cursor.current;
+  valueStack[index] = cursor.current
 
   if (__DEV__) {
-    fiberStack[index] = fiber;
+    fiberStack[index] = fiber
   }
 
-  cursor.current = value;
+  cursor.current = value
 }
 ```
 
 ![react](./assets/useContext/useContext3.png)
 
-#### Provider的`completeWork`
+#### Provider 的`completeWork`
 
 在`provider`的`completeWork`工作之前，其实会先处理子节点的`beginWork`，因此，子节点`consumer`在`beginWork`阶段就消费了`context`内容，要么通过`useContext hook`要么通过`JSX`语法。
 
@@ -668,10 +662,10 @@ function completeWork() {
   switch (workInProgress.tag) {
     case ContextProvider:
       // Pop provider fiber
-      const context: ReactContext<any> = workInProgress.type._context;
-      popProvider(context, workInProgress);
-      bubbleProperties(workInProgress);
-      return null;
+      const context: ReactContext<any> = workInProgress.type._context
+      popProvider(context, workInProgress)
+      bubbleProperties(workInProgress)
+      return null
   }
 }
 ```
@@ -685,82 +679,82 @@ function completeWork() {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
-const valueCursor: StackCursor<mixed> = createCursor(null);//【一个对象，包含一个current属性】
+const valueCursor: StackCursor<mixed> = createCursor(null) //【一个对象，包含一个current属性】
 
 export function popProvider(
   context: ReactContext<any>,
-  providerFiber: Fiber,
+  providerFiber: Fiber
 ): void {
-  const currentValue = valueCursor.current;
+  const currentValue = valueCursor.current
 
   if (isPrimaryRenderer) {
     if (
       enableServerContext &&
       currentValue === REACT_SERVER_CONTEXT_DEFAULT_VALUE_NOT_LOADED
     ) {
-      context._currentValue = context._defaultValue;
+      context._currentValue = context._defaultValue
     } else {
-      context._currentValue = currentValue;
+      context._currentValue = currentValue
     }
     if (__DEV__) {
-      const currentRenderer = rendererCursorDEV.current;
-      pop(rendererCursorDEV, providerFiber);
-      context._currentRenderer = currentRenderer;
+      const currentRenderer = rendererCursorDEV.current
+      pop(rendererCursorDEV, providerFiber)
+      context._currentRenderer = currentRenderer
     }
   } else {
     if (
       enableServerContext &&
       currentValue === REACT_SERVER_CONTEXT_DEFAULT_VALUE_NOT_LOADED
     ) {
-      context._currentValue2 = context._defaultValue;
+      context._currentValue2 = context._defaultValue
     } else {
-      context._currentValue2 = currentValue;
+      context._currentValue2 = currentValue
     }
     if (__DEV__) {
-      const currentRenderer2 = renderer2CursorDEV.current;
-      pop(renderer2CursorDEV, providerFiber);
-      context._currentRenderer2 = currentRenderer2;
+      const currentRenderer2 = renderer2CursorDEV.current
+      pop(renderer2CursorDEV, providerFiber)
+      context._currentRenderer2 = currentRenderer2
     }
   }
 
-  pop(valueCursor, providerFiber);
+  pop(valueCursor, providerFiber)
 }
 ```
 
 `popProvider`用到的辅助函数`pop`如下：
 
-1. `valueStack`栈顶设为null；
-2. `fiberStack`栈顶设为null；
+1. `valueStack`栈顶设为 null；
+2. `fiberStack`栈顶设为 null；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberStack.js】
-const valueStack: Array<any> = [];
-let fiberStack: Array<Fiber | null>;
-let index = -1;
+const valueStack: Array<any> = []
+let fiberStack: Array<Fiber | null>
+let index = -1
 
 function pop<T>(cursor: StackCursor<T>, fiber: Fiber): void {
   if (index < 0) {
     if (__DEV__) {
-      console.error('Unexpected pop.');
+      console.error("Unexpected pop.")
     }
-    return;
+    return
   }
 
   if (__DEV__) {
     if (fiber !== fiberStack[index]) {
-      console.error('Unexpected Fiber popped.');
+      console.error("Unexpected Fiber popped.")
     }
   }
 
-  cursor.current = valueStack[index];
+  cursor.current = valueStack[index]
 
-  valueStack[index] = null;
+  valueStack[index] = null
 
   if (__DEV__) {
-    fiberStack[index] = null;
+    fiberStack[index] = null
   }
 
-  index--;
+  index--
 }
 ```
 
@@ -770,11 +764,11 @@ function pop<T>(cursor: StackCursor<T>, fiber: Fiber): void {
 
 ### Consumer
 
-`Consumer`组件消费`context`可以通过`MyContext.Consumer`就是JSX的方式也可以通过`React.useContext`就是hook的方式消费。
+`Consumer`组件消费`context`可以通过`MyContext.Consumer`就是 JSX 的方式也可以通过`React.useContext`就是 hook 的方式消费。
 
-#### Consumer通过hook方式消费
+#### Consumer 通过 hook 方式消费(`beginWork`)
 
-使用hook方式消费时，在组件`beginWork`阶段（`mountIndeterminateComponent`/`updateFunctionComponent`）会调用`renderWithHooks`方法，就会执行`React.useContext(ThemeContext)`其实就是`readContext`方法，本例中最终会读取`ThemeContext`这个前面创建的`context`对象所保存的值。
+使用 hook 方式消费时，在组件`beginWork`阶段（`mountIndeterminateComponent`/`updateFunctionComponent`）会调用`renderWithHooks`方法，就会执行`React.useContext(ThemeContext)`其实就是`readContext`方法，本例中最终会读取`ThemeContext`这个前面创建的`context`对象所保存的值。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -922,7 +916,7 @@ function updateFunctionComponent(
 }
 ```
 
-`readcontext`方法并不复杂，只是读取`context._currentValue`里的值，处理节点对应`dependencies`也是用next的串联关系（一个`consumer`可以使用多个`context`内容），最后返回`context`最新值：
+`readcontext`方法并不复杂，只是读取`context._currentValue`里的值，处理节点对应`dependencies`也是用 next 的串联关系（一个`consumer`可以使用多个`context`内容），最后返回`context`最新值：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
@@ -997,9 +991,9 @@ function readContextForConsumer<T>(
 ![react](./assets/useContext/useContext4.png)
 ![react](./assets/useContext/useContext5.png)
 
-#### Consumer通过JSX方式消费
+#### Consumer 通过 JSX 方式消费(`beginWork`)
 
-使用JSX方式消费时，在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`Panel`组件是一个`ContextConsumer`类型，所以就会进入`updateContextConsumer`方法，可以看到同样会调用`readContext`方法：
+使用 JSX 方式消费时，在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`Panel`组件是一个`ContextConsumer`类型，所以就会进入`updateContextConsumer`方法，可以看到同样会调用`readContext`方法：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -1067,36 +1061,75 @@ function updateContextConsumer(
 }
 ```
 
+#### Consumer 通过 JSX 方式消费(`completeWork`)
+
+`Consumer`组件在`completeWork`阶段仍然走`ContextConsumer`分支，所以只会调用`bubbleProperties(workInProgress)`将`flags`冒泡往上，其他并未操作。
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberCompleteWork.js】
+function completeWork(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes
+): Fiber | null {
+  const newProps = workInProgress.pendingProps
+  // Note: This intentionally doesn't check if we're hydrating because comparing
+  // to the current tree provider fiber is just as fast and less error-prone.
+  // Ideally we would have a special version of the work loop only
+  // for hydration.
+  popTreeContext(workInProgress)
+  switch (workInProgress.tag) {
+    case IndeterminateComponent:
+    case LazyComponent:
+    case SimpleMemoComponent:
+    case FunctionComponent:
+    case ForwardRef:
+    case Fragment:
+    case Mode:
+    case Profiler:
+    case ContextConsumer:
+    case MemoComponent:
+      bubbleProperties(workInProgress)
+      return null
+    case ContextProvider:
+      // 【省略代码...】
+      return null
+  }
+
+  // 【省略代码...】
+}
+```
+
 ### 一致性保证
 
 #### prepareToReadContext
 
-在所有的组件处理方法中，例如`mountIndeterminateComponent`(通过hook消费)和`updateContextConsumer`（通过JSX语法消费）中都会调用`prepareToReadContext`做读取`context`之前的准备工作，获取当前`fiber`节点的`dependencies`并重置为`null`：
+在所有的组件处理方法中，例如`mountIndeterminateComponent`(通过 hook 消费)和`updateContextConsumer`（通过 JSX 语法消费）中都会调用`prepareToReadContext`做读取`context`之前的准备工作，获取当前`fiber`节点的`dependencies`并重置为`null`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
 export function prepareToReadContext(
   workInProgress: Fiber,
-  renderLanes: Lanes,
+  renderLanes: Lanes
 ): void {
-  currentlyRenderingFiber = workInProgress;
-  lastContextDependency = null;
-  lastFullyObservedContext = null;
+  currentlyRenderingFiber = workInProgress
+  lastContextDependency = null
+  lastFullyObservedContext = null
   // 【dependencies存储了使用的Context】
-  const dependencies = workInProgress.dependencies;
+  const dependencies = workInProgress.dependencies
   if (dependencies !== null) {
     if (enableLazyContextPropagation) {
       // Reset the work-in-progress list
-      dependencies.firstContext = null;
+      dependencies.firstContext = null
     } else {
-      const firstContext = dependencies.firstContext;
+      const firstContext = dependencies.firstContext
       if (firstContext !== null) {
         if (includesSomeLane(dependencies.lanes, renderLanes)) {
           // Context list has a pending update. Mark that this fiber performed work.
-          markWorkInProgressReceivedUpdate();
+          markWorkInProgressReceivedUpdate()
         }
         // Reset the work-in-progress list
-        dependencies.firstContext = null;
+        dependencies.firstContext = null
       }
     }
   }
@@ -1408,8 +1441,8 @@ function propagateContextChanges<T>(
 
 ## 总结
 
-1. 调用`createContext`创建一个`context`对象，里面包含`Provider`和`Consumer`信息以及数据信息`_currentValue`，`Provider`对应类型是`REACT_PROVIDER_TYPE`，`Consumer`对应类型是`REACT_CONTEXT_TYPE`；
-2. `beginWork`阶段首先遇到`REACT_PROVIDER_TYPE`类型的`Provider`组件，调用`updateContextProvider`=>`pushProvider()`，将数据和当前fiber入栈；
+1. 调用`createContext`会创建一个`context`对象，里面包含`Provider`和`Consumer`信息以及数据信息`_currentValue`，`Provider`对应类型是`REACT_PROVIDER_TYPE`，`Consumer`对应类型是`REACT_CONTEXT_TYPE`；
+2. `beginWork`阶段首先遇到`REACT_PROVIDER_TYPE`类型的`Provider`组件，调用`updateContextProvider`=>`pushProvider()`，将数据和当前 `fiber` 入栈；
 3. `beginWork`阶段接着深入子节点遇到`REACT_CONTEXT_TYPE`类型的`Consumer`组件或者调用了`useContext`的`Consumer`组件，前者进入`updateContextConsumer`方法继而进入`readContext`方法，后者直接调用`readContext`方法，方法会读取`context._currentValue`里的值并且更新`fiber`对应的`dependencies list`，也就是我们说的`Consumer`组件消费`Provider`组件提供的数据；
 4. 子组件消费完之后回到`Provider`组件的`completeWork`阶段，继而调用`popProvider`出栈，这一操作是为了保证所有的`Consumer`组件永远消费的是离自己最近的`Provider`组件提供的数据；
 5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧`context`数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`Consumer`组件的祖先节点`childLanes`属性用于后续更新这些组件；

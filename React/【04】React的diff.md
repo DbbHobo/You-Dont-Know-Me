@@ -114,9 +114,9 @@ function FiberNode(
 }
 ```
 
-## diff过程
+## diff 过程
 
-前文可知，React的渲染流程大致有如下三个的过程：
+前文可知，React 的渲染流程大致有如下三个的过程：
 
 1. `Scheduler`：按优先级进行`Update`任务调度的过程
 2. `Render`：由`React-Element`构造`fiber`树的过程
@@ -128,7 +128,7 @@ function FiberNode(
 
 `updateHostRoot` => `updateFunctionComponent` => `updateHostComponent` => `updateHostComponent` => `updateHostText` ...
 
-我们调试diff过程的用例如下：
+我们调试 diff 过程的用例如下：
 
 ```html
 <html>
@@ -139,28 +139,31 @@ function FiberNode(
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [list,setList] = React.useState(['a','b','c'])
-        React.useEffect(()=>{
+        const [list, setList] = React.useState(["a", "b", "c"])
+        React.useEffect(() => {
           setTimeout(() => {
-            setList(list=>{
-              return ['a','b','e','f','c']
+            setList((list) => {
+              return ["a", "b", "e", "f", "c"]
             })
-          }, 3000);
-        },[])
+          }, 3000)
+        }, [])
 
-        return <div>
-                  {list.map((item,index) => (
-                    <h2 key={item} className={item+index}>{item}</h2>
-                  ))}
-                </div>
+        return (
+          <div>
+            {list.map((item, index) => (
+              <h2 key={item} className={item + index}>
+                {item}
+              </h2>
+            ))}
+          </div>
+        )
       }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
-
 ```
 
 ```js
@@ -174,7 +177,7 @@ length: 5
 [[Prototype]]: Array(0)
 ```
 
-`updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`也就是diff过程的入口
+`updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`也就是 diff 过程的入口
 
 `updateFunctionComponent`/`updateHostComponent` => `reconcileChildren` => `reconcileChildFibers`(`createChildReconciler`) => `reconcileChildFibersImpl` => `reconcileSingleElement`/`reconcileChildrenArray`
 
@@ -245,7 +248,7 @@ function createChildReconciler(
   ): Fiber {
     // 【省略代码...】
   }
-  
+
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
@@ -414,7 +417,7 @@ function createChildReconciler(
 }
 ```
 
-### 单节点diff
+### 单节点 diff
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -423,26 +426,26 @@ function reconcileSingleElement(
   returnFiber: Fiber,
   currentFirstChild: Fiber | null,
   element: ReactElement,
-  lanes: Lanes,
+  lanes: Lanes
 ): Fiber {
-  const key = element.key;
-  let child = currentFirstChild;
+  const key = element.key
+  let child = currentFirstChild
   while (child !== null) {
     // TODO: If key === null and child.key === null, then this only applies to
     // the first item in the list.
     // 【ReactElement的key和现在渲染的节点的key、type作对比】
     if (child.key === key) {
-      const elementType = element.type;
+      const elementType = element.type
       if (elementType === REACT_FRAGMENT_TYPE) {
         if (child.tag === Fragment) {
-          deleteRemainingChildren(returnFiber, child.sibling);
-          const existing = useFiber(child, element.props.children);
-          existing.return = returnFiber;
+          deleteRemainingChildren(returnFiber, child.sibling)
+          const existing = useFiber(child, element.props.children)
+          existing.return = returnFiber
           if (__DEV__) {
-            existing._debugSource = element._source;
-            existing._debugOwner = element._owner;
+            existing._debugSource = element._source
+            existing._debugOwner = element._owner
           }
-          return existing;
+          return existing
         }
       } else {
         if (
@@ -455,30 +458,30 @@ function reconcileSingleElement(
           // We need to do this after the Hot Reloading check above,
           // because hot reloading has different semantics than prod because
           // it doesn't resuspend. So we can't let the call below suspend.
-          (typeof elementType === 'object' &&
+          (typeof elementType === "object" &&
             elementType !== null &&
             elementType.$$typeof === REACT_LAZY_TYPE &&
             resolveLazy(elementType) === child.type)
         ) {
-          deleteRemainingChildren(returnFiber, child.sibling);
-          const existing = useFiber(child, element.props);
-          existing.ref = coerceRef(returnFiber, child, element);
-          existing.return = returnFiber;
+          deleteRemainingChildren(returnFiber, child.sibling)
+          const existing = useFiber(child, element.props)
+          existing.ref = coerceRef(returnFiber, child, element)
+          existing.return = returnFiber
           if (__DEV__) {
-            existing._debugSource = element._source;
-            existing._debugOwner = element._owner;
+            existing._debugSource = element._source
+            existing._debugOwner = element._owner
           }
-          return existing;
+          return existing
         }
       }
       // Didn't match.
-      deleteRemainingChildren(returnFiber, child);
-      break;
+      deleteRemainingChildren(returnFiber, child)
+      break
     } else {
       // 【key不相同直接删除旧节点】
-      deleteChild(returnFiber, child);
+      deleteChild(returnFiber, child)
     }
-    child = child.sibling;
+    child = child.sibling
   }
 
   if (element.type === REACT_FRAGMENT_TYPE) {
@@ -486,20 +489,20 @@ function reconcileSingleElement(
       element.props.children,
       returnFiber.mode,
       lanes,
-      element.key,
-    );
-    created.return = returnFiber;
-    return created;
+      element.key
+    )
+    created.return = returnFiber
+    return created
   } else {
-    const created = createFiberFromElement(element, returnFiber.mode, lanes);
-    created.ref = coerceRef(returnFiber, currentFirstChild, element);
-    created.return = returnFiber;
-    return created;
+    const created = createFiberFromElement(element, returnFiber.mode, lanes)
+    created.ref = coerceRef(returnFiber, currentFirstChild, element)
+    created.return = returnFiber
+    return created
   }
 }
 ```
 
-### 多节点diff
+### 多节点 diff
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -508,7 +511,7 @@ function reconcileChildrenArray(
   returnFiber: Fiber,
   currentFirstChild: Fiber | null,
   newChildren: Array<any>,
-  lanes: Lanes,
+  lanes: Lanes
 ): Fiber | null {
   // This algorithm can't optimize by searching from both ends since we
   // don't have backpointers on fibers. I'm trying to see how far we can get
@@ -532,78 +535,78 @@ function reconcileChildrenArray(
   if (__DEV__) {
     // First, validate keys.
     // 【遍历新节点，获取所有的key】
-    let knownKeys: Set<string> | null = null;
+    let knownKeys: Set<string> | null = null
     for (let i = 0; i < newChildren.length; i++) {
-      const child = newChildren[i];
-      knownKeys = warnOnInvalidKey(child, knownKeys, returnFiber);
+      const child = newChildren[i]
+      knownKeys = warnOnInvalidKey(child, knownKeys, returnFiber)
     }
   }
 
-  let resultingFirstChild: Fiber | null = null;//【能复用的情况下，新节点中的第一个节点】
-  let previousNewFiber: Fiber | null = null;//【上一个被遍历的新节点】
+  let resultingFirstChild: Fiber | null = null //【能复用的情况下，新节点中的第一个节点】
+  let previousNewFiber: Fiber | null = null //【上一个被遍历的新节点】
 
-  let oldFiber = currentFirstChild;//【旧节点序列的第一个节点初始化oldFiber】
-  let lastPlacedIndex = 0;//【能复用的旧节点中最后一个的索引】
-  let newIdx = 0;
-  let nextOldFiber = null;//【用于下一个监测是否能复用的旧节点】
+  let oldFiber = currentFirstChild //【旧节点序列的第一个节点初始化oldFiber】
+  let lastPlacedIndex = 0 //【能复用的旧节点中最后一个的索引】
+  let newIdx = 0
+  let nextOldFiber = null //【用于下一个监测是否能复用的旧节点】
 
   // 【第一遍循环，从第一个新/旧节点开始看是否可以复用，关键方法updateSlot，此处会判断是否可复用】
   for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
     if (oldFiber.index > newIdx) {
-      nextOldFiber = oldFiber;
-      oldFiber = null;
+      nextOldFiber = oldFiber
+      oldFiber = null
     } else {
-      nextOldFiber = oldFiber.sibling;
+      nextOldFiber = oldFiber.sibling
     }
     const newFiber = updateSlot(
       returnFiber,
       oldFiber,
       newChildren[newIdx],
-      lanes,
-    );
+      lanes
+    )
     if (newFiber === null) {
       // TODO: This breaks on empty slots like null children. That's
       // unfortunate because it triggers the slow path all the time. We need
       // a better way to communicate whether this was a miss or null,
       // boolean, undefined, etc.
       if (oldFiber === null) {
-        oldFiber = nextOldFiber;
+        oldFiber = nextOldFiber
       }
-      break;
+      break
     }
     if (shouldTrackSideEffects) {
       if (oldFiber && newFiber.alternate === null) {
         // We matched the slot, but we didn't reuse the existing fiber, so we
         // need to delete the existing child.
-        deleteChild(returnFiber, oldFiber);
+        deleteChild(returnFiber, oldFiber)
       }
     }
     // 【lastPlacedIndex表示的是最后一次检查能否复用的旧节点的索引】
     // 【旧节点不存在的话标识newFiber是Placement表明是新增，旧节点存在且索引小于lastPlacedIndex标识Placement表明是移动（从前往后移动），旧节点存在且索引大于等于于lastPlacedIndex则不用动这个节点】
-    lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+    lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
     if (previousNewFiber === null) {
       // TODO: Move out of the loop. This only happens for the first run.
-      resultingFirstChild = newFiber;
+      resultingFirstChild = newFiber
     } else {
       // TODO: Defer siblings if we're not at the right index for this slot.
       // I.e. if we had null values before, then we want to defer this
       // for each null value. However, we also don't want to call updateSlot
       // with the previous one.
-      previousNewFiber.sibling = newFiber;
+      previousNewFiber.sibling = newFiber
     }
-    previousNewFiber = newFiber;
-    oldFiber = nextOldFiber;
+    previousNewFiber = newFiber
+    oldFiber = nextOldFiber
   }
 
   // 【新节点已经遍历结束，删除剩余的旧节点，并且返回第一个节点作为祖先节点的child】
   if (newIdx === newChildren.length) {
     // We've reached the end of the new children. We can delete the rest.
-    deleteRemainingChildren(returnFiber, oldFiber);
+    deleteRemainingChildren(returnFiber, oldFiber)
     if (getIsHydrating()) {
-      const numberOfForks = newIdx;
-      pushTreeFork(returnFiber, numberOfForks);
+      const numberOfForks = newIdx
+      pushTreeFork(returnFiber, numberOfForks)
     }
-    return resultingFirstChild;
+    return resultingFirstChild
   }
 
   // 【旧节点已经遍历结束，剩下的新节点作为新创建的】
@@ -611,29 +614,29 @@ function reconcileChildrenArray(
     // If we don't have any more existing children we can choose a fast path
     // since the rest will all be insertions.
     for (; newIdx < newChildren.length; newIdx++) {
-      const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
+      const newFiber = createChild(returnFiber, newChildren[newIdx], lanes)
       if (newFiber === null) {
-        continue;
+        continue
       }
-      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
       if (previousNewFiber === null) {
         // TODO: Move out of the loop. This only happens for the first run.
-        resultingFirstChild = newFiber;
+        resultingFirstChild = newFiber
       } else {
-        previousNewFiber.sibling = newFiber;
+        previousNewFiber.sibling = newFiber
       }
-      previousNewFiber = newFiber;
+      previousNewFiber = newFiber
     }
     if (getIsHydrating()) {
-      const numberOfForks = newIdx;
-      pushTreeFork(returnFiber, numberOfForks);
+      const numberOfForks = newIdx
+      pushTreeFork(returnFiber, numberOfForks)
     }
-    return resultingFirstChild;
+    return resultingFirstChild
   }
-  
+
   // 【新旧节点都没遍历完】
   // Add all children to a key map for quick lookups.
-  const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
+  const existingChildren = mapRemainingChildren(returnFiber, oldFiber)
 
   // Keep scanning and use the map to restore deleted items as moves.
   for (; newIdx < newChildren.length; newIdx++) {
@@ -642,8 +645,8 @@ function reconcileChildrenArray(
       returnFiber,
       newIdx,
       newChildren[newIdx],
-      lanes,
-    );
+      lanes
+    )
     if (newFiber !== null) {
       if (shouldTrackSideEffects) {
         if (newFiber.alternate !== null) {
@@ -651,36 +654,34 @@ function reconcileChildrenArray(
           // current, that means that we reused the fiber. We need to delete
           // it from the child list so that we don't add it to the deletion
           // list.
-          existingChildren.delete(
-            newFiber.key === null ? newIdx : newFiber.key,
-          );
+          existingChildren.delete(newFiber.key === null ? newIdx : newFiber.key)
         }
       }
-      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
       if (previousNewFiber === null) {
-        resultingFirstChild = newFiber;
+        resultingFirstChild = newFiber
       } else {
-        previousNewFiber.sibling = newFiber;
+        previousNewFiber.sibling = newFiber
       }
-      previousNewFiber = newFiber;
+      previousNewFiber = newFiber
     }
   }
 
   if (shouldTrackSideEffects) {
     // Any existing children that weren't consumed above were deleted. We need
     // to add them to the deletion list.
-    existingChildren.forEach(child => deleteChild(returnFiber, child));
+    existingChildren.forEach((child) => deleteChild(returnFiber, child))
   }
 
   if (getIsHydrating()) {
-    const numberOfForks = newIdx;
-    pushTreeFork(returnFiber, numberOfForks);
+    const numberOfForks = newIdx
+    pushTreeFork(returnFiber, numberOfForks)
   }
-  return resultingFirstChild;
+  return resultingFirstChild
 }
 ```
 
-- 第一遍循环，从第一个新/旧节点开始看是否可以复用，关键方法`updateSlot`，会判断旧节点是否可复用，a、b节点会走入`updateElement`方法，因为都有可复用节点会走向`useFiber`；
+- 第一遍循环，从第一个新/旧节点开始看是否可以复用，关键方法`updateSlot`，会判断旧节点是否可复用，a、b 节点会走入`updateElement`方法，因为都有可复用节点会走向`useFiber`；
 
 **`updateSlot` => `updateElement` => `useFiber` => `createWorkInProgress`**
 
@@ -963,40 +964,40 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 function placeChild(
   newFiber: Fiber,
   lastPlacedIndex: number,
-  newIndex: number,
+  newIndex: number
 ): number {
-  newFiber.index = newIndex;
+  newFiber.index = newIndex
   if (!shouldTrackSideEffects) {
     // During hydration, the useId algorithm needs to know which fibers are
     // part of a list of children (arrays, iterators).
-    newFiber.flags |= Forked;
-    return lastPlacedIndex;
+    newFiber.flags |= Forked
+    return lastPlacedIndex
   }
-  const current = newFiber.alternate;
+  const current = newFiber.alternate
   if (current !== null) {
-    const oldIndex = current.index;
+    const oldIndex = current.index
     if (oldIndex < lastPlacedIndex) {
       // 【需要移动的情况打Placement标志】
       // This is a move.
-      newFiber.flags |= Placement | PlacementDEV;
-      return lastPlacedIndex;
+      newFiber.flags |= Placement | PlacementDEV
+      return lastPlacedIndex
     } else {
       // 【新节点既不用移动也不用插入的情况】
       // This item can stay in place.
-      return oldIndex;
+      return oldIndex
     }
   } else {
     // 【插入的情况打Placement标志】
     // This is an insertion.
-    newFiber.flags |= Placement | PlacementDEV;
-    return lastPlacedIndex;
+    newFiber.flags |= Placement | PlacementDEV
+    return lastPlacedIndex
   }
 }
 ```
 
 ![react](./assets/diff/diff7-placeChild.png)
 
-- 第一个循环继续，b节点也是可复用节点，重复上述过程复用b节点，然后下一个节点e无法复用（`updateSlot`返回的`newFiber`为`null`）跳出第一个循环；
+- 第一个循环继续，b 节点也是可复用节点，重复上述过程复用 b 节点，然后下一个节点 e 无法复用（`updateSlot`返回的`newFiber`为`null`）跳出第一个循环；
 
 ![react](./assets/diff/diff8.png)
 
@@ -1007,29 +1008,29 @@ function placeChild(
 // 【packages/react-reconciler/src/ReactChildFiber.js】
 function mapRemainingChildren(
   returnFiber: Fiber,
-  currentFirstChild: Fiber,
+  currentFirstChild: Fiber
 ): Map<string | number, Fiber> {
   // Add the remaining children to a temporary map so that we can find them by
   // keys quickly. Implicit (null) keys get added to this set with their index
   // instead.
-  const existingChildren: Map<string | number, Fiber> = new Map();
+  const existingChildren: Map<string | number, Fiber> = new Map()
 
-  let existingChild: null | Fiber = currentFirstChild;
+  let existingChild: null | Fiber = currentFirstChild
   while (existingChild !== null) {
     if (existingChild.key !== null) {
       // 【有key】
-      existingChildren.set(existingChild.key, existingChild);
+      existingChildren.set(existingChild.key, existingChild)
     } else {
       // 【无key用索引index】
-      existingChildren.set(existingChild.index, existingChild);
+      existingChildren.set(existingChild.index, existingChild)
     }
-    existingChild = existingChild.sibling;
+    existingChild = existingChild.sibling
   }
-  return existingChildren;
+  return existingChildren
 }
 ```
 
-- 进入第二轮循环，遍历新节点，调用`updateFromMap`方法，先在`existingChildren`根据`key`或者`index`寻找是否有可用旧节点，然后根据类型进入不同方法，e、f节点会走入`updateElement`方法，因为都是新增节点无法复用旧节点会走向`createFiberFromElement`；
+- 进入第二轮循环，遍历新节点，调用`updateFromMap`方法，先在`existingChildren`根据`key`或者`index`寻找是否有可用旧节点，然后根据类型进入不同方法，e、f 节点会走入`updateElement`方法，因为都是新增节点无法复用旧节点会走向`createFiberFromElement`；
 
 **`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`**
 
@@ -1316,26 +1317,26 @@ export function createFiberFromTypeAndProps(
 ![react](./assets/diff/diff9.png)
 ![react](./assets/diff/diff10.png)
 
-- 已经得到全新创建的`newFiber`，调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，e、f节点因为都是新增节点所以会标志`Placement`；
+- 已经得到全新创建的`newFiber`，调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，e、f 节点因为都是新增节点所以会标志`Placement`；
 
 ![react](./assets/diff/diff11.png)
 
-- 循环到最后一个节点c，在`updateFromMap`中首先在`existingChildren`根据`key`或者`index`找到了可用的旧节点，然后进入`updateElement`方法，因为有可复用节点会走向`useFiber`，由旧的c节点构造出来的新c节点fiber node，由于`className`的变化，会把最新的`className`放在`pendingProps`属性中用于后续处理；
+- 循环到最后一个节点 c，在`updateFromMap`中首先在`existingChildren`根据`key`或者`index`找到了可用的旧节点，然后进入`updateElement`方法，因为有可复用节点会走向`useFiber`，由旧的 c 节点构造出来的新 c 节点 fiber node，由于`className`的变化，会把最新的`className`放在`pendingProps`属性中用于后续处理；
 
 ![react](./assets/diff/diff12.png)
 ![react](./assets/diff/diff13.png)
 ![react](./assets/diff/diff14.png)
 
-- 同样的对新c节点调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，此处不需要插入或者移动；
-- 到此处所有的新节点遍历完毕，返回第一个新的`fiber node`，其他的节点通过`sibling`属性依次链接在后面，这一层的diff过程也就完成了，新的`fiber node`结构生成；
+- 同样的对新 c 节点调用`placeChild`看新节点是否需要`Placement`标志表示插入或者移动，此处不需要插入或者移动；
+- 到此处所有的新节点遍历完毕，返回第一个新的`fiber node`，其他的节点通过`sibling`属性依次链接在后面，这一层的 diff 过程也就完成了，新的`fiber node`结构生成；
 
 ## 总结
 
 1. `render`流程每一个节点都会经历`beginWork`过程，而根据`tag`类型由分别进入不同的方法，例如根节点`root`进入`updateHostRoot`、函数组件`ƒ App()`进入`updateFunctionComponent`、`div`元素进入`updateHostComponent`等等；
-2. `updateFunctionComponent`、`updateHostComponent`等方法如果当前节点有子节点都会进入`reconcileChildren`=>`reconcileChildFibers`=>`createChildReconciler`，在子节点是Array的情况也就是多节点的情况下进入`reconcileChildrenArray`方法；
+2. `updateFunctionComponent`、`updateHostComponent`等方法如果当前节点有子节点都会进入`reconcileChildren`=>`reconcileChildFibers`=>`createChildReconciler`，在子节点是 Array 的情况也就是多节点的情况下进入`reconcileChildrenArray`方法；
 3. `reconcileChildrenArray`方法首先进入第一次循环，从`newChildren`和`old fiber`的头开始寻找是否有可复用节点，有的话`newChildren`移动到下一个，和`old fiber`的`sibling`继续对比查看是否可复用，直到不可复用跳出第一次循环；
 4. 第一次循环结束的时候可能有三种情况，第一种`newChildren`遍历完毕而`old fiber`还有剩余，说明剩下的`old fiber`是需要删除的，第二种`old fiber`遍历完毕而`newChildren`还有剩余，说明剩下的`newChildren`是需要增加的，第三种就是`newChildren`和`old fiber`都有剩余，那就要进入第二次循环；
-5. 构造一个`Map<old fiber的key或index，old fiber>`把剩余的未匹配的旧节点存储起来，然后进入第二轮循环，继续遍历`newChildren`，第一步先调用`updateFromMap`方法，首先在`existingChildren`中根据`key`或者`index`寻找是否有可用旧节点，然后根据新节点的tag类型进入不同方法；
+5. 构造一个`Map<old fiber的key或index，old fiber>`把剩余的未匹配的旧节点存储起来，然后进入第二轮循环，继续遍历`newChildren`，第一步先调用`updateFromMap`方法，首先在`existingChildren`中根据`key`或者`index`寻找是否有可用旧节点，然后根据新节点的 tag 类型进入不同方法；
 6. 如果是全新的节点通常会走如下路径`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`；
-7. 如果是可复用的节点通常会走如下路径`updateFromMap` => `updateElement` => `useFiber` => `createWorkInProgress`，如果是不可复用的节点则创建权限的节点如下`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`；
+7. 如果是可复用的节点通常会走如下路径`updateFromMap` => `updateElement` => `useFiber` => `createWorkInProgress`，如果是不可复用的节点则创建全新的节点如下`updateFromMap` => `updateElement` => `createFiberFromElement` => `createFiberFromTypeAndProps`；
 8. 经过两次遍历，本层的新节点对应的`fiber node`结构也就构造完成了；

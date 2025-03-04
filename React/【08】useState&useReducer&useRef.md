@@ -1,4 +1,4 @@
-# 状态管理Hook
+# 状态管理 Hook
 
 ## useState
 
@@ -25,16 +25,18 @@ useState is a React Hook that lets you add a state variable to your component.
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [count,setCount] = React.useState(1)
+        const [count, setCount] = React.useState(1)
 
-        return <div>
-                  <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
-                  <h2>HOBO~{count}</h2>
-                </div>
+        return (
+          <div>
+            <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
+            <h2>HOBO~{count}</h2>
+          </div>
+        )
       }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -375,7 +377,7 @@ function beginWork(
 
 ### `updateState` => `updateReducer`
 
-`dispatchSetState`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新DOM任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useState`方法，然后这一次是更新情况下就会调用`updateState`方法从而进入`updateReducer`方法。
+`dispatchSetState`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新 DOM 任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useState`方法，然后这一次是更新情况下就会调用`updateState`方法从而进入`updateReducer`方法。
 
 `updateState` 实际调用的是 `updateReducer`，首先拿到当前对应 `hook` 和 `hook.queue`，然后把 `pending` 的 `queue` 加入到上一轮还没执行的 `update` 队列 `current.baseQueue` 中形成一个单向循环链表，然后遍历执行这个已经串起来的 `update` 队列。`update` 队列的每一项都根据其参数进行进行处理，获取最新的 `state` 然后更新到对应 `hook` 上。
 
@@ -643,15 +645,15 @@ function updateWorkInProgressHook(): Hook {
 ```ts
 // 第一个setState因为fiber.lanes为0所以提前计算eagerState为101，然后将rerender任务入队，第二个setState因为fiber.lanes此时已经为1，所以直接将rerender任务入队，但是又由于两次rerender任务的优先级完全相同`existingCallbackPriority === newCallbackPriority`，所以第二次任务被直接忽略，同理第三次setState也一样。最终仅有一个update任务添加在hook.queue.pending里，并且其值是提前算好的eagerState。
 function handleClick() {
-  setState(age + 100); // setState(1 + 100)
-  setState(age + 200); // setState(1 + 200)
-  setState(age + 300); // setState(1 + 300)
+  setState(age + 100) // setState(1 + 100)
+  setState(age + 200) // setState(1 + 200)
+  setState(age + 300) // setState(1 + 300)
 }
 // 三次调用setState都会最终添加一个update任务在hook.queue.pending里（中间用interleaved过渡在enqueueConcurrentHookUpdate方法处理），然后在updateReducer方法中遍历三个任务并执行，每次执行的入参都是上一次执行的结果
 function handleClick() {
-  setState(a => a + 100); // setState(1 => 101)
-  setState(a => a + 200); // setState(101 => 301)
-  setState(a => a + 300); // setState(301 => 601)
+  setState((a) => a + 100) // setState(1 => 101)
+  setState((a) => a + 200) // setState(101 => 301)
+  setState((a) => a + 300) // setState(301 => 601)
 }
 ```
 
@@ -683,25 +685,33 @@ useReducer is a React Hook that lets you add a reducer to your component.
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [state, dispatch] = React.useReducer(reducer, { age: 1 });
+        const [state, dispatch] = React.useReducer(reducer, { age: 1 })
 
         function reducer(state, action) {
-          if (action.type === 'incremented_age') {
+          if (action.type === "incremented_age") {
             return {
-              age: state.age + 100
-            };
+              age: state.age + 100,
+            }
           }
-          throw Error('Unknown action.');
+          throw Error("Unknown action.")
         }
 
-        return <div>
-                  <h1 onClick={() => { dispatch({ type: 'incremented_age' })}}>Hello World!</h1>
-                  <h2>HOBO~{state.age}</h2>
-                </div>
-        }
+        return (
+          <div>
+            <h1
+              onClick={() => {
+                dispatch({ type: "incremented_age" })
+              }}
+            >
+              Hello World!
+            </h1>
+            <h2>HOBO~{state.age}</h2>
+          </div>
+        )
+      }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -833,7 +843,7 @@ const dispatch: Dispatch<A> = (queue.dispatch = (dispatchReducerAction.bind(
   ): any));
 ```
 
-`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务，然后也分为render过程中产生或者非render过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值`eagerState`
+`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务，然后也分为 render 过程中产生或者非 render 过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值`eagerState`
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
 2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
@@ -880,7 +890,7 @@ function dispatchReducerAction<S, A>(
 
 ### `updateReducer`
 
-`dispatchReducerAction`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新DOM任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useReducer`方法，然后这一次是更新情况下就会进入`updateReducer`方法。
+`dispatchReducerAction`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新 DOM 任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useReducer`方法，然后这一次是更新情况下就会进入`updateReducer`方法。
 
 内容同 `useState` 原理中，用的是同样的方法 `updateReducer`。区别主要在于`updateReducer`的第一个参数`reducer`函数，在`useState`中使用的是`React`提供的默认函数`basicStateReducer`，而在`useReducer`中由用户把控传入。同样的连续多次调用`dispatch`每次都会把新值传入计算函数，所以多次计算都以上一次为基准得到最新值。
 
@@ -1051,7 +1061,7 @@ function updateReducer<S, I, A>(
 ![react](./assets/useState/useReducer3.png)
 ![react](./assets/useReducer4.png)
 
-处理完当前`hook`的更新之后，最后会回到组件的`updateFuctionComponent`方法，此时`fiber`上的`memoizedState`也就是`hook`状态已经更新到最新状态并且返回了`nextChildren`（函数组件返回的JSX对应的`React-Element`），继而调用`reconcileChildren`继续处理子节点。可以看出来，`hook`是处理函数组件特殊的一环，为函数组件提供了更丰富的功能。
+处理完当前`hook`的更新之后，最后会回到组件的`updateFuctionComponent`方法，此时`fiber`上的`memoizedState`也就是`hook`状态已经更新到最新状态并且返回了`nextChildren`（函数组件返回的 JSX 对应的`React-Element`），继而调用`reconcileChildren`继续处理子节点。可以看出来，`hook`是处理函数组件特殊的一环，为函数组件提供了更丰富的功能。
 
 ![react](./assets/useReducer5.png)
 ![react](./assets/useReducer6.png)
@@ -1078,20 +1088,22 @@ useRef is a React Hook that lets you reference a value that’s not needed for r
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const ref = React.useRef(null);
+        const ref = React.useRef(null)
 
         const handleClick = () => {
-          ref.current = 1;
-          console.log('ref is:',ref.current);
-        };
-
-        return <div>
-                  <h1 onClick={handleClick}>Hello World!</h1>
-                </div>
+          ref.current = 1
+          console.log("ref is:", ref.current)
         }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+        return (
+          <div>
+            <h1 onClick={handleClick}>Hello World!</h1>
+          </div>
+        )
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -1130,14 +1142,14 @@ useRef<T>(initialValue: T): {current: T} {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
-function mountRef<T>(initialValue: T): {current: T} {
-  const hook = mountWorkInProgressHook();
+function mountRef<T>(initialValue: T): { current: T } {
+  const hook = mountWorkInProgressHook()
   if (enableUseRefAccessWarning) {
     // 【省略代码...】
   } else {
-    const ref = {current: initialValue};
-    hook.memoizedState = ref;
-    return ref;
+    const ref = { current: initialValue }
+    hook.memoizedState = ref
+    return ref
   }
 }
 ```
@@ -1148,33 +1160,33 @@ function mountRef<T>(initialValue: T): {current: T} {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
-function updateRef<T>(initialValue: T): {current: T} {
-  const hook = updateWorkInProgressHook();
-  return hook.memoizedState;
+function updateRef<T>(initialValue: T): { current: T } {
+  const hook = updateWorkInProgressHook()
+  return hook.memoizedState
 }
 ```
 
-### useRef存储DOM对象
+### useRef 存储 DOM 对象
 
-使用`useRef`存储`DOM`对象是一种常见使用方法，其实在`commit`阶段`commitLayoutEffectOnFiber`方法中会调用一个叫`safelyAttachRef`的方法，实际使用`try/catch`去调用`commitAttachRef`方法里面会获取对应DOM元素为`ref`这个`hook`赋值。
+使用`useRef`存储`DOM`对象是一种常见使用方法，其实在`commit`阶段`commitLayoutEffectOnFiber`方法中会调用一个叫`safelyAttachRef`的方法，实际使用`try/catch`去调用`commitAttachRef`方法里面会获取对应 DOM 元素为`ref`这个`hook`赋值。
 
 1. `attach`在`commitLayoutEffectOnFiber`阶段，根据`flags & Ref`标识，获取到当前`fiber`节点对应的`DOM`赋值给`ref.current`；
 2. `detach`在`commitMutationEffectsOnFiber`阶段，是`commitLayoutEffectOnFiber`之前的阶段，有些类似`useEffect`里先调用`effect.destory()`再调用`effect.create()`，清空再获取最新内容的意思；
-3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个flags在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`beginWork`阶段的`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
+3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个 flags 在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`beginWork`阶段的`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
 
 - `markRef`在`beginWork`阶段根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function markRef(current: Fiber | null, workInProgress: Fiber) {
-  const ref = workInProgress.ref;
+  const ref = workInProgress.ref
   if (
     (current === null && ref !== null) ||
     (current !== null && current.ref !== ref)
   ) {
     // Schedule a Ref effect
-    workInProgress.flags |= Ref;
-    workInProgress.flags |= RefStatic;
+    workInProgress.flags |= Ref
+    workInProgress.flags |= RefStatic
   }
 }
 ```
@@ -1188,93 +1200,93 @@ function commitLayoutEffectOnFiber(
   finishedRoot: FiberRoot,
   current: Fiber | null,
   finishedWork: Fiber,
-  committedLanes: Lanes,
+  committedLanes: Lanes
 ): void {
   // When updating this function, also update reappearLayoutEffects, which does
   // most of the same things when an offscreen tree goes from hidden -> visible.
-  const flags = finishedWork.flags;
+  const flags = finishedWork.flags
   switch (finishedWork.tag) {
     // 【省略代码...】
     case HostSingleton:
     case HostComponent: {
       // 【省略代码...】
       if (flags & Ref) {
-        safelyAttachRef(finishedWork, finishedWork.return);
+        safelyAttachRef(finishedWork, finishedWork.return)
       }
-      break;
+      break
     }
     // 【省略代码...】
     case OffscreenComponent: {
       // 【省略代码...】
       if (flags & Ref) {
-        const props: OffscreenProps = finishedWork.memoizedProps;
-        if (props.mode === 'manual') {
-          safelyAttachRef(finishedWork, finishedWork.return);
+        const props: OffscreenProps = finishedWork.memoizedProps
+        if (props.mode === "manual") {
+          safelyAttachRef(finishedWork, finishedWork.return)
         } else {
-          safelyDetachRef(finishedWork, finishedWork.return);
+          safelyDetachRef(finishedWork, finishedWork.return)
         }
       }
-      break;
+      break
     }
     default: {
       // 【省略代码...】
-      break;
+      break
     }
   }
 }
 
 function safelyAttachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
   try {
-    commitAttachRef(current);
+    commitAttachRef(current)
   } catch (error) {
-    captureCommitPhaseError(current, nearestMountedAncestor, error);
+    captureCommitPhaseError(current, nearestMountedAncestor, error)
   }
 }
 
 function commitAttachRef(finishedWork: Fiber) {
-  const ref = finishedWork.ref;
+  const ref = finishedWork.ref
   if (ref !== null) {
-    const instance = finishedWork.stateNode;
-    let instanceToUse;
+    const instance = finishedWork.stateNode
+    let instanceToUse
     switch (finishedWork.tag) {
       case HostHoistable:
       case HostSingleton:
       case HostComponent:
         // 【获取DOM】
-        instanceToUse = getPublicInstance(instance);
-        break;
+        instanceToUse = getPublicInstance(instance)
+        break
       default:
-        instanceToUse = instance;
+        instanceToUse = instance
     }
     // Moved outside to ensure DCE works with this flag
     if (enableScopeAPI && finishedWork.tag === ScopeComponent) {
-      instanceToUse = instance;
+      instanceToUse = instance
     }
-    if (typeof ref === 'function') {
+    if (typeof ref === "function") {
       if (shouldProfile(finishedWork)) {
         try {
-          startLayoutEffectTimer();
-          finishedWork.refCleanup = ref(instanceToUse);
+          startLayoutEffectTimer()
+          finishedWork.refCleanup = ref(instanceToUse)
         } finally {
-          recordLayoutEffectDuration(finishedWork);
+          recordLayoutEffectDuration(finishedWork)
         }
       } else {
-        finishedWork.refCleanup = ref(instanceToUse);
+        finishedWork.refCleanup = ref(instanceToUse)
       }
     } else {
       if (__DEV__) {
-        if (!ref.hasOwnProperty('current')) {
+        if (!ref.hasOwnProperty("current")) {
           console.error(
-            'Unexpected ref object provided for %s. ' +
-              'Use either a ref-setter function or React.createRef().',
-            getComponentNameFromFiber(finishedWork),
-          );
+            "Unexpected ref object provided for %s. " +
+              "Use either a ref-setter function or React.createRef().",
+            getComponentNameFromFiber(finishedWork)
+          )
         }
       }
 
       // $FlowFixMe unable to narrow type to the non-function case
       // 【DOM赋值给ref这个hook】
-      ref.current = instanceToUse;
+      ref.current = instanceToUse
     }
   }
 }
@@ -1287,60 +1299,60 @@ function commitAttachRef(finishedWork: Fiber) {
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
 // `recursivelyTraverseMutationEffects`/`commitMutationEffects` => `commitMutationEffectsOnFiber` => `safelyDetachRef`
 function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
-  const ref = current.ref;
-  const refCleanup = current.refCleanup;
+  const ref = current.ref
+  const refCleanup = current.refCleanup
 
   if (ref !== null) {
-    if (typeof refCleanup === 'function') {
+    if (typeof refCleanup === "function") {
       try {
         if (shouldProfile(current)) {
           try {
-            startLayoutEffectTimer();
-            refCleanup();
+            startLayoutEffectTimer()
+            refCleanup()
           } finally {
-            recordLayoutEffectDuration(current);
+            recordLayoutEffectDuration(current)
           }
         } else {
-          refCleanup();
+          refCleanup()
         }
       } catch (error) {
-        captureCommitPhaseError(current, nearestMountedAncestor, error);
+        captureCommitPhaseError(current, nearestMountedAncestor, error)
       } finally {
         // `refCleanup` has been called. Nullify all references to it to prevent double invocation.
-        current.refCleanup = null;
-        const finishedWork = current.alternate;
+        current.refCleanup = null
+        const finishedWork = current.alternate
         if (finishedWork != null) {
-          finishedWork.refCleanup = null;
+          finishedWork.refCleanup = null
         }
       }
-    } else if (typeof ref === 'function') {
-      let retVal;
+    } else if (typeof ref === "function") {
+      let retVal
       try {
         if (shouldProfile(current)) {
           try {
-            startLayoutEffectTimer();
-            retVal = ref(null);
+            startLayoutEffectTimer()
+            retVal = ref(null)
           } finally {
-            recordLayoutEffectDuration(current);
+            recordLayoutEffectDuration(current)
           }
         } else {
-          retVal = ref(null);
+          retVal = ref(null)
         }
       } catch (error) {
-        captureCommitPhaseError(current, nearestMountedAncestor, error);
+        captureCommitPhaseError(current, nearestMountedAncestor, error)
       }
       if (__DEV__) {
-        if (typeof retVal === 'function') {
+        if (typeof retVal === "function") {
           console.error(
-            'Unexpected return value from a callback ref in %s. ' +
-              'A callback ref should not return a function.',
-            getComponentNameFromFiber(current),
-          );
+            "Unexpected return value from a callback ref in %s. " +
+              "A callback ref should not return a function.",
+            getComponentNameFromFiber(current)
+          )
         }
       }
     } else {
       // $FlowFixMe unable to narrow type to RefObject
-      ref.current = null;
+      ref.current = null
     }
   }
 }
@@ -1353,7 +1365,7 @@ function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
 3. `hook.queue`上存储了状态更新链表，用于更新`hook`的状态值；
 4. 用户触发状态值更改时，`useState`和`useReducer`分别会调用`dispatchSetState`/`dispatchReducerAction`，两者都会构造对应的`update`任务放入合适的任务队列，而`useState`可能会提前计算新值，`useReducer`则不会，然后都会进行更新任务的调度继而进入`render`、`commit`流程进行更新；
 5. `useState`和`useReducer`在更新时都使用的`updateReducer`方法，区别在于`reducer`函数前者用的`React`提供的默认函数`basicStateReducer`后者由用户定义；
-6. `useRef`如果用在获取`DOM`元素上那在`commit`第三阶段`commitLayoutEffectOnFiber`方法(`commitLayoutEffects`)中会调用一个叫`safelyAttachRef`的方法里面会获取对应DOM元素而后给对应节点的`ref`这个`hook`赋值。在`commit`第二阶段`commitMutationEffectsOnFiber`方法(`commitMutationEffects`)会调用`safelyDetachRef`去`detach`。
+6. `useRef`如果用在获取`DOM`元素上那在`commit`第三阶段`commitLayoutEffectOnFiber`方法(`commitLayoutEffects`)中会调用一个叫`safelyAttachRef`的方法里面会获取对应 DOM 元素而后给对应节点的`ref`这个`hook`赋值。在`commit`第二阶段`commitMutationEffectsOnFiber`方法(`commitMutationEffects`)会调用`safelyDetachRef`去`detach`；
 
 ![react](./assets/useState/useState.png)
 

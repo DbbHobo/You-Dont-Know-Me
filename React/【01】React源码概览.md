@@ -29,19 +29,19 @@ react-main
 
 `DOM` 、 `SSR` 渲染等方法的入口：
 
-- react-dom                 # 注意这同时是DOM和SSR的入口
+- react-dom # 注意这同时是 DOM 和 SSR 的入口
 
 ## react-reconciler
 
 协调器，实现了 `render` 、`commit` 两个过程
 
-- react-reconciler          # 协调器的实现，你可以用它构建自己的Renderer
+- react-reconciler # 协调器的实现，你可以用它构建自己的 Renderer
 
 ## scheduler
 
 `Scheduler` 调度器的实现。
 
-- scheduler                 # 调度器的实现
+- scheduler # 调度器的实现
 
 ## shared
 
@@ -49,13 +49,13 @@ react-main
 
 ```js
 // ...
-export const REACT_ELEMENT_TYPE: symbol = Symbol.for('react.element');
-export const REACT_PORTAL_TYPE: symbol = Symbol.for('react.portal');
-export const REACT_FRAGMENT_TYPE: symbol = Symbol.for('react.fragment');
-export const REACT_STRICT_MODE_TYPE: symbol = Symbol.for('react.strict_mode');
-export const REACT_PROFILER_TYPE: symbol = Symbol.for('react.profiler');
-export const REACT_PROVIDER_TYPE: symbol = Symbol.for('react.provider');
-export const REACT_CONTEXT_TYPE: symbol = Symbol.for('react.context');
+export const REACT_ELEMENT_TYPE: symbol = Symbol.for("react.element")
+export const REACT_PORTAL_TYPE: symbol = Symbol.for("react.portal")
+export const REACT_FRAGMENT_TYPE: symbol = Symbol.for("react.fragment")
+export const REACT_STRICT_MODE_TYPE: symbol = Symbol.for("react.strict_mode")
+export const REACT_PROFILER_TYPE: symbol = Symbol.for("react.profiler")
+export const REACT_PROVIDER_TYPE: symbol = Symbol.for("react.provider")
+export const REACT_CONTEXT_TYPE: symbol = Symbol.for("react.context")
 // ...
 ```
 
@@ -63,16 +63,16 @@ export const REACT_CONTEXT_TYPE: symbol = Symbol.for('react.context');
 
 `React`将自己流程中的一部分抽离出来，形成可以独立使用的包，由于他们是试验性质的，所以不被建议在生产环境使用。包括如下内容等：
 
-- react-server        # 创建自定义SSR流
-- react-client        # 创建自定义的流
-- react-fetch         # 用于数据请求
-- react-interactions  # 用于测试交互相关的内部特性，比如React的事件模型
+- react-server # 创建自定义 SSR 流
+- react-client # 创建自定义的流
+- react-fetch # 用于数据请求
+- react-interactions # 用于测试交互相关的内部特性，比如 React 的事件模型
 
 ## 其他
 
-- react-art                 # canvas、svg 等内容的渲染
-- react-native-renderer     # native入口
-- react-noop-renderer       # 用于debug fiber
+- react-art # canvas、svg 等内容的渲染
+- react-native-renderer # native 入口
+- react-noop-renderer # 用于 debug fiber
 
 ## React 渲染流程概览
 
@@ -84,7 +84,7 @@ export const REACT_CONTEXT_TYPE: symbol = Symbol.for('react.context');
 
 整体渲染流程分成了四个大的阶段：
 
-1. **`trigger`** 阶段：无论是首次渲染还是rerender过程，在这个阶段进行任务的触发`scheduleUpdateOnFiber`，当任务安排完成就会调用`scheduleCallback()`/`scheduleSyncCallback`进入下一个阶段调度阶段；
+1. **`trigger`** 阶段：无论是首次渲染还是 rerender 过程，在这个阶段进行任务的触发`scheduleUpdateOnFiber`，当任务安排完成就会调用`scheduleCallback()`/`scheduleSyncCallback`进入下一个阶段调度阶段；
 
 2. **`scheduler`** 阶段：调度阶段，不同任务的优先级不同，`workLoop`会遍历所有任务并执行；
 
@@ -98,10 +98,8 @@ function createElement(type, props, ...children) {
     type,
     props: {
       ...props,
-      children: children.map(child =>
-        typeof child === "object"
-          ? child
-          : createTextElement(child)
+      children: children.map((child) =>
+        typeof child === "object" ? child : createTextElement(child)
       ),
     },
   }
@@ -128,36 +126,25 @@ function createDom(fiber) {
   return dom
 }
 
-const isEvent = key => key.startsWith("on")
-const isProperty = key =>
-  key !== "children" && !isEvent(key)
-const isNew = (prev, next) => key =>
-  prev[key] !== next[key]
-const isGone = (prev, next) => key => !(key in next)
+const isEvent = (key) => key.startsWith("on")
+const isProperty = (key) => key !== "children" && !isEvent(key)
+const isNew = (prev, next) => (key) => prev[key] !== next[key]
+const isGone = (prev, next) => (key) => !(key in next)
 function updateDom(dom, prevProps, nextProps) {
   //Remove old or changed event listeners
   Object.keys(prevProps)
     .filter(isEvent)
-    .filter(
-      key =>
-        !(key in nextProps) ||
-        isNew(prevProps, nextProps)(key)
-    )
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2)
-      dom.removeEventListener(
-        eventType,
-        prevProps[name]
-      )
+    .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2)
+      dom.removeEventListener(eventType, prevProps[name])
     })
 
   // Remove old properties
   Object.keys(prevProps)
     .filter(isProperty)
     .filter(isGone(prevProps, nextProps))
-    .forEach(name => {
+    .forEach((name) => {
       dom[name] = ""
     })
 
@@ -165,7 +152,7 @@ function updateDom(dom, prevProps, nextProps) {
   Object.keys(nextProps)
     .filter(isProperty)
     .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
+    .forEach((name) => {
       dom[name] = nextProps[name]
     })
 
@@ -173,14 +160,9 @@ function updateDom(dom, prevProps, nextProps) {
   Object.keys(nextProps)
     .filter(isEvent)
     .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2)
-      dom.addEventListener(
-        eventType,
-        nextProps[name]
-      )
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2)
+      dom.addEventListener(eventType, nextProps[name])
     })
 }
 
@@ -202,20 +184,10 @@ function commitWork(fiber) {
   }
   const domParent = domParentFiber.dom
 
-  if (
-    fiber.effectTag === "PLACEMENT" &&
-    fiber.dom != null
-  ) {
+  if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     domParent.appendChild(fiber.dom)
-  } else if (
-    fiber.effectTag === "UPDATE" &&
-    fiber.dom != null
-  ) {
-    updateDom(
-      fiber.dom,
-      fiber.alternate.props,
-      fiber.props
-    )
+  } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props)
   } else if (fiber.effectTag === "DELETION") {
     commitDeletion(fiber, domParent)
   }
@@ -252,9 +224,7 @@ let deletions = null
 function workLoop(deadline) {
   let shouldYield = false
   while (nextUnitOfWork && !shouldYield) {
-    nextUnitOfWork = performUnitOfWork(
-      nextUnitOfWork
-    )
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
     shouldYield = deadline.timeRemaining() < 1
   }
 
@@ -268,8 +238,7 @@ function workLoop(deadline) {
 requestIdleCallback(workLoop)
 
 function performUnitOfWork(fiber) {
-  const isFunctionComponent =
-    fiber.type instanceof Function
+  const isFunctionComponent = fiber.type instanceof Function
   if (isFunctionComponent) {
     updateFunctionComponent(fiber)
   } else {
@@ -309,11 +278,11 @@ function useState(initial) {
   }
 
   const actions = oldHook ? oldHook.queue : []
-  actions.forEach(action => {
+  actions.forEach((action) => {
     hook.state = action(hook.state)
   })
 
-  const setState = action => {
+  const setState = (action) => {
     hook.queue.push(action)
     wipRoot = {
       dom: currentRoot.dom,
@@ -338,21 +307,14 @@ function updateHostComponent(fiber) {
 
 function reconcileChildren(wipFiber, elements) {
   let index = 0
-  let oldFiber =
-    wipFiber.alternate && wipFiber.alternate.child
+  let oldFiber = wipFiber.alternate && wipFiber.alternate.child
   let prevSibling = null
 
-  while (
-    index < elements.length ||
-    oldFiber != null
-  ) {
+  while (index < elements.length || oldFiber != null) {
     const element = elements[index]
     let newFiber = null
 
-    const sameType =
-      oldFiber &&
-      element &&
-      element.type == oldFiber.type
+    const sameType = oldFiber && element && element.type == oldFiber.type
 
     if (sameType) {
       newFiber = {
@@ -403,11 +365,7 @@ const Didact = {
 /** @jsx Didact.createElement */
 function Counter() {
   const [state, setState] = Didact.useState(1)
-  return (
-    <h1 onClick={() => setState(c => c + 1)}>
-      Count: {state}
-    </h1>
-  )
+  return <h1 onClick={() => setState((c) => c + 1)}>Count: {state}</h1>
 }
 const element = <Counter />
 const container = document.getElementById("root")
@@ -423,12 +381,55 @@ Didact.render(element, container)
 - `Scheduler`：调度器，用来调度任务执行顺序，让浏览器的每一帧优先执行高优先级的任务
 - `effect`：渲染、更新过程中的副作用
 
-## React源码调试
-<!-- TODO -->
-1. 首先下载最新版本的React项目
-2. 
+## 直接用源码中的示例调试
 
-## React版本更新
+## 创建 React 项目中调试本地源码
+
+1. 首先 `clone` 最新版本的 `React` 项目并构建
+
+```bash
+git clone https://github.com/facebook/react.git
+
+cd react
+# 下载依赖
+yarn install
+# build
+yarn build react/index,react/jsx,react/compiler-runtime,react-dom/index,react-dom/client,scheduler --type=NODE
+```
+
+2. 使用 `create-react-app` 去创建一个新的 `React` 项目
+
+```bash
+npx create-react-app your-project-name
+# 下载依赖
+yarn install
+```
+
+3. 移除原项目中的 `React` 和 `React-DOM` 包
+
+```bash
+cd your-project-name
+# 移除原有的react包
+npm remove react react-dom
+```
+
+4. 把打包好的 `React` 和 `React-DOM` 链接到全局
+
+```bash
+# react链接到全局
+cd path/to/react/build/node_modules/react
+yarn link
+
+# react-dom链接到全局
+cd path/to/react/build/node_modules/react-dom
+yarn link
+
+# 把全局中的react和react-dom链接到项目中来
+cd path/to/your-project-name
+yarn link react react-dom
+```
+
+## React 版本更新
 
 [React v19](https://react.dev/blog/2024/12/05/react-19?ck_subscriber_id=2869254244&utm_source=convertkit&utm_medium=email&utm_campaign=%E2%9A%9B%EF%B8%8F%20This%20Week%20In%20React%20#whats-new-in-react-19)
 
@@ -440,10 +441,14 @@ Didact.render(element, container)
 
 [build-your-own-react](https://pomb.us/build-your-own-react/)
 
-[React技术揭秘](https://react.iamkasong.com/preparation/file.html#%E9%A1%B6%E5%B1%82%E7%9B%AE%E5%BD%95)
+[React 技术揭秘](https://react.iamkasong.com/preparation/file.html#%E9%A1%B6%E5%B1%82%E7%9B%AE%E5%BD%95)
 
 [React 应用的宏观包结构(web 开发)](https://7km.top/main/macro-structure#%E5%AE%8F%E8%A7%82%E6%80%BB%E8%A7%88)
 
 [A look inside React Fiber](https://makersden.io/blog/look-inside-fiber)
 
 [React-Fiber-Architecture](https://github.com/SaeedMalikx/React-Fiber-Architecture)
+
+[How to Contribute](https://legacy.reactjs.org/docs/how-to-contribute.html)
+
+[overreacted by Dan Abramov](https://overreacted.io/)

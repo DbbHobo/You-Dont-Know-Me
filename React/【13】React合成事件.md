@@ -11,15 +11,15 @@
 ```js
 document.addEventListener("click", function (event) {
   if (event.button === 0) {
-    console.log("Left button clicked (Modern browsers)");
+    console.log("Left button clicked (Modern browsers)")
   } else if (event.button === 1) {
-    console.log("Middle button clicked");
+    console.log("Middle button clicked")
   } else if (event.button === 2) {
-    console.log("Right button clicked");
+    console.log("Right button clicked")
   } else {
-    console.log("Unknown button");
+    console.log("Unknown button")
   }
-});
+})
 ```
 
 在 React 中，无论是在 Chrome、Firefox 还是 IE 中，`event.button` 的值都被标准化：
@@ -306,12 +306,10 @@ export function removeEventListener(
 }
 ```
 
-DOM添加事件监听`addEventListener`的一些参数细节如下：
+DOM 添加事件监听`addEventListener`的一些参数细节如下：
 
 ```ts
-// useCapture 可选
-// 一个布尔值，表示在 DOM 树中注册了 listener 的元素，是否要先于它下面的 EventTarget 调用该 listener(捕获阶段去触发)。当 useCapture（设为 true）时，沿着 DOM 树向上冒泡的事件不会触发 listener(捕获阶段去触发)。当一个元素嵌套了另一个元素，并且两个元素都对同一事件注册了一个处理函数时，所发生的事件冒泡和事件捕获是两种不同的事件传播方式。事件传播模式决定了元素以哪个顺序接收事件。如果没有指定，useCapture 默认为 false。
-// options 可选
+// **options** 可选
 // 一个指定有关 listener 属性的可选参数对象。可用的选项如下：
 // {
 //   capture: true,
@@ -319,17 +317,21 @@ DOM添加事件监听`addEventListener`的一些参数细节如下：
 //   passive: true,
 //   signal: controller.signal
 // }
-  // capture 可选
-  // 一个布尔值，表示 listener 会在该类型的事件捕获阶段传播到该 EventTarget 时触发。
-  // once 可选
-  // 一个布尔值，表示 listener 在添加之后最多只调用一次。如果为 true，listener 会在其被调用之后自动移除。
-  // passive 可选
-  // 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。
-  // signal 可选
-  // AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
-addEventListener(type, listener);
-addEventListener(type, listener, options);
-addEventListener(type, listener, useCapture);
+// capture 可选
+// 一个布尔值，表示 listener 会在该类型的事件捕获阶段传播到该 EventTarget 时触发。
+// once 可选
+// 一个布尔值，表示 listener 在添加之后最多只调用一次。如果为 true，listener 会在其被调用之后自动移除。
+// passive 可选
+// 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。
+// signal 可选
+// AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
+
+// **useCapture** 可选
+// 一个布尔值，表示在 DOM 树中注册了 listener 的元素，是否要先于它下面的 EventTarget 调用该 listener(捕获阶段去触发)。当 useCapture（设为 true）时，沿着 DOM 树向上冒泡的事件不会触发 listener(捕获阶段去触发)。当一个元素嵌套了另一个元素，并且两个元素都对同一事件注册了一个处理函数时，所发生的事件冒泡和事件捕获是两种不同的事件传播方式。事件传播模式决定了元素以哪个顺序接收事件。如果没有指定，useCapture 默认为 false。
+
+addEventListener(type, listener)
+addEventListener(type, listener, options)
+addEventListener(type, listener, useCapture)
 ```
 
 在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
@@ -339,132 +341,132 @@ addEventListener(type, listener, useCapture);
 export function createEventListenerWrapperWithPriority(
   targetContainer: EventTarget,
   domEventName: DOMEventName,
-  eventSystemFlags: EventSystemFlags,
+  eventSystemFlags: EventSystemFlags
 ): Function {
-  const eventPriority = getEventPriority(domEventName);
-  let listenerWrapper;
+  const eventPriority = getEventPriority(domEventName)
+  let listenerWrapper
   switch (eventPriority) {
     case DiscreteEventPriority:
-      listenerWrapper = dispatchDiscreteEvent;
-      break;
+      listenerWrapper = dispatchDiscreteEvent
+      break
     case ContinuousEventPriority:
-      listenerWrapper = dispatchContinuousEvent;
-      break;
+      listenerWrapper = dispatchContinuousEvent
+      break
     case DefaultEventPriority:
     default:
-      listenerWrapper = dispatchEvent;
-      break;
+      listenerWrapper = dispatchEvent
+      break
   }
   return listenerWrapper.bind(
     null,
     domEventName,
     eventSystemFlags,
-    targetContainer,
-  );
+    targetContainer
+  )
 }
 
 export function getEventPriority(domEventName: DOMEventName): EventPriority {
   switch (domEventName) {
     // Used by SimpleEventPlugin:
-    case 'beforetoggle':
-    case 'cancel':
-    case 'click':
-    case 'close':
-    case 'contextmenu':
-    case 'copy':
-    case 'cut':
-    case 'auxclick':
-    case 'dblclick':
-    case 'dragend':
-    case 'dragstart':
-    case 'drop':
-    case 'focusin':
-    case 'focusout':
-    case 'input':
-    case 'invalid':
-    case 'keydown':
-    case 'keypress':
-    case 'keyup':
-    case 'mousedown':
-    case 'mouseup':
-    case 'paste':
-    case 'pause':
-    case 'play':
-    case 'pointercancel':
-    case 'pointerdown':
-    case 'pointerup':
-    case 'ratechange':
-    case 'reset':
-    case 'resize':
-    case 'seeked':
-    case 'submit':
-    case 'toggle':
-    case 'touchcancel':
-    case 'touchend':
-    case 'touchstart':
-    case 'volumechange':
+    case "beforetoggle":
+    case "cancel":
+    case "click":
+    case "close":
+    case "contextmenu":
+    case "copy":
+    case "cut":
+    case "auxclick":
+    case "dblclick":
+    case "dragend":
+    case "dragstart":
+    case "drop":
+    case "focusin":
+    case "focusout":
+    case "input":
+    case "invalid":
+    case "keydown":
+    case "keypress":
+    case "keyup":
+    case "mousedown":
+    case "mouseup":
+    case "paste":
+    case "pause":
+    case "play":
+    case "pointercancel":
+    case "pointerdown":
+    case "pointerup":
+    case "ratechange":
+    case "reset":
+    case "resize":
+    case "seeked":
+    case "submit":
+    case "toggle":
+    case "touchcancel":
+    case "touchend":
+    case "touchstart":
+    case "volumechange":
     // Used by polyfills: (fall through)
-    case 'change':
-    case 'selectionchange':
-    case 'textInput':
-    case 'compositionstart':
-    case 'compositionend':
-    case 'compositionupdate':
+    case "change":
+    case "selectionchange":
+    case "textInput":
+    case "compositionstart":
+    case "compositionend":
+    case "compositionupdate":
     // Only enableCreateEventHandleAPI: (fall through)
-    case 'beforeblur':
-    case 'afterblur':
+    case "beforeblur":
+    case "afterblur":
     // Not used by React but could be by user code: (fall through)
-    case 'beforeinput':
-    case 'blur':
-    case 'fullscreenchange':
-    case 'focus':
-    case 'hashchange':
-    case 'popstate':
-    case 'select':
-    case 'selectstart':
-      return DiscreteEventPriority;
-    case 'drag':
-    case 'dragenter':
-    case 'dragexit':
-    case 'dragleave':
-    case 'dragover':
-    case 'mousemove':
-    case 'mouseout':
-    case 'mouseover':
-    case 'pointermove':
-    case 'pointerout':
-    case 'pointerover':
-    case 'scroll':
-    case 'touchmove':
-    case 'wheel':
+    case "beforeinput":
+    case "blur":
+    case "fullscreenchange":
+    case "focus":
+    case "hashchange":
+    case "popstate":
+    case "select":
+    case "selectstart":
+      return DiscreteEventPriority
+    case "drag":
+    case "dragenter":
+    case "dragexit":
+    case "dragleave":
+    case "dragover":
+    case "mousemove":
+    case "mouseout":
+    case "mouseover":
+    case "pointermove":
+    case "pointerout":
+    case "pointerover":
+    case "scroll":
+    case "touchmove":
+    case "wheel":
     // Not used by React but could be by user code: (fall through)
-    case 'mouseenter':
-    case 'mouseleave':
-    case 'pointerenter':
-    case 'pointerleave':
-      return ContinuousEventPriority;
-    case 'message': {
+    case "mouseenter":
+    case "mouseleave":
+    case "pointerenter":
+    case "pointerleave":
+      return ContinuousEventPriority
+    case "message": {
       // We might be in the Scheduler callback.
       // Eventually this mechanism will be replaced by a check
       // of the current priority on the native scheduler.
-      const schedulerPriority = getCurrentSchedulerPriorityLevel();
+      const schedulerPriority = getCurrentSchedulerPriorityLevel()
       switch (schedulerPriority) {
         case ImmediateSchedulerPriority:
-          return DiscreteEventPriority;
+          return DiscreteEventPriority
         case UserBlockingSchedulerPriority:
-          return ContinuousEventPriority;
+          return ContinuousEventPriority
         case NormalSchedulerPriority:
         case LowSchedulerPriority:
           // TODO: Handle LowSchedulerPriority, somehow. Maybe the same lane as hydration.
-          return DefaultEventPriority;
+          return DefaultEventPriority
         case IdleSchedulerPriority:
-          return IdleEventPriority;
+          return IdleEventPriority
         default:
-          return DefaultEventPriority;
+          return DefaultEventPriority
       }
     }
     default:
-      return DefaultEventPriority;
+      return DefaultEventPriority
   }
 }
 ```
@@ -473,7 +475,7 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
 - `ContinuousEventPriority`: 优先级最低，包括`drag`、`mouseenter`等事件，对应的`listener`是`dispatchContinuousEvent`
 - `DefaultEventPriority`: 优先级适中，包括`animation`、`load`等事件，对应的`listener`是`dispatchEvent`
 
-以上这3种`listener`实际上都是对`dispatchEvent`的包装。
+以上这 3 种`listener`实际上都是对`dispatchEvent`的包装。所以经过`listenToAllSupportedEvents`一系列的操作之后，我们将所有事件的回调监听都绑定到了根元素 `container` 上，一旦触发事件就会进入我们绑定的回调`dispatchEvent`中。
 
 ![react](./assets/SyntheticEvent/SyntheticEvent1.png)
 ![react](./assets/SyntheticEvent/SyntheticEvent2.png)
@@ -484,8 +486,8 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
 
 触发一个原生事件时，大致的执行流程如下：
 
-1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法；
-2. `findInstanceBlockingEvent` 方法根据该原生事件查找到当前原生 `DOM` 节点和对应的 `fiber` 节点；
+1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，获取到原生事件对象`nativeEvent`；
+2. `findInstanceBlockingEvent` 方法根据该原生事件对象`nativeEvent`查找到事件触发所在的 `DOM` 节点和其对应的 `fiber` 节点；
 3. 触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
 4. `extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
 5. 最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
@@ -786,9 +788,9 @@ function dispatchEventsForPlugins(
 ![react](./assets/SyntheticEvent/SyntheticEvent7.png)
 ![react](./assets/SyntheticEvent/SyntheticEvent8.png)
 
-可以看到在React中将DOM事件插件系统分为了几如下类，不同的事件插件实例分别去调用`extractEvents`方法，其中最常见的事件都会由`SimpleEventPlugin.extractEvents`进行处理。
+可以看到在 React 中将 DOM 事件插件系统分为了几如下类，不同的事件插件实例分别去调用`extractEvents`方法，其中最常见的事件都会由`SimpleEventPlugin.extractEvents`进行处理。
 
-然后在`extractEvents`方法中调用`accumulateEventHandleNonManagedNodeListeners`方法从当前fiber节点往上一步步寻找所有注册了事件回调的并推入`listeners`数组，如果`listeners`数组有内容那么就生成合成事件`SyntheticEventCtor`实例并入队`dispatchQueue`以供后续处理。
+然后在`extractEvents`方法中调用`accumulateEventHandleNonManagedNodeListeners`方法从当前 `fiber` 节点往上一步步寻找所有注册了事件回调的并推入`listeners`数组，如果`listeners`数组有内容那么就生成合成事件`SyntheticEventCtor`实例并入队`dispatchQueue`以供后续处理，这个合成事件实例可以通过`nativeEvent`访问原生事件对象。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/DOMPluginEventSystem.js】
@@ -1211,19 +1213,19 @@ export function accumulateSinglePhaseListeners(
 
 `processDispatchQueue`最终会遍历`dispatchQueue`里的每一个`event`及其所有的`listener`事件回调并执行，根据是否捕获阶段或冒泡阶段来倒序或顺序执行：
 
-- `capture`：从上至下调用fiber树中绑定的回调函数， 所以倒序遍历`dispatchQueue`
-- `bubble`：从下至上调用fiber树中绑定的回调函数， 所以顺序遍历`dispatchQueue`
+- `capture`：从上至下调用 fiber 树中绑定的回调函数， 所以倒序遍历`dispatchQueue`
+- `bubble`：从下至上调用 fiber 树中绑定的回调函数， 所以顺序遍历`dispatchQueue`
 
 ```ts
 // 【packages/react-dom-bindings/src/events/DOMPluginEventSystem.js】
 export function processDispatchQueue(
   dispatchQueue: DispatchQueue,
-  eventSystemFlags: EventSystemFlags,
+  eventSystemFlags: EventSystemFlags
 ): void {
-  const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
+  const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0
   for (let i = 0; i < dispatchQueue.length; i++) {
-    const {event, listeners} = dispatchQueue[i];
-    processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
+    const { event, listeners } = dispatchQueue[i]
+    processDispatchQueueItemsInOrder(event, listeners, inCapturePhase)
     //  event system doesn't use pooling.
   }
 }
@@ -1231,14 +1233,14 @@ export function processDispatchQueue(
 function processDispatchQueueItemsInOrder(
   event: ReactSyntheticEvent,
   dispatchListeners: Array<DispatchListener>,
-  inCapturePhase: boolean,
+  inCapturePhase: boolean
 ): void {
-  let previousInstance;
+  let previousInstance
   if (inCapturePhase) {
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
-      const {instance, currentTarget, listener} = dispatchListeners[i];
+      const { instance, currentTarget, listener } = dispatchListeners[i]
       if (instance !== previousInstance && event.isPropagationStopped()) {
-        return;
+        return
       }
       if (__DEV__ && enableOwnerStacks && instance !== null) {
         runWithFiberInDEV(
@@ -1246,18 +1248,18 @@ function processDispatchQueueItemsInOrder(
           executeDispatch,
           event,
           listener,
-          currentTarget,
-        );
+          currentTarget
+        )
       } else {
-        executeDispatch(event, listener, currentTarget);
+        executeDispatch(event, listener, currentTarget)
       }
-      previousInstance = instance;
+      previousInstance = instance
     }
   } else {
     for (let i = 0; i < dispatchListeners.length; i++) {
-      const {instance, currentTarget, listener} = dispatchListeners[i];
+      const { instance, currentTarget, listener } = dispatchListeners[i]
       if (instance !== previousInstance && event.isPropagationStopped()) {
-        return;
+        return
       }
       if (__DEV__ && enableOwnerStacks && instance !== null) {
         runWithFiberInDEV(
@@ -1265,12 +1267,12 @@ function processDispatchQueueItemsInOrder(
           executeDispatch,
           event,
           listener,
-          currentTarget,
-        );
+          currentTarget
+        )
       } else {
-        executeDispatch(event, listener, currentTarget);
+        executeDispatch(event, listener, currentTarget)
       }
-      previousInstance = instance;
+      previousInstance = instance
     }
   }
 }
@@ -1278,16 +1280,16 @@ function processDispatchQueueItemsInOrder(
 function executeDispatch(
   event: ReactSyntheticEvent,
   listener: Function,
-  currentTarget: EventTarget,
+  currentTarget: EventTarget
 ): void {
-  event.currentTarget = currentTarget;
+  event.currentTarget = currentTarget
   try {
     // 【最终执行回调】
-    listener(event);
+    listener(event)
   } catch (error) {
-    reportGlobalError(error);
+    reportGlobalError(error)
   }
-  event.currentTarget = null;
+  event.currentTarget = null
 }
 ```
 
@@ -1300,7 +1302,7 @@ function executeDispatch(
 
 ### `addEventListener`
 
-一个DOM元素的原型链是这样的：
+一个 DOM 元素的原型链是这样的：
 
 `div` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
 
@@ -1308,7 +1310,7 @@ HTML 元素类的总体继承关系如下：
 
 ![browser](../Browser/assets/dom-hierarchy.svg)
 
-可以知道页面上所有的DOM节点都继承自`EventTarget`，`EventTarget`上的`addEventListener`用于添加事件监听。DOM添加事件监听`addEventListener`的第三个参数可以是一个布尔值或者对象，如果是布尔值表示该事件回调在捕获或者冒泡阶段触发，如果是对象可以有四个属性分别是`capture`、`once`、`passive`、`signal`，具体属性含义如下：
+可以知道页面上所有的 DOM 节点都继承自`EventTarget`，`EventTarget`上的`addEventListener`用于添加事件监听。DOM 添加事件监听`addEventListener`的第三个参数可以是一个布尔值或者对象，如果是布尔值表示该事件回调在捕获或者冒泡阶段触发，如果是对象可以有四个属性分别是`capture`、`once`、`passive`、`signal`，具体属性含义如下：
 
 ```ts
 // 【useCapture】 可选
@@ -1330,9 +1332,9 @@ HTML 元素类的总体继承关系如下：
 // 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。
 // signal 可选
 // AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
-addEventListener(type, listener);
-addEventListener(type, listener, options);
-addEventListener(type, listener, useCapture);
+addEventListener(type, listener)
+addEventListener(type, listener, options)
+addEventListener(type, listener, useCapture)
 ```
 
 ### `Event`
@@ -1362,7 +1364,7 @@ addEventListener(type, listener, useCapture);
 - `TouchEvent`
 - `UIEvent`
 
-下面有一个DOM操作实例，可以看到`parent`节点调用`addEventListener`监听了点击事件，我们鼠标悬浮在`child`节点上进行点击那么实际触发就是在`child`节点上。`click`事件是一个`PointerEvent`实例，继承自`Event`。事件监听的回调函数入参是这个`PointerEvent`实例`event`，它包含`target`、`currentTarget`、`type`等属性。
+下面有一个 DOM 操作实例，可以看到`parent`节点调用`addEventListener`监听了点击事件，我们鼠标悬浮在`child`节点上进行点击那么实际触发就是在`child`节点上。`click`事件是一个`PointerEvent`实例，继承自`Event`。事件监听的回调函数入参是这个`PointerEvent`实例`event`，它包含`target`、`currentTarget`、`type`等属性。
 
 ```html
 <div id="parent">
@@ -1375,18 +1377,18 @@ addEventListener(type, listener, useCapture);
 ```
 
 ```js
-const output = document.querySelector("#output");
-const parent = document.querySelector("#parent");
+const output = document.querySelector("#output")
+const parent = document.querySelector("#parent")
 parent.addEventListener("click", (event) => {
   // 【此处event是一个PointerEvent实例，继承自Event】
-  const currentTarget = event.currentTarget.getAttribute("id");//【此事件在哪个DOM节点上被监听的】
-  const target = event.target.getAttribute("id");//【实际触发此事件的DOM节点】
-  output.textContent = `Current target: ${currentTarget}\n`;
-  output.textContent += `Target: ${target}`;
-});
+  const currentTarget = event.currentTarget.getAttribute("id") //【此事件在哪个DOM节点上被监听的】
+  const target = event.target.getAttribute("id") //【实际触发此事件的DOM节点】
+  output.textContent = `Current target: ${currentTarget}\n`
+  output.textContent += `Target: ${target}`
+})
 
-const reset = document.querySelector("#reset");
-reset.addEventListener("click", () => document.location.reload());
+const reset = document.querySelector("#reset")
+reset.addEventListener("click", () => document.location.reload())
 ```
 
 ![react](./assets/SyntheticEvent/Event.png)
@@ -1395,7 +1397,7 @@ reset.addEventListener("click", () => document.location.reload());
 
 合成事件分为注册、触发事件回调调用两个流程
 
-合成事件的注册主要是在root根容器上调用`addEventListener`添加事件监听，目前的`React`版本中包含81个原生事件，监听的事件回调根据事件的优先级分为3类`dispatch`事件，但是最终都会调用`dispatchEvent`，`dispatchEvent`是`React`对用户回调函数的包装。
+合成事件的注册主要是在 root 根容器上调用`addEventListener`添加事件监听，目前的`React`版本中包含 81 个原生事件，监听的事件回调根据事件的优先级分为 3 类`dispatch`事件，但是最终都会调用`dispatchEvent`，`dispatchEvent`是`React`对用户回调函数的包装。
 
 合成事件触发之后就会进入回调函数`dispatchEvent`，然后进入事件插件派发系统，找到所有注册了的事件回调并有序调用。
 

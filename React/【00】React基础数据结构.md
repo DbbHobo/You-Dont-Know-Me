@@ -1,4 +1,4 @@
-# React常用基础数据结构
+# React 常用基础数据结构
 
 ## ReactElement
 
@@ -42,9 +42,178 @@ export type ReactElement = {
 
 如果服务器存在漏洞，可能导致返回恶意构造的数据。由于 `JSON` 无法传递 `Symbol`，恶意数据中无法包含正确的 `$$typeof` 标识符。`React` 检测到这一问题后，会拒绝处理该元素，从而起到一定的安全防护作用，防止恶意数据引发不可预知的问题。这之所以有效，是因为你不能直接将 `Symbol` 放入 `JSON` 中。因此，即便服务器存在安全漏洞而返回 `JSON` 而不是纯文本，这个 `JSON` 也无法包含 `Symbol.for('react.element')`。`React` 会检查元素的 `$$typeof` 属性，并在该属性缺失或无效时拒绝处理该元素。
 
+## FiberRootNode
+
+全局唯一的根节点，包含应用层级的许多信息，`current`指向我们页面渲染的 fiber 树。
+
+`FiberRoot`
+
+```ts
+type BaseFiberRootProperties = {
+  // The type of root (legacy, batched, concurrent, etc.)
+  tag: RootTag,
+
+  // Any additional information from the host associated with this root.
+  containerInfo: Container,
+  // Used only by persistent updates.
+  pendingChildren: any,
+  // The currently active root fiber. This is the mutable root of the tree.
+  current: Fiber,
+
+  pingCache: WeakMap<Wakeable, Set<mixed>> | Map<Wakeable, Set<mixed>> | null,
+
+  // A finished work-in-progress HostRoot that's ready to be committed.
+  finishedWork: Fiber | null,
+  // Timeout handle returned by setTimeout. Used to cancel a pending timeout, if
+  // it's superseded by a new one.
+  timeoutHandle: TimeoutHandle | NoTimeout,
+  // Top context object, used by renderSubtreeIntoContainer
+  context: Object | null,
+  pendingContext: Object | null,
+
+  // Used by useMutableSource hook to avoid tearing during hydration.
+  mutableSourceEagerHydrationData?: Array<
+    MutableSource<any> | MutableSourceVersion,
+  > | null,
+
+  // Node returned by Scheduler.scheduleCallback. Represents the next rendering
+  // task that the root will work on.
+  callbackNode: any,
+  callbackPriority: Lane,
+  eventTimes: LaneMap<number>,
+  expirationTimes: LaneMap<number>,
+  hiddenUpdates: LaneMap<Array<ConcurrentUpdate> | null>,
+
+  pendingLanes: Lanes,
+  suspendedLanes: Lanes,
+  pingedLanes: Lanes,
+  expiredLanes: Lanes,
+  mutableReadLanes: Lanes,
+  errorRecoveryDisabledLanes: Lanes,
+
+  finishedLanes: Lanes,
+
+  entangledLanes: Lanes,
+  entanglements: LaneMap<Lanes>,
+
+  pooledCache: Cache | null,
+  pooledCacheLanes: Lanes,
+
+  // TODO: In Fizz, id generation is specific to each server config. Maybe we
+  // should do this in Fiber, too? Deferring this decision for now because
+  // there's no other place to store the prefix except for an internal field on
+  // the public createRoot object, which the fiber tree does not currently have
+  // a reference to.
+  identifierPrefix: string,
+
+  onRecoverableError: (
+    error: mixed,
+    errorInfo: {digest?: ?string, componentStack?: ?string},
+  ) => void,
+};
+
+// The following attributes are only used by DevTools and are only present in DEV builds.
+// They enable DevTools Profiler UI to show which Fiber(s) scheduled a given commit.
+type UpdaterTrackingOnlyFiberRootProperties = {
+  memoizedUpdaters: Set<Fiber>,
+  pendingUpdatersLaneMap: LaneMap<Set<Fiber>>,
+};
+
+export type SuspenseHydrationCallbacks = {
+  onHydrated?: (suspenseInstance: SuspenseInstance) => void,
+  onDeleted?: (suspenseInstance: SuspenseInstance) => void,
+  ...
+};
+
+// The follow fields are only used by enableSuspenseCallback for hydration.
+type SuspenseCallbackOnlyFiberRootProperties = {
+  hydrationCallbacks: null | SuspenseHydrationCallbacks,
+};
+
+export type TransitionTracingCallbacks = {
+  onTransitionStart?: (transitionName: string, startTime: number) => void,
+  onTransitionProgress?: (
+    transitionName: string,
+    startTime: number,
+    currentTime: number,
+    pending: Array<{name: null | string}>,
+  ) => void,
+  onTransitionIncomplete?: (
+    transitionName: string,
+    startTime: number,
+    deletions: Array<{
+      type: string,
+      name?: string | null,
+      endTime: number,
+    }>,
+  ) => void,
+  onTransitionComplete?: (
+    transitionName: string,
+    startTime: number,
+    endTime: number,
+  ) => void,
+  onMarkerProgress?: (
+    transitionName: string,
+    marker: string,
+    startTime: number,
+    currentTime: number,
+    pending: Array<{name: null | string}>,
+  ) => void,
+  onMarkerIncomplete?: (
+    transitionName: string,
+    marker: string,
+    startTime: number,
+    deletions: Array<{
+      type: string,
+      name?: string | null,
+      endTime: number,
+    }>,
+  ) => void,
+  onMarkerComplete?: (
+    transitionName: string,
+    marker: string,
+    startTime: number,
+    endTime: number,
+  ) => void,
+};
+
+// The following fields are only used in transition tracing in Profile builds
+type TransitionTracingOnlyFiberRootProperties = {
+  transitionCallbacks: null | TransitionTracingCallbacks,
+  transitionLanes: Array<Set<Transition> | null>,
+  // Transitions on the root can be represented as a bunch of tracing markers.
+  // Each entangled group of transitions can be treated as a tracing marker.
+  // It will have a set of pending suspense boundaries. These transitions
+  // are considered complete when the pending suspense boundaries set is
+  // empty. We can represent this as a Map of transitions to suspense
+  // boundary sets
+  incompleteTransitions: Map<Transition, TracingMarkerInstance>,
+};
+
+// Exported FiberRoot type includes all properties,
+// To avoid requiring potentially error-prone :any casts throughout the project.
+// The types are defined separately within this file to ensure they stay in sync.
+export type FiberRoot = {
+  ...BaseFiberRootProperties,
+  ...SuspenseCallbackOnlyFiberRootProperties,
+  ...UpdaterTrackingOnlyFiberRootProperties,
+  ...TransitionTracingOnlyFiberRootProperties,
+  ...
+};
+```
+
+`fiberRootNode.rootTag`
+
+```ts
+export type RootTag = 0 | 1
+
+export const LegacyRoot = 0
+export const ConcurrentRoot = 1
+```
+
 ## FiberNode
 
-虚拟Node用来模拟页面结构，其中还蕴含了很多字段用于更新、判断、存储DOM、祖先关系等等。
+虚拟 Node 用来模拟页面结构，其中还蕴含了很多字段用于更新、判断、存储 DOM、祖先关系等等。
 
 `FiberNode`
 
@@ -212,109 +381,109 @@ export type WorkTag =
   | 24
   | 25
   | 26
-  | 27;
+  | 27
 
-export const FunctionComponent = 0;
-export const ClassComponent = 1;
-export const IndeterminateComponent = 2; // Before we know whether it is function or class
-export const HostRoot = 3; // Root of a host tree. Could be nested inside another node.
-export const HostPortal = 4; // A subtree. Could be an entry point to a different renderer.
-export const HostComponent = 5;
-export const HostText = 6;
-export const Fragment = 7;
-export const Mode = 8;
-export const ContextConsumer = 9;
-export const ContextProvider = 10;
-export const ForwardRef = 11;
-export const Profiler = 12;
-export const SuspenseComponent = 13;
-export const MemoComponent = 14;
-export const SimpleMemoComponent = 15;
-export const LazyComponent = 16;
-export const IncompleteClassComponent = 17;
-export const DehydratedFragment = 18;
-export const SuspenseListComponent = 19;
-export const ScopeComponent = 21;
-export const OffscreenComponent = 22;
-export const LegacyHiddenComponent = 23;
-export const CacheComponent = 24;
-export const TracingMarkerComponent = 25;
-export const HostHoistable = 26;
-export const HostSingleton = 27;
+export const FunctionComponent = 0
+export const ClassComponent = 1
+export const IndeterminateComponent = 2 // Before we know whether it is function or class
+export const HostRoot = 3 // Root of a host tree. Could be nested inside another node.
+export const HostPortal = 4 // A subtree. Could be an entry point to a different renderer.
+export const HostComponent = 5
+export const HostText = 6
+export const Fragment = 7
+export const Mode = 8
+export const ContextConsumer = 9
+export const ContextProvider = 10
+export const ForwardRef = 11
+export const Profiler = 12
+export const SuspenseComponent = 13
+export const MemoComponent = 14
+export const SimpleMemoComponent = 15
+export const LazyComponent = 16
+export const IncompleteClassComponent = 17
+export const DehydratedFragment = 18
+export const SuspenseListComponent = 19
+export const ScopeComponent = 21
+export const OffscreenComponent = 22
+export const LegacyHiddenComponent = 23
+export const CacheComponent = 24
+export const TracingMarkerComponent = 25
+export const HostHoistable = 26
+export const HostSingleton = 27
 ```
 
 `fiber.mode`
 
 ```ts
-export type TypeOfMode = number;
+export type TypeOfMode = number
 
-export const NoMode = /*                         */ 0b000000;
+export const NoMode = /*                         */ 0b000000
 // TODO: Remove ConcurrentMode by reading from the root tag instead
-export const ConcurrentMode = /*                 */ 0b000001;
-export const ProfileMode = /*                    */ 0b000010;
-export const DebugTracingMode = /*               */ 0b000100;
-export const StrictLegacyMode = /*               */ 0b001000;
-export const StrictEffectsMode = /*              */ 0b010000;
-export const ConcurrentUpdatesByDefaultMode = /* */ 0b100000;
+export const ConcurrentMode = /*                 */ 0b000001
+export const ProfileMode = /*                    */ 0b000010
+export const DebugTracingMode = /*               */ 0b000100
+export const StrictLegacyMode = /*               */ 0b001000
+export const StrictEffectsMode = /*              */ 0b010000
+export const ConcurrentUpdatesByDefaultMode = /* */ 0b100000
 ```
 
 `fiber.flags`
 
 ```ts
-export type Flags = number;
+export type Flags = number
 
 // Don't change these values. They're used by React Dev Tools.
-export const NoFlags = /*                      */ 0b000000000000000000000000000;
-export const PerformedWork = /*                */ 0b000000000000000000000000001;
-export const Placement = /*                    */ 0b000000000000000000000000010;
-export const DidCapture = /*                   */ 0b000000000000000000010000000;
-export const Hydrating = /*                    */ 0b000000000000001000000000000;
+export const NoFlags = /*                      */ 0b000000000000000000000000000
+export const PerformedWork = /*                */ 0b000000000000000000000000001
+export const Placement = /*                    */ 0b000000000000000000000000010
+export const DidCapture = /*                   */ 0b000000000000000000010000000
+export const Hydrating = /*                    */ 0b000000000000001000000000000
 
 // You can change the rest (and add more).
-export const Update = /*                       */ 0b000000000000000000000000100;
+export const Update = /*                       */ 0b000000000000000000000000100
 /* Skipped value:                                 0b000000000000000000000001000; */
 
-export const ChildDeletion = /*                */ 0b000000000000000000000010000;
-export const ContentReset = /*                 */ 0b000000000000000000000100000;
-export const Callback = /*                     */ 0b000000000000000000001000000;
+export const ChildDeletion = /*                */ 0b000000000000000000000010000
+export const ContentReset = /*                 */ 0b000000000000000000000100000
+export const Callback = /*                     */ 0b000000000000000000001000000
 /* Used by DidCapture:                            0b000000000000000000010000000; */
 
-export const ForceClientRender = /*            */ 0b000000000000000000100000000;
-export const Ref = /*                          */ 0b000000000000000001000000000;
-export const Snapshot = /*                     */ 0b000000000000000010000000000;
-export const Passive = /*                      */ 0b000000000000000100000000000;
+export const ForceClientRender = /*            */ 0b000000000000000000100000000
+export const Ref = /*                          */ 0b000000000000000001000000000
+export const Snapshot = /*                     */ 0b000000000000000010000000000
+export const Passive = /*                      */ 0b000000000000000100000000000
 /* Used by Hydrating:                             0b000000000000001000000000000; */
 
-export const Visibility = /*                   */ 0b000000000000010000000000000;
-export const StoreConsistency = /*             */ 0b000000000000100000000000000;
+export const Visibility = /*                   */ 0b000000000000010000000000000
+export const StoreConsistency = /*             */ 0b000000000000100000000000000
 
 export const LifecycleEffectMask =
-  Passive | Update | Callback | Ref | Snapshot | StoreConsistency;
+  Passive | Update | Callback | Ref | Snapshot | StoreConsistency
 
 // Union of all commit flags (flags with the lifetime of a particular commit)
-export const HostEffectMask = /*               */ 0b00000000000011111111111111;
+export const HostEffectMask = /*               */ 0b00000000000011111111111111
 
 // These are not really side effects, but we still reuse this field.
-export const Incomplete = /*                   */ 0b000000000001000000000000000;
-export const ShouldCapture = /*                */ 0b000000000010000000000000000;
-export const ForceUpdateForLegacySuspense = /* */ 0b000000000100000000000000000;
-export const DidPropagateContext = /*          */ 0b000000001000000000000000000;
-export const NeedsPropagation = /*             */ 0b000000010000000000000000000;
-export const Forked = /*                       */ 0b000000100000000000000000000;
+export const Incomplete = /*                   */ 0b000000000001000000000000000
+export const ShouldCapture = /*                */ 0b000000000010000000000000000
+export const ForceUpdateForLegacySuspense = /* */ 0b000000000100000000000000000
+export const DidPropagateContext = /*          */ 0b000000001000000000000000000
+export const NeedsPropagation = /*             */ 0b000000010000000000000000000
+export const Forked = /*                       */ 0b000000100000000000000000000
 
 // Static tags describe aspects of a fiber that are not specific to a render,
 // e.g. a fiber uses a passive effect (even if there are no updates on this particular render).
 // This enables us to defer more work in the unmount case,
 // since we can defer traversing the tree during layout to look for Passive effects,
 // and instead rely on the static flag as a signal that there may be cleanup work.
-export const RefStatic = /*                    */ 0b000001000000000000000000000;
-export const LayoutStatic = /*                 */ 0b000010000000000000000000000;
-export const PassiveStatic = /*                */ 0b000100000000000000000000000;
+export const RefStatic = /*                    */ 0b000001000000000000000000000
+export const LayoutStatic = /*                 */ 0b000010000000000000000000000
+export const PassiveStatic = /*                */ 0b000100000000000000000000000
 
 // Flag used to identify newly inserted fibers. It isn't reset after commit unlike `Placement`.
-export const PlacementDEV = /*                 */ 0b001000000000000000000000000;
-export const MountLayoutDev = /*               */ 0b010000000000000000000000000;
-export const MountPassiveDev = /*              */ 0b100000000000000000000000000;
+export const PlacementDEV = /*                 */ 0b001000000000000000000000000
+export const MountLayoutDev = /*               */ 0b010000000000000000000000000
+export const MountPassiveDev = /*              */ 0b100000000000000000000000000
 
 // Groups of flags that are used in the commit phase to skip over trees that
 // don't contain effects, by checking subtreeFlags.
@@ -330,7 +499,7 @@ export const BeforeMutationMask: number =
       // TODO: Only need to visit Deletions during BeforeMutation phase if an
       // element is focused.
       ChildDeletion | Visibility
-    : 0);
+    : 0)
 
 export const MutationMask =
   Placement |
@@ -339,254 +508,84 @@ export const MutationMask =
   ContentReset |
   Ref |
   Hydrating |
-  Visibility;
-export const LayoutMask = Update | Callback | Ref | Visibility;
+  Visibility
+export const LayoutMask = Update | Callback | Ref | Visibility
 
 // TODO: Split into PassiveMountMask and PassiveUnmountMask
-export const PassiveMask = Passive | Visibility | ChildDeletion;
+export const PassiveMask = Passive | Visibility | ChildDeletion
 
 // Union of tags that don't get reset on clones.
 // This allows certain concepts to persist without recalculating them,
 // e.g. whether a subtree contains passive effects or portals.
-export const StaticMask = LayoutStatic | PassiveStatic | RefStatic;
-
-```
-
-## FiberRootNode
-
-全局唯一的根节点，包含应用层级的许多信息，`current`指向我们页面渲染的fiber树。
-
-`FiberRoot`
-
-```ts
-type BaseFiberRootProperties = {
-  // The type of root (legacy, batched, concurrent, etc.)
-  tag: RootTag,
-
-  // Any additional information from the host associated with this root.
-  containerInfo: Container,
-  // Used only by persistent updates.
-  pendingChildren: any,
-  // The currently active root fiber. This is the mutable root of the tree.
-  current: Fiber,
-
-  pingCache: WeakMap<Wakeable, Set<mixed>> | Map<Wakeable, Set<mixed>> | null,
-
-  // A finished work-in-progress HostRoot that's ready to be committed.
-  finishedWork: Fiber | null,
-  // Timeout handle returned by setTimeout. Used to cancel a pending timeout, if
-  // it's superseded by a new one.
-  timeoutHandle: TimeoutHandle | NoTimeout,
-  // Top context object, used by renderSubtreeIntoContainer
-  context: Object | null,
-  pendingContext: Object | null,
-
-  // Used by useMutableSource hook to avoid tearing during hydration.
-  mutableSourceEagerHydrationData?: Array<
-    MutableSource<any> | MutableSourceVersion,
-  > | null,
-
-  // Node returned by Scheduler.scheduleCallback. Represents the next rendering
-  // task that the root will work on.
-  callbackNode: any,
-  callbackPriority: Lane,
-  eventTimes: LaneMap<number>,
-  expirationTimes: LaneMap<number>,
-  hiddenUpdates: LaneMap<Array<ConcurrentUpdate> | null>,
-
-  pendingLanes: Lanes,
-  suspendedLanes: Lanes,
-  pingedLanes: Lanes,
-  expiredLanes: Lanes,
-  mutableReadLanes: Lanes,
-  errorRecoveryDisabledLanes: Lanes,
-
-  finishedLanes: Lanes,
-
-  entangledLanes: Lanes,
-  entanglements: LaneMap<Lanes>,
-
-  pooledCache: Cache | null,
-  pooledCacheLanes: Lanes,
-
-  // TODO: In Fizz, id generation is specific to each server config. Maybe we
-  // should do this in Fiber, too? Deferring this decision for now because
-  // there's no other place to store the prefix except for an internal field on
-  // the public createRoot object, which the fiber tree does not currently have
-  // a reference to.
-  identifierPrefix: string,
-
-  onRecoverableError: (
-    error: mixed,
-    errorInfo: {digest?: ?string, componentStack?: ?string},
-  ) => void,
-};
-
-// The following attributes are only used by DevTools and are only present in DEV builds.
-// They enable DevTools Profiler UI to show which Fiber(s) scheduled a given commit.
-type UpdaterTrackingOnlyFiberRootProperties = {
-  memoizedUpdaters: Set<Fiber>,
-  pendingUpdatersLaneMap: LaneMap<Set<Fiber>>,
-};
-
-export type SuspenseHydrationCallbacks = {
-  onHydrated?: (suspenseInstance: SuspenseInstance) => void,
-  onDeleted?: (suspenseInstance: SuspenseInstance) => void,
-  ...
-};
-
-// The follow fields are only used by enableSuspenseCallback for hydration.
-type SuspenseCallbackOnlyFiberRootProperties = {
-  hydrationCallbacks: null | SuspenseHydrationCallbacks,
-};
-
-export type TransitionTracingCallbacks = {
-  onTransitionStart?: (transitionName: string, startTime: number) => void,
-  onTransitionProgress?: (
-    transitionName: string,
-    startTime: number,
-    currentTime: number,
-    pending: Array<{name: null | string}>,
-  ) => void,
-  onTransitionIncomplete?: (
-    transitionName: string,
-    startTime: number,
-    deletions: Array<{
-      type: string,
-      name?: string | null,
-      endTime: number,
-    }>,
-  ) => void,
-  onTransitionComplete?: (
-    transitionName: string,
-    startTime: number,
-    endTime: number,
-  ) => void,
-  onMarkerProgress?: (
-    transitionName: string,
-    marker: string,
-    startTime: number,
-    currentTime: number,
-    pending: Array<{name: null | string}>,
-  ) => void,
-  onMarkerIncomplete?: (
-    transitionName: string,
-    marker: string,
-    startTime: number,
-    deletions: Array<{
-      type: string,
-      name?: string | null,
-      endTime: number,
-    }>,
-  ) => void,
-  onMarkerComplete?: (
-    transitionName: string,
-    marker: string,
-    startTime: number,
-    endTime: number,
-  ) => void,
-};
-
-// The following fields are only used in transition tracing in Profile builds
-type TransitionTracingOnlyFiberRootProperties = {
-  transitionCallbacks: null | TransitionTracingCallbacks,
-  transitionLanes: Array<Set<Transition> | null>,
-  // Transitions on the root can be represented as a bunch of tracing markers.
-  // Each entangled group of transitions can be treated as a tracing marker.
-  // It will have a set of pending suspense boundaries. These transitions
-  // are considered complete when the pending suspense boundaries set is
-  // empty. We can represent this as a Map of transitions to suspense
-  // boundary sets
-  incompleteTransitions: Map<Transition, TracingMarkerInstance>,
-};
-
-// Exported FiberRoot type includes all properties,
-// To avoid requiring potentially error-prone :any casts throughout the project.
-// The types are defined separately within this file to ensure they stay in sync.
-export type FiberRoot = {
-  ...BaseFiberRootProperties,
-  ...SuspenseCallbackOnlyFiberRootProperties,
-  ...UpdaterTrackingOnlyFiberRootProperties,
-  ...TransitionTracingOnlyFiberRootProperties,
-  ...
-};
-```
-
-`fiberRootNode.rootTag`
-
-```ts
-export type RootTag = 0 | 1;
-
-export const LegacyRoot = 0;
-export const ConcurrentRoot = 1;
+export const StaticMask = LayoutStatic | PassiveStatic | RefStatic
 ```
 
 ## Hook
 
 ```ts
 export type HookType =
-  | 'useState'
-  | 'useReducer'
-  | 'useContext'
-  | 'useRef'
-  | 'useEffect'
-  | 'useEffectEvent'
-  | 'useInsertionEffect'
-  | 'useLayoutEffect'
-  | 'useCallback'
-  | 'useMemo'
-  | 'useImperativeHandle'
-  | 'useDebugValue'
-  | 'useDeferredValue'
-  | 'useTransition'
-  | 'useMutableSource'
-  | 'useSyncExternalStore'
-  | 'useId'
-  | 'useCacheRefresh';
-  
+  | "useState"
+  | "useReducer"
+  | "useContext"
+  | "useRef"
+  | "useEffect"
+  | "useEffectEvent"
+  | "useInsertionEffect"
+  | "useLayoutEffect"
+  | "useCallback"
+  | "useMemo"
+  | "useImperativeHandle"
+  | "useDebugValue"
+  | "useDeferredValue"
+  | "useTransition"
+  | "useMutableSource"
+  | "useSyncExternalStore"
+  | "useId"
+  | "useCacheRefresh"
+
 export type Hook = {
-  memoizedState: any,
-  baseState: any,
-  baseQueue: Update<any, any> | null,
-  queue: any,
-  next: Hook | null,
-};
+  memoizedState: any
+  baseState: any
+  baseQueue: Update<any, any> | null
+  queue: any
+  next: Hook | null
+}
 
 export type Effect = {
-  tag: HookFlags,
-  create: () => (() => void) | void,
-  destroy: (() => void) | void,
-  deps: Array<mixed> | void | null,
-  next: Effect,
-};
+  tag: HookFlags
+  create: () => (() => void) | void
+  destroy: (() => void) | void
+  deps: Array<mixed> | void | null
+  next: Effect
+}
 ```
 
 ## Update
 
 ```ts
 export type Update<State> = {
-  lane: Lane,
+  lane: Lane
 
-  tag: 0 | 1 | 2 | 3,
-  payload: any,
-  callback: (() => mixed) | null,
+  tag: 0 | 1 | 2 | 3
+  payload: any
+  callback: (() => mixed) | null
 
-  next: Update<State> | null,
-};
+  next: Update<State> | null
+}
 
 export type SharedQueue<State> = {
-  pending: Update<State> | null,
-  lanes: Lanes,
-  hiddenCallbacks: Array<() => mixed> | null,
-};
+  pending: Update<State> | null
+  lanes: Lanes
+  hiddenCallbacks: Array<() => mixed> | null
+}
 
 export type UpdateQueue<State> = {
-  baseState: State,
-  firstBaseUpdate: Update<State> | null,
-  lastBaseUpdate: Update<State> | null,
-  shared: SharedQueue<State>,
-  callbacks: Array<() => mixed> | null,
-};
+  baseState: State
+  firstBaseUpdate: Update<State> | null
+  lastBaseUpdate: Update<State> | null
+  shared: SharedQueue<State>
+  callbacks: Array<() => mixed> | null
+}
 ```
 
 ## Context

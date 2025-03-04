@@ -1,4 +1,4 @@
-# 副作用hook
+# 副作用 hook
 
 ## useEffect
 
@@ -13,20 +13,22 @@
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [count,setCount] = React.useState(1)
+        const [count, setCount] = React.useState(1)
 
-        React.useEffect(()=>{
+        React.useEffect(() => {
           console.log("Its useEffect...")
-        },[])
+        }, [])
 
-        return <div>
-                  <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
-                  <h2>HOBO~{count}</h2>
-                </div>
+        return (
+          <div>
+            <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
+            <h2>HOBO~{count}</h2>
+          </div>
+        )
       }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -47,16 +49,16 @@ export function renderWithHooks<Props, SecondArg>(
   Component: (p: Props, arg: SecondArg) => any,
   props: Props,
   secondArg: SecondArg,
-  nextRenderLanes: Lanes,
+  nextRenderLanes: Lanes
 ): any {
-  renderLanes = nextRenderLanes;
-  currentlyRenderingFiber = workInProgress;
+  renderLanes = nextRenderLanes
+  currentlyRenderingFiber = workInProgress
 
   // 【省略代码...】
 
-  workInProgress.memoizedState = null;
-  workInProgress.updateQueue = null;
-  workInProgress.lanes = NoLanes;
+  workInProgress.memoizedState = null
+  workInProgress.updateQueue = null
+  workInProgress.lanes = NoLanes
 
   // The following should have already been reset
   // currentHook = null;
@@ -77,22 +79,22 @@ export function renderWithHooks<Props, SecondArg>(
   // 【根据是否dev环境，是否存在等情况ReactCurrentDispatcher.current用的是不同的方法套装】
   if (__DEV__) {
     if (current !== null && current.memoizedState !== null) {
-      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV
     } else if (hookTypesDev !== null) {
       // This dispatcher handles an edge case where a component is updating,
       // but no stateful hooks have been used.
       // We want to match the production code behavior (which will use HooksDispatcherOnMount),
       // but with the extra DEV validation to ensure hooks ordering hasn't changed.
       // This dispatcher does that.
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV
     } else {
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV
     }
   } else {
     ReactCurrentDispatcher.current =
       current === null || current.memoizedState === null
         ? HooksDispatcherOnMount
-        : HooksDispatcherOnUpdate;
+        : HooksDispatcherOnUpdate
   }
 
   // In Strict Mode, during development, user functions are double invoked to
@@ -124,43 +126,38 @@ export function renderWithHooks<Props, SecondArg>(
   const shouldDoubleRenderDEV =
     __DEV__ &&
     debugRenderPhaseSideEffectsForStrictMode &&
-    (workInProgress.mode & StrictLegacyMode) !== NoMode;
+    (workInProgress.mode & StrictLegacyMode) !== NoMode
 
-  shouldDoubleInvokeUserFnsInHooksDEV = shouldDoubleRenderDEV;
+  shouldDoubleInvokeUserFnsInHooksDEV = shouldDoubleRenderDEV
   // 【-----调用Component也就是function组件对应的function-----】
-  let children = Component(props, secondArg);
-  shouldDoubleInvokeUserFnsInHooksDEV = false;
+  let children = Component(props, secondArg)
+  shouldDoubleInvokeUserFnsInHooksDEV = false
 
   // Check if there was a render phase update
   if (didScheduleRenderPhaseUpdateDuringThisPass) {
     // Keep rendering until the component stabilizes (there are no more render
     // phase updates).
-    children = renderWithHooksAgain(
-      workInProgress,
-      Component,
-      props,
-      secondArg,
-    );
+    children = renderWithHooksAgain(workInProgress, Component, props, secondArg)
   }
 
   if (shouldDoubleRenderDEV) {
     // In development, components are invoked twice to help detect side effects.
-    setIsStrictModeForDevtools(true);
+    setIsStrictModeForDevtools(true)
     try {
       children = renderWithHooksAgain(
         workInProgress,
         Component,
         props,
-        secondArg,
-      );
+        secondArg
+      )
     } finally {
-      setIsStrictModeForDevtools(false);
+      setIsStrictModeForDevtools(false)
     }
   }
 
-  finishRenderingHooks(current, workInProgress);
+  finishRenderingHooks(current, workInProgress)
 
-  return children;
+  return children
 }
 ```
 
@@ -247,17 +244,17 @@ import {
   StoreConsistency,
   MountLayoutDev as MountLayoutDevEffect,
   MountPassiveDev as MountPassiveDevEffect,
-} from './ReactFiberFlags';
+} from "./ReactFiberFlags"
 import {
   HasEffect as HookHasEffect,
   Layout as HookLayout,
   Passive as HookPassive,
   Insertion as HookInsertion,
-} from './ReactHookEffectTags';
+} from "./ReactHookEffectTags"
 
 function mountEffect(
   create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): void {
   if (
     __DEV__ &&
@@ -267,16 +264,16 @@ function mountEffect(
       MountPassiveDevEffect | PassiveEffect | PassiveStaticEffect,
       HookPassive,
       create,
-      deps,
-    );
+      deps
+    )
   } else {
     // 【fiberFlags是PassiveEffect|PassiveStaticEffect，hookFlags是HookPassive】
     mountEffectImpl(
       PassiveEffect | PassiveStaticEffect,
       HookPassive,
       create,
-      deps,
-    );
+      deps
+    )
   }
 }
 ```
@@ -289,19 +286,19 @@ function mountEffect(
 
 ```ts
 export type Hook = {
-  memoizedState: any,//缓存值，根据不同hook不一样
-  baseState: any,//新值，本次更新计算得到
-  queue: any,//UpdateQueue对象，存储一个update单向循环链表
-  baseQueue: Update<any, any> | null,//由于优先级被打断尚未处理的update
-  next: Hook | null,//链接的下一个hook
-};
+  memoizedState: any //缓存值，根据不同hook不一样
+  baseState: any //新值，本次更新计算得到
+  queue: any //UpdateQueue对象，存储一个update单向循环链表
+  baseQueue: Update<any, any> | null //由于优先级被打断尚未处理的update
+  next: Hook | null //链接的下一个hook
+}
 export type Effect = {
-  tag: HookFlags,//HookHasEffect | HookFlags，hook的标识，后续commit阶段决定了是否要执行回调
-  create: () => (() => void) | void,//回调函数
-  destroy: (() => void) | void,//销毁函数，可以由用户的回调函数返回
-  deps: Array<mixed> | void | null,//依赖值
-  next: Effect,//链接的下一个Effect
-};
+  tag: HookFlags //HookHasEffect | HookFlags，hook的标识，后续commit阶段决定了是否要执行回调
+  create: () => (() => void) | void //回调函数
+  destroy: (() => void) | void //销毁函数，可以由用户的回调函数返回
+  deps: Array<mixed> | void | null //依赖值
+  next: Effect //链接的下一个Effect
+}
 ```
 
 1. 首先构造一个空`Hook`对象并且作为全局唯一的 `workInProgressHook`，如果已有`hook`就用`next`链接，用例中已有一个`useState`对应的`Hook`，所以用`next`链接到其后；
@@ -325,7 +322,7 @@ function mountEffectImpl(
   create: () => (() => void) | void,
   deps: Array<mixed> | void | null,
 ): void {
-  //【第一步：构造一个空hook对象，与全局唯一的workInProgressHook链接起来】
+  //【第一步：构造一个空hook对象，workInProgressHook存在，用next链接到后面，workInProgressHook不存在，作为第一个hook存在，最后将workInProgressHook设置为当前hook】
   // export type Hook = {
   //   memoizedState: any,
   //   baseState: any,
@@ -677,11 +674,11 @@ function updateWorkInProgressHook(): Hook {
 ![hook](./assets/useEffect/useEffect11-updateEffect.png)
 ![hook](./assets/useEffect/useEffect12-updateEffect.png)
 
-### fiber.updateQueue存储的effect list触发时机
+### fiber.updateQueue 存储的 effect list 触发时机
 
 那么`effect`副作用回调何时调用呢？答案是在`flushPassiveEffects`这个方法中。
 
-前文已知React会通过`scheduleSyncCallback`或者`scheduleCallback`去安排`task`任务的执行，其中一种就是`performSyncWorkOnRoot`或者`performConcurrentWorkOnRoot`构建fiber树任务，这个任务是完成DOM挂载或更新的方法。而`useEffect`的回调触发在`flushPassiveEffects`任务中完成。那么`flushPassiveEffects`任务什么时候被`scheduleCallback`安排呢？其实是在`commit`过程中(三个commit步骤之前)，有几个可能的触发点：
+前文已知 React 会通过`scheduleSyncCallback`或者`scheduleCallback`去安排`task`任务的执行，其中一种就是`performSyncWorkOnRoot`或者`performConcurrentWorkOnRoot`构建 fiber 树任务，这个任务是完成 DOM 挂载或更新的方法。而`useEffect`的回调触发在`flushPassiveEffects`任务中完成。那么`flushPassiveEffects`任务什么时候被`scheduleCallback`安排呢？其实是在`commit`过程中(三个 commit 步骤之前)，有几个可能的触发点：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -689,7 +686,7 @@ function commitRootImpl(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,
   transitions: Array<Transition> | null,
-  renderPriorityLevel: EventPriority,
+  renderPriorityLevel: EventPriority
 ) {
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
@@ -698,47 +695,47 @@ function commitRootImpl(
     // no more pending effects.
     // TODO: Might be better if `flushPassiveEffects` did not automatically
     // flush synchronous work at the end, to avoid factoring hazards like this.
-    flushPassiveEffects();
-  } while (rootWithPendingPassiveEffects !== null);
+    flushPassiveEffects()
+  } while (rootWithPendingPassiveEffects !== null)
 
   // 【省略代码...】
 
-  const finishedWork = root.finishedWork;
-  const lanes = root.finishedLanes;
+  const finishedWork = root.finishedWork
+  const lanes = root.finishedLanes
 
   // 【省略代码...】
 
-  root.finishedWork = null;
-  root.finishedLanes = NoLanes;
+  root.finishedWork = null
+  root.finishedLanes = NoLanes
 
   if (finishedWork === root.current) {
     throw new Error(
-      'Cannot commit the same tree as before. This error is likely caused by ' +
-        'a bug in React. Please file an issue.',
-    );
+      "Cannot commit the same tree as before. This error is likely caused by " +
+        "a bug in React. Please file an issue."
+    )
   }
 
   // commitRoot never returns a continuation; it always finishes synchronously.
   // So we can clear these now to allow a new callback to be scheduled.
-  root.callbackNode = null;
-  root.callbackPriority = NoLane;
+  root.callbackNode = null
+  root.callbackPriority = NoLane
 
   // Check which lanes no longer have any work scheduled on them, and mark
   // those as finished.
-  let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes);
+  let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes)
 
   // Make sure to account for lanes that were updated by a concurrent event
   // during the render phase; don't mark them as finished.
-  const concurrentlyUpdatedLanes = getConcurrentlyUpdatedLanes();
-  remainingLanes = mergeLanes(remainingLanes, concurrentlyUpdatedLanes);
+  const concurrentlyUpdatedLanes = getConcurrentlyUpdatedLanes()
+  remainingLanes = mergeLanes(remainingLanes, concurrentlyUpdatedLanes)
 
-  markRootFinished(root, remainingLanes);
+  markRootFinished(root, remainingLanes)
 
   if (root === workInProgressRoot) {
     // We can reset these now that they are finished.
-    workInProgressRoot = null;
-    workInProgress = null;
-    workInProgressRootRenderLanes = NoLanes;
+    workInProgressRoot = null
+    workInProgress = null
+    workInProgressRootRenderLanes = NoLanes
   } else {
     // This indicates that the last root we worked on is not the same one that
     // we're committing now. This most commonly happens when a suspended root
@@ -756,24 +753,24 @@ function commitRootImpl(
     (finishedWork.flags & PassiveMask) !== NoFlags
   ) {
     if (!rootDoesHavePassiveEffects) {
-      rootDoesHavePassiveEffects = true;
-      pendingPassiveEffectsRemainingLanes = remainingLanes;
+      rootDoesHavePassiveEffects = true
+      pendingPassiveEffectsRemainingLanes = remainingLanes
       // workInProgressTransitions might be overwritten, so we want
       // to store it in pendingPassiveTransitions until they get processed
       // We need to pass this through as an argument to commitRoot
       // because workInProgressTransitions might have changed between
       // the previous render and commit if we throttle the commit
       // with setTimeout
-      pendingPassiveTransitions = transitions;
+      pendingPassiveTransitions = transitions
 
       // 【-----Scheduler安排flushPassiveEffects任务-----】
       scheduleCallback(NormalSchedulerPriority, () => {
-        flushPassiveEffects();
+        flushPassiveEffects()
         // This render triggered passive effects: release the root cache pool
         // *after* passive effects fire to avoid freeing a cache pool that may
         // be referenced by a node in the tree (HostRoot, Cache boundary etc)
-        return null;
-      });
+        return null
+      })
     }
   }
 
@@ -785,23 +782,23 @@ function commitRootImpl(
   const subtreeHasEffects =
     (finishedWork.subtreeFlags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
-    NoFlags;
+    NoFlags
   const rootHasEffect =
     (finishedWork.flags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
-    NoFlags;
+    NoFlags
 
   if (subtreeHasEffects || rootHasEffect) {
-    const prevTransition = ReactCurrentBatchConfig.transition;
-    ReactCurrentBatchConfig.transition = null;
-    const previousPriority = getCurrentUpdatePriority();
-    setCurrentUpdatePriority(DiscreteEventPriority);
+    const prevTransition = ReactCurrentBatchConfig.transition
+    ReactCurrentBatchConfig.transition = null
+    const previousPriority = getCurrentUpdatePriority()
+    setCurrentUpdatePriority(DiscreteEventPriority)
 
-    const prevExecutionContext = executionContext;
-    executionContext |= CommitContext;
+    const prevExecutionContext = executionContext
+    executionContext |= CommitContext
 
     // Reset this to null before calling lifecycles
-    ReactCurrentOwner.current = null;
+    ReactCurrentOwner.current = null
 
     // The commit phase is broken into several sub-phases. We do a separate pass
     // of the effect list for each phase: all mutation effects come before all
@@ -812,13 +809,13 @@ function commitRootImpl(
     // getSnapshotBeforeUpdate is called.
     const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(
       root,
-      finishedWork,
-    );
+      finishedWork
+    )
 
     // 【省略代码...】
 
     // The next phase is the mutation phase, where we mutate the host tree.
-    commitMutationEffects(root, finishedWork, lanes);
+    commitMutationEffects(root, finishedWork, lanes)
 
     // 【省略代码...】
 
@@ -826,34 +823,34 @@ function commitRootImpl(
     // the mutation phase, so that the previous tree is still current during
     // componentWillUnmount, but before the layout phase, so that the finished
     // work is current during componentDidMount/Update.
-    root.current = finishedWork;
+    root.current = finishedWork
 
     // The next phase is the layout phase, where we call effects that read
     // the host tree after it's been mutated. The idiomatic use case for this is
     // layout, but class component lifecycles also fire here for legacy reasons.
     // 【省略代码...】
 
-    commitLayoutEffects(finishedWork, root, lanes);
+    commitLayoutEffects(finishedWork, root, lanes)
 
     // 【省略代码...】
 
     // Tell Scheduler to yield at the end of the frame, so the browser has an
     // opportunity to paint.
-    requestPaint();
+    requestPaint()
 
-    executionContext = prevExecutionContext;
+    executionContext = prevExecutionContext
 
     // Reset the priority to the previous non-sync value.
-    setCurrentUpdatePriority(previousPriority);
-    ReactCurrentBatchConfig.transition = prevTransition;
+    setCurrentUpdatePriority(previousPriority)
+    ReactCurrentBatchConfig.transition = prevTransition
   } else {
     // No effects.
-    root.current = finishedWork;
+    root.current = finishedWork
     // Measure these anyway so the flamegraph explicitly shows that there were
     // no effects.
     // TODO: Maybe there's a better way to report this.
     if (enableProfilerTimer) {
-      recordCommitTime();
+      recordCommitTime()
     }
   }
 
@@ -861,7 +858,7 @@ function commitRootImpl(
 
   // Always call this before exiting `commitRoot`, to ensure that any
   // additional work on this root is scheduled.
-  ensureRootIsScheduled(root, now());
+  ensureRootIsScheduled(root, now())
 
   // 【省略代码...】
 
@@ -874,27 +871,27 @@ function commitRootImpl(
   // currently schedule the callback in multiple places, will wait until those
   // are consolidated.
   if (includesSyncLane(pendingPassiveEffectsLanes) && root.tag !== LegacyRoot) {
-    flushPassiveEffects();
+    flushPassiveEffects()
   }
 
   // 【省略代码...】
 
   // If layout work was scheduled, flush it now.
-  flushSyncCallbacks();
+  flushSyncCallbacks()
 
   // 【省略代码...】
 
-  return null;
+  return null
 }
 ```
 
 此时`flushPassiveEffects`任务已经入队，什么时候被调用呢？(`Concurrency`模式)
 
-如果是**首次挂载**，首先在`unstable_scheduleCallback`方法中`performConcurrentWorkOnRoot`加入`TaskQueue`队列，此时没有其他任务在执行，所以调用`requestHostCallback`从而进入`performConcurrentWorkOnRoot`。然后我们执行`performConcurrentWorkOnRoot`时，`render`过程中会调用`renderWithHooks`调用`useEffect`方法创建对应`hook`和`effect`实例，`commit`过程中调用`scheduleCallback`将`flushPassiveEffects`任务加入`TaskQueue`队列。然后执行完`commit`的三个关键步骤，此时DOM挂载也已经完成，最终完成`performConcurrentWorkOnRoot`回到`workLoop`方法执行`TaskQueue`队列的下一个任务也就是`flushPassiveEffects`任务，此时就会完成首次挂载的`useEffect`回调。
+如果是**首次挂载**，首先在`unstable_scheduleCallback`方法中`performConcurrentWorkOnRoot`加入`TaskQueue`队列，此时没有其他任务在执行，所以调用`requestHostCallback`从而进入`performConcurrentWorkOnRoot`。然后我们执行`performConcurrentWorkOnRoot`时，`render`过程中会调用`renderWithHooks`调用`useEffect`方法创建对应`hook`和`effect`实例，`commit`过程中调用`scheduleCallback`将`flushPassiveEffects`任务加入`TaskQueue`队列。然后执行完`commit`的三个关键步骤，此时 DOM 挂载也已经完成，最终完成`performConcurrentWorkOnRoot`回到`workLoop`方法执行`TaskQueue`队列的下一个任务也就是`flushPassiveEffects`任务，此时就会完成首次挂载的`useEffect`回调。
 
-- `scheduleCallback` => `unstable_scheduleCallback` => `performConcurrentWorkOnRoot`加入`TaskQueue`+`requestHostCallback(flushWork)` => `schedulePerformWorkUntilDeadline` => `messageChannel.postMessage()` => `performWorkUntilDeadline` => `flushWork` => `workLoop`  => `performConcurrentWorkOnRoot`执行
+- `scheduleCallback` => `unstable_scheduleCallback` => `performConcurrentWorkOnRoot`加入`TaskQueue`+`requestHostCallback(flushWork)` => `schedulePerformWorkUntilDeadline` => `messageChannel.postMessage()` => `performWorkUntilDeadline` => `flushWork` => `workLoop` => `performConcurrentWorkOnRoot`执行
 - `performConcurrentWorkOnRoot` => `renderWithHooks` + `commitRootImpl` => `scheduleCallback` => `unstable_scheduleCallback` => `flushPassiveEffects`加入`TaskQueue`队列
-- `performConcurrentWorkOnRoot`执行结束回到`workLoop`，继续执行下一个Task也就是`flushPassiveEffects`，执行`useEffect`回调
+- `performConcurrentWorkOnRoot`执行结束回到`workLoop`，继续执行下一个 Task 也就是`flushPassiveEffects`，执行`useEffect`回调
 
 ![react](./assets/performConcurrentWorkOnRoot1.png)
 ![react](./assets/performConcurrentWorkOnRoot2.png)
@@ -906,77 +903,77 @@ function commitRootImpl(
 ![react](./assets/useEffect-scheduleCallback6.png)
 ![react](./assets/useEffect-scheduleCallback7.png)
 
-如果是**更新阶段**，在我们的例子中点击某个元素造成`state`的改变从而引起rerender，此时会进入`flushSyncCallbacks`方法，第一步先执行`performSyncWorkOnRoot`方法去更新DOM，在`commit`过程中同样也先调用`scheduleCallback`将`flushPassiveEffects`任务加入`TaskQueue`队列。和首次挂载不同的是，更新阶段在`commit`的三个步骤走完之后，会直接调用`flushPassiveEffects`方法，继而执行`useEffect`的回调。
+如果是**更新阶段**，在我们的例子中点击某个元素造成`state`的改变从而引起 rerender，此时会进入`flushSyncCallbacks`方法，第一步先执行`performSyncWorkOnRoot`方法去更新 DOM，在`commit`过程中同样也先调用`scheduleCallback`将`flushPassiveEffects`任务加入`TaskQueue`队列。和首次挂载不同的是，更新阶段在`commit`的三个步骤走完之后，会直接调用`flushPassiveEffects`方法，继而执行`useEffect`的回调。
 
 ![react](./assets/useEffect-scheduleCallback8.png)
 
 ```ts
 // 【commitRootImpl方法中调用scheduleCallback安排flushPassiveEffects】
 scheduleCallback(NormalSchedulerPriority, () => {
-  flushPassiveEffects();
+  flushPassiveEffects()
   // This render triggered passive effects: release the root cache pool
   // *after* passive effects fire to avoid freeing a cache pool that may
   // be referenced by a node in the tree (HostRoot, Cache boundary etc)
-  return null;
-});
+  return null
+})
 
 function scheduleCallback(priorityLevel: any, callback) {
   if (__DEV__) {
     // If we're currently inside an `act` scope, bypass Scheduler and push to
     // the `act` queue instead.
-    const actQueue = ReactCurrentActQueue.current;
+    const actQueue = ReactCurrentActQueue.current
     if (actQueue !== null) {
-      actQueue.push(callback);
-      return fakeActCallbackNode;
+      actQueue.push(callback)
+      return fakeActCallbackNode
     } else {
-      return Scheduler_scheduleCallback(priorityLevel, callback);
+      return Scheduler_scheduleCallback(priorityLevel, callback)
     }
   } else {
     // In production, always call Scheduler. This function will be stripped out.
-    return Scheduler_scheduleCallback(priorityLevel, callback);
+    return Scheduler_scheduleCallback(priorityLevel, callback)
   }
 }
 
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
-  options?: {delay: number},
+  options?: { delay: number }
 ): Task {
-  var currentTime = getCurrentTime();
+  var currentTime = getCurrentTime()
 
-  var startTime;
-  if (typeof options === 'object' && options !== null) {
-    var delay = options.delay;
-    if (typeof delay === 'number' && delay > 0) {
-      startTime = currentTime + delay;
+  var startTime
+  if (typeof options === "object" && options !== null) {
+    var delay = options.delay
+    if (typeof delay === "number" && delay > 0) {
+      startTime = currentTime + delay
     } else {
-      startTime = currentTime;
+      startTime = currentTime
     }
   } else {
-    startTime = currentTime;
+    startTime = currentTime
   }
 
-  var timeout;
+  var timeout
   switch (priorityLevel) {
     case ImmediatePriority:
-      timeout = IMMEDIATE_PRIORITY_TIMEOUT;
-      break;
+      timeout = IMMEDIATE_PRIORITY_TIMEOUT
+      break
     case UserBlockingPriority:
-      timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
-      break;
+      timeout = USER_BLOCKING_PRIORITY_TIMEOUT
+      break
     case IdlePriority:
-      timeout = IDLE_PRIORITY_TIMEOUT;
-      break;
+      timeout = IDLE_PRIORITY_TIMEOUT
+      break
     case LowPriority:
-      timeout = LOW_PRIORITY_TIMEOUT;
-      break;
+      timeout = LOW_PRIORITY_TIMEOUT
+      break
     case NormalPriority:
     default:
-      timeout = NORMAL_PRIORITY_TIMEOUT;
-      break;
+      timeout = NORMAL_PRIORITY_TIMEOUT
+      break
   }
 
-  var expirationTime = startTime + timeout;
+  var expirationTime = startTime + timeout
 
   var newTask: Task = {
     id: taskIdCounter++,
@@ -985,63 +982,62 @@ function unstable_scheduleCallback(
     startTime,
     expirationTime,
     sortIndex: -1,
-  };
+  }
   if (enableProfiling) {
-    newTask.isQueued = false;
+    newTask.isQueued = false
   }
 
   if (startTime > currentTime) {
     // This is a delayed task.
-    newTask.sortIndex = startTime;
-    push(timerQueue, newTask);
+    newTask.sortIndex = startTime
+    push(timerQueue, newTask)
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
       // All tasks are delayed, and this is the task with the earliest delay.
       if (isHostTimeoutScheduled) {
         // Cancel an existing timeout.
-        cancelHostTimeout();
+        cancelHostTimeout()
       } else {
-        isHostTimeoutScheduled = true;
+        isHostTimeoutScheduled = true
       }
       // Schedule a timeout.
-      requestHostTimeout(handleTimeout, startTime - currentTime);
+      requestHostTimeout(handleTimeout, startTime - currentTime)
     }
   } else {
-    newTask.sortIndex = expirationTime;
-    push(taskQueue, newTask);
+    newTask.sortIndex = expirationTime
+    push(taskQueue, newTask)
     if (enableProfiling) {
-      markTaskStart(newTask, currentTime);
-      newTask.isQueued = true;
+      markTaskStart(newTask, currentTime)
+      newTask.isQueued = true
     }
     // Schedule a host callback, if needed. If we're already performing work,
     // wait until the next time we yield.
     if (!isHostCallbackScheduled && !isPerformingWork) {
-      isHostCallbackScheduled = true;
-      requestHostCallback(flushWork);
+      isHostCallbackScheduled = true
+      requestHostCallback(flushWork)
     }
   }
 
-  return newTask;
+  return newTask
 }
 
-
 function requestHostCallback(
-  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean,
+  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean
 ) {
-  scheduledHostCallback = callback;
+  scheduledHostCallback = callback
   if (!isMessageLoopRunning) {
-    isMessageLoopRunning = true;
-    schedulePerformWorkUntilDeadline();
+    isMessageLoopRunning = true
+    schedulePerformWorkUntilDeadline()
   }
 }
 
 const localSetImmediate =
-  typeof setImmediate !== 'undefined' ? setImmediate : null; // IE and Node.js + jsdom
-const localSetTimeout = typeof setTimeout === 'function' ? setTimeout : null;
+  typeof setImmediate !== "undefined" ? setImmediate : null // IE and Node.js + jsdom
+const localSetTimeout = typeof setTimeout === "function" ? setTimeout : null
 const localClearTimeout =
-  typeof clearTimeout === 'function' ? clearTimeout : null;
-let schedulePerformWorkUntilDeadline;
+  typeof clearTimeout === "function" ? clearTimeout : null
+let schedulePerformWorkUntilDeadline
 // 【setImmediate  MessageChannel  setTimeout三种方案顺序】
-if (typeof localSetImmediate === 'function') {
+if (typeof localSetImmediate === "function") {
   // Node.js and old IE.
   // There's a few reasons for why we prefer setImmediate.
   //
@@ -1054,33 +1050,33 @@ if (typeof localSetImmediate === 'function') {
   // If other browsers ever implement it, it's better to use it.
   // Although both of these would be inferior to native scheduling.
   schedulePerformWorkUntilDeadline = () => {
-    localSetImmediate(performWorkUntilDeadline);
-  };
-} else if (typeof MessageChannel !== 'undefined') {
+    localSetImmediate(performWorkUntilDeadline)
+  }
+} else if (typeof MessageChannel !== "undefined") {
   // DOM and Worker environments.
   // We prefer MessageChannel because of the 4ms setTimeout clamping.
-  const channel = new MessageChannel();
-  const port = channel.port2;
-  channel.port1.onmessage = performWorkUntilDeadline;
+  const channel = new MessageChannel()
+  const port = channel.port2
+  channel.port1.onmessage = performWorkUntilDeadline
   schedulePerformWorkUntilDeadline = () => {
-    port.postMessage(null);
-  };
+    port.postMessage(null)
+  }
 } else {
   // We should only fallback here in non-browser environments.
   schedulePerformWorkUntilDeadline = () => {
     // $FlowFixMe[not-a-function] nullable value
-    localSetTimeout(performWorkUntilDeadline, 0);
-  };
+    localSetTimeout(performWorkUntilDeadline, 0)
+  }
 }
 
 // 【scheduledHostCallback = callback;】
 const performWorkUntilDeadline = () => {
   if (scheduledHostCallback !== null) {
-    const currentTime = getCurrentTime();
+    const currentTime = getCurrentTime()
     // Keep track of the start time so we can measure how long the main thread
     // has been blocked.
-    startTime = currentTime;
-    const hasTimeRemaining = true;
+    startTime = currentTime
+    const hasTimeRemaining = true
 
     // If a scheduler task throws, exit the current browser task so the
     // error can be observed.
@@ -1088,79 +1084,79 @@ const performWorkUntilDeadline = () => {
     // Intentionally not using a try-catch, since that makes some debugging
     // techniques harder. Instead, if `scheduledHostCallback` errors, then
     // `hasMoreWork` will remain true, and we'll continue the work loop.
-    let hasMoreWork = true;
+    let hasMoreWork = true
     try {
       // $FlowFixMe[not-a-function] found when upgrading Flow
       // 【执行回调，就是前面传入的flushWork函数】
-      hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
+      hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime)
     } finally {
       if (hasMoreWork) {
         // If there's more work, schedule the next message event at the end
         // of the preceding one.
-        schedulePerformWorkUntilDeadline();
+        schedulePerformWorkUntilDeadline()
       } else {
-        isMessageLoopRunning = false;
-        scheduledHostCallback = null;
+        isMessageLoopRunning = false
+        scheduledHostCallback = null
       }
     }
   } else {
-    isMessageLoopRunning = false;
+    isMessageLoopRunning = false
   }
   // Yielding to the browser will give it a chance to paint, so we can
   // reset this.
-  needsPaint = false;
-};
+  needsPaint = false
+}
 
 // 【调用workLoop】
 function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   if (enableProfiling) {
-    markSchedulerUnsuspended(initialTime);
+    markSchedulerUnsuspended(initialTime)
   }
 
   // We'll need a host callback the next time work is scheduled.
-  isHostCallbackScheduled = false;
+  isHostCallbackScheduled = false
   if (isHostTimeoutScheduled) {
     // We scheduled a timeout but it's no longer needed. Cancel it.
-    isHostTimeoutScheduled = false;
-    cancelHostTimeout();
+    isHostTimeoutScheduled = false
+    cancelHostTimeout()
   }
 
-  isPerformingWork = true;
-  const previousPriorityLevel = currentPriorityLevel;
+  isPerformingWork = true
+  const previousPriorityLevel = currentPriorityLevel
   try {
     if (enableProfiling) {
       try {
-        return workLoop(hasTimeRemaining, initialTime);
+        return workLoop(hasTimeRemaining, initialTime)
       } catch (error) {
         if (currentTask !== null) {
-          const currentTime = getCurrentTime();
+          const currentTime = getCurrentTime()
           // $FlowFixMe[incompatible-call] found when upgrading Flow
-          markTaskErrored(currentTask, currentTime);
+          markTaskErrored(currentTask, currentTime)
           // $FlowFixMe[incompatible-use] found when upgrading Flow
-          currentTask.isQueued = false;
+          currentTask.isQueued = false
         }
-        throw error;
+        throw error
       }
     } else {
       // No catch in prod code path.
-      return workLoop(hasTimeRemaining, initialTime);
+      return workLoop(hasTimeRemaining, initialTime)
     }
   } finally {
-    currentTask = null;
-    currentPriorityLevel = previousPriorityLevel;
-    isPerformingWork = false;
+    currentTask = null
+    currentPriorityLevel = previousPriorityLevel
+    isPerformingWork = false
     if (enableProfiling) {
-      const currentTime = getCurrentTime();
-      markSchedulerSuspended(currentTime);
+      const currentTime = getCurrentTime()
+      markSchedulerSuspended(currentTime)
     }
   }
 }
 
 // 【顺序执行taskQueue里的任务】
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
-  let currentTime = initialTime;
-  advanceTimers(currentTime);
-  currentTask = peek(taskQueue);
+  let currentTime = initialTime
+  advanceTimers(currentTime)
+  currentTask = peek(taskQueue)
   while (
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
@@ -1170,60 +1166,60 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
-      break;
+      break
     }
     // $FlowFixMe[incompatible-use] found when upgrading Flow
-    const callback = currentTask.callback;
-    if (typeof callback === 'function') {
+    const callback = currentTask.callback
+    if (typeof callback === "function") {
       // $FlowFixMe[incompatible-use] found when upgrading Flow
-      currentTask.callback = null;
+      currentTask.callback = null
       // $FlowFixMe[incompatible-use] found when upgrading Flow
-      currentPriorityLevel = currentTask.priorityLevel;
+      currentPriorityLevel = currentTask.priorityLevel
       // $FlowFixMe[incompatible-use] found when upgrading Flow
-      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime
       if (enableProfiling) {
         // $FlowFixMe[incompatible-call] found when upgrading Flow
-        markTaskRun(currentTask, currentTime);
+        markTaskRun(currentTask, currentTime)
       }
-      const continuationCallback = callback(didUserCallbackTimeout);
-      currentTime = getCurrentTime();
-      if (typeof continuationCallback === 'function') {
+      const continuationCallback = callback(didUserCallbackTimeout)
+      currentTime = getCurrentTime()
+      if (typeof continuationCallback === "function") {
         // If a continuation is returned, immediately yield to the main thread
         // regardless of how much time is left in the current time slice.
         // $FlowFixMe[incompatible-use] found when upgrading Flow
-        currentTask.callback = continuationCallback;
+        currentTask.callback = continuationCallback
         if (enableProfiling) {
           // $FlowFixMe[incompatible-call] found when upgrading Flow
-          markTaskYield(currentTask, currentTime);
+          markTaskYield(currentTask, currentTime)
         }
-        advanceTimers(currentTime);
-        return true;
+        advanceTimers(currentTime)
+        return true
       } else {
         if (enableProfiling) {
           // $FlowFixMe[incompatible-call] found when upgrading Flow
-          markTaskCompleted(currentTask, currentTime);
+          markTaskCompleted(currentTask, currentTime)
           // $FlowFixMe[incompatible-use] found when upgrading Flow
-          currentTask.isQueued = false;
+          currentTask.isQueued = false
         }
         if (currentTask === peek(taskQueue)) {
-          pop(taskQueue);
+          pop(taskQueue)
         }
-        advanceTimers(currentTime);
+        advanceTimers(currentTime)
       }
     } else {
-      pop(taskQueue);
+      pop(taskQueue)
     }
-    currentTask = peek(taskQueue);
+    currentTask = peek(taskQueue)
   }
   // Return whether there's additional work
   if (currentTask !== null) {
-    return true;
+    return true
   } else {
-    const firstTimer = peek(timerQueue);
+    const firstTimer = peek(timerQueue)
     if (firstTimer !== null) {
-      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime)
     }
-    return false;
+    return false
   }
 }
 ```
@@ -1531,88 +1527,88 @@ If your Effect wasn’t caused by an interaction (like a click), React will gene
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function mountLayoutEffect(
   create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): void {
-  let fiberFlags: Flags = UpdateEffect | LayoutStaticEffect;
+  let fiberFlags: Flags = UpdateEffect | LayoutStaticEffect
   if (
     __DEV__ &&
     (currentlyRenderingFiber.mode & StrictEffectsMode) !== NoMode
   ) {
-    fiberFlags |= MountLayoutDevEffect;
+    fiberFlags |= MountLayoutDevEffect
   }
   // 【同useEffect中的mountEffectImpl，但是第二个参数hookFlag不同，此处是HookLayout】
-  return mountEffectImpl(fiberFlags, HookLayout, create, deps);
+  return mountEffectImpl(fiberFlags, HookLayout, create, deps)
 }
 
 function mountEffectImpl(
   fiberFlags: Flags,
   hookFlags: HookFlags,
   create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): void {
-  const hook = mountWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
   // 【打Update标记】
-  currentlyRenderingFiber.flags |= fiberFlags;
+  currentlyRenderingFiber.flags |= fiberFlags
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
     undefined,
-    nextDeps,
-  );
+    nextDeps
+  )
 }
 ```
 
 ### `updateEffectImpl`
 
-- `updateEffectImpl`中，同样地如果依赖值并无变化也就不会给`effect`实例的`tag`打上`HookHasEffect` |`HookLayout`标记，`HookHasEffect` |`HookLayout`标记是决定是否需要执行`effect`回调的重要标识，并且是给当前`fiber`的`flags`添加`UpdateEffect`标志，`effect`实例打`HookHasEffect` |`HookLayout`标志；
+- `updateEffectImpl`中，同样地如果依赖值并无变化也就不会给`effect`实例的`tag`打上`HookLayout` |`HookHasEffect`标记，`HookLayout` |`HookHasEffect`标记是决定是否需要执行`effect`回调的重要标识，并且是给当前`fiber`的`flags`添加`UpdateEffect`标志，`effect`实例打`HookLayout` |`HookHasEffect`标志；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function updateLayoutEffect(
   create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): void {
   // 【同useEffect中的updateEffectImpl，但是第二个参数hookFlag不同，此处是HookLayout】
-  return updateEffectImpl(UpdateEffect, HookLayout, create, deps);
+  return updateEffectImpl(UpdateEffect, HookLayout, create, deps)
 }
 
 function updateEffectImpl(
   fiberFlags: Flags,
   hookFlags: HookFlags,
   create: () => (() => void) | void,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): void {
   // 【找到当前需要工作的hook】
-  const hook = updateWorkInProgressHook();
+  const hook = updateWorkInProgressHook()
   // 【获取到最新的deps】
-  const nextDeps = deps === undefined ? null : deps;
-  let destroy = undefined;
+  const nextDeps = deps === undefined ? null : deps
+  let destroy = undefined
 
   // currentHook is null when rerendering after a render phase state update.
   if (currentHook !== null) {
-    const prevEffect = currentHook.memoizedState;
-    destroy = prevEffect.destroy;
+    const prevEffect = currentHook.memoizedState
+    destroy = prevEffect.destroy
     if (nextDeps !== null) {
-      const prevDeps = prevEffect.deps;
+      const prevDeps = prevEffect.deps
       // 【对比current fiber的依赖deps和要更新的树的依赖deps是否发生变化，没有变化就调用pushEffect更新hook.memoizedState上的Effect对象并返回】
       // 【没有HookLayout标识，后续也就不会调用回调函数】
       if (areHookInputsEqual(nextDeps, prevDeps)) {
-        hook.memoizedState = pushEffect(hookFlags, create, destroy, nextDeps);
-        return;
+        hook.memoizedState = pushEffect(hookFlags, create, destroy, nextDeps)
+        return
       }
     }
   }
 
   // 【打Update标记】
-  currentlyRenderingFiber.flags |= fiberFlags;
+  currentlyRenderingFiber.flags |= fiberFlags
   // 【更新memoizedState】
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
     destroy,
-    nextDeps,
-  );
+    nextDeps
+  )
 }
 ```
 
@@ -1626,12 +1622,12 @@ function commitRootImpl(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,
   transitions: Array<Transition> | null,
-  renderPriorityLevel: EventPriority,
+  renderPriorityLevel: EventPriority
 ) {
   // 【省略代码...】
 
-  const finishedWork = root.finishedWork;
-  const lanes = root.finishedLanes;
+  const finishedWork = root.finishedWork
+  const lanes = root.finishedLanes
 
   // 【省略代码...】
 
@@ -1643,11 +1639,11 @@ function commitRootImpl(
   const subtreeHasEffects =
     (finishedWork.subtreeFlags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
-    NoFlags;
+    NoFlags
   const rootHasEffect =
     (finishedWork.flags &
       (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
-    NoFlags;
+    NoFlags
 
   if (subtreeHasEffects || rootHasEffect) {
     // 【省略代码...】
@@ -1661,13 +1657,13 @@ function commitRootImpl(
     // getSnapshotBeforeUpdate is called.
     const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(
       root,
-      finishedWork,
-    );
+      finishedWork
+    )
 
     // 【省略代码...】
 
     // The next phase is the mutation phase, where we mutate the host tree.
-    commitMutationEffects(root, finishedWork, lanes);
+    commitMutationEffects(root, finishedWork, lanes)
 
     // 【省略代码...】
 
@@ -1675,39 +1671,38 @@ function commitRootImpl(
     // the mutation phase, so that the previous tree is still current during
     // componentWillUnmount, but before the layout phase, so that the finished
     // work is current during componentDidMount/Update.
-    root.current = finishedWork;
+    root.current = finishedWork
 
     // The next phase is the layout phase, where we call effects that read
     // the host tree after it's been mutated. The idiomatic use case for this is
     // layout, but class component lifecycles also fire here for legacy reasons.
     // 【省略代码...】
 
-    commitLayoutEffects(finishedWork, root, lanes);
+    commitLayoutEffects(finishedWork, root, lanes)
 
     // 【省略代码...】
 
     // Tell Scheduler to yield at the end of the frame, so the browser has an
     // opportunity to paint.
-    requestPaint();
+    requestPaint()
 
     // 【省略代码...】
-
   } else {
     // No effects.
-    root.current = finishedWork;
+    root.current = finishedWork
   }
 
-  return null;
+  return null
 }
 
 // 【去执行effect.destory()】
 function commitMutationEffectsOnFiber(
   finishedWork: Fiber,
   root: FiberRoot,
-  lanes: Lanes,
+  lanes: Lanes
 ) {
-  const current = finishedWork.alternate;
-  const flags = finishedWork.flags;
+  const current = finishedWork.alternate
+  const flags = finishedWork.flags
 
   // The effect flag should be checked *after* we refine the type of fiber,
   // because the fiber tag is more specific. An exception is any flag related
@@ -1717,22 +1712,19 @@ function commitMutationEffectsOnFiber(
     case ForwardRef:
     case MemoComponent:
     case SimpleMemoComponent: {
-      recursivelyTraverseMutationEffects(root, finishedWork, lanes);
-      commitReconciliationEffects(finishedWork);
+      recursivelyTraverseMutationEffects(root, finishedWork, lanes)
+      commitReconciliationEffects(finishedWork)
 
       if (flags & Update) {
         try {
           commitHookEffectListUnmount(
             HookInsertion | HookHasEffect,
             finishedWork,
-            finishedWork.return,
-          );
-          commitHookEffectListMount(
-            HookInsertion | HookHasEffect,
-            finishedWork,
-          );
+            finishedWork.return
+          )
+          commitHookEffectListMount(HookInsertion | HookHasEffect, finishedWork)
         } catch (error) {
-          captureCommitPhaseError(finishedWork, finishedWork.return, error);
+          captureCommitPhaseError(finishedWork, finishedWork.return, error)
         }
         // Layout effects are destroyed during the mutation phase so that all
         // destroy functions for all fibers are called before any create functions.
@@ -1741,39 +1733,38 @@ function commitMutationEffectsOnFiber(
         // by a create function in another component during the same commit.
         if (shouldProfile(finishedWork)) {
           try {
-            startLayoutEffectTimer();
+            startLayoutEffectTimer()
             // 【useLayoutEffect的effect.destory()执行】
             commitHookEffectListUnmount(
               HookLayout | HookHasEffect,
               finishedWork,
-              finishedWork.return,
-            );
+              finishedWork.return
+            )
           } catch (error) {
-            captureCommitPhaseError(finishedWork, finishedWork.return, error);
+            captureCommitPhaseError(finishedWork, finishedWork.return, error)
           }
-          recordLayoutEffectDuration(finishedWork);
+          recordLayoutEffectDuration(finishedWork)
         } else {
           try {
             // 【useLayoutEffect的effect.destory()执行】
             commitHookEffectListUnmount(
               HookLayout | HookHasEffect,
               finishedWork,
-              finishedWork.return,
-            );
+              finishedWork.return
+            )
           } catch (error) {
-            captureCommitPhaseError(finishedWork, finishedWork.return, error);
+            captureCommitPhaseError(finishedWork, finishedWork.return, error)
           }
         }
       }
-      return;
+      return
     }
-    
-    
-    default: {
-      recursivelyTraverseMutationEffects(root, finishedWork, lanes);
-      commitReconciliationEffects(finishedWork);
 
-      return;
+    default: {
+      recursivelyTraverseMutationEffects(root, finishedWork, lanes)
+      commitReconciliationEffects(finishedWork)
+
+      return
     }
   }
 }
@@ -1782,27 +1773,27 @@ function commitMutationEffectsOnFiber(
 export function commitLayoutEffects(
   finishedWork: Fiber,
   root: FiberRoot,
-  committedLanes: Lanes,
+  committedLanes: Lanes
 ): void {
-  inProgressLanes = committedLanes;
-  inProgressRoot = root;
+  inProgressLanes = committedLanes
+  inProgressRoot = root
 
-  const current = finishedWork.alternate;
-  commitLayoutEffectOnFiber(root, current, finishedWork, committedLanes);
+  const current = finishedWork.alternate
+  commitLayoutEffectOnFiber(root, current, finishedWork, committedLanes)
 
-  inProgressLanes = null;
-  inProgressRoot = null;
+  inProgressLanes = null
+  inProgressRoot = null
 }
 
 function commitLayoutEffectOnFiber(
   finishedRoot: FiberRoot,
   current: Fiber | null,
   finishedWork: Fiber,
-  committedLanes: Lanes,
+  committedLanes: Lanes
 ): void {
   // When updating this function, also update reappearLayoutEffects, which does
   // most of the same things when an offscreen tree goes from hidden -> visible.
-  const flags = finishedWork.flags;
+  const flags = finishedWork.flags
   switch (finishedWork.tag) {
     // 【省略代码...】
     case FunctionComponent:
@@ -1811,20 +1802,20 @@ function commitLayoutEffectOnFiber(
       recursivelyTraverseLayoutEffects(
         finishedRoot,
         finishedWork,
-        committedLanes,
-      );
+        committedLanes
+      )
       if (flags & Update) {
-        commitHookLayoutEffects(finishedWork, HookLayout | HookHasEffect);
+        commitHookLayoutEffects(finishedWork, HookLayout | HookHasEffect)
       }
-      break;
+      break
     }
     default: {
       recursivelyTraverseLayoutEffects(
         finishedRoot,
         finishedWork,
-        committedLanes,
-      );
-      break;
+        committedLanes
+      )
+      break
     }
   }
 }
@@ -1832,19 +1823,19 @@ function commitLayoutEffectOnFiber(
 function recursivelyTraverseLayoutEffects(
   root: FiberRoot,
   parentFiber: Fiber,
-  lanes: Lanes,
+  lanes: Lanes
 ) {
-  const prevDebugFiber = getCurrentDebugFiberInDEV();
+  const prevDebugFiber = getCurrentDebugFiberInDEV()
   if (parentFiber.subtreeFlags & LayoutMask) {
-    let child = parentFiber.child;
+    let child = parentFiber.child
     while (child !== null) {
-      setCurrentDebugFiberInDEV(child);
-      const current = child.alternate;
-      commitLayoutEffectOnFiber(root, current, child, lanes);
-      child = child.sibling;
+      setCurrentDebugFiberInDEV(child)
+      const current = child.alternate
+      commitLayoutEffectOnFiber(root, current, child, lanes)
+      child = child.sibling
     }
   }
-  setCurrentDebugFiberInDEV(prevDebugFiber);
+  setCurrentDebugFiberInDEV(prevDebugFiber)
 }
 
 function commitHookLayoutEffects(finishedWork: Fiber, hookFlags: HookFlags) {
@@ -1854,17 +1845,17 @@ function commitHookLayoutEffects(finishedWork: Fiber, hookFlags: HookFlags) {
   // by a create function in another component during the same commit.
   if (shouldProfile(finishedWork)) {
     try {
-      startLayoutEffectTimer();
-      commitHookEffectListMount(hookFlags, finishedWork);
+      startLayoutEffectTimer()
+      commitHookEffectListMount(hookFlags, finishedWork)
     } catch (error) {
-      captureCommitPhaseError(finishedWork, finishedWork.return, error);
+      captureCommitPhaseError(finishedWork, finishedWork.return, error)
     }
-    recordLayoutEffectDuration(finishedWork);
+    recordLayoutEffectDuration(finishedWork)
   } else {
     try {
-      commitHookEffectListMount(hookFlags, finishedWork);
+      commitHookEffectListMount(hookFlags, finishedWork)
     } catch (error) {
-      captureCommitPhaseError(finishedWork, finishedWork.return, error);
+      captureCommitPhaseError(finishedWork, finishedWork.return, error)
     }
   }
 }
@@ -2034,28 +2025,28 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 
 最终执行的核心方法是`commitHookEffectListMount()`，但是和`useEffect`的执行时机不同。**进入`commitHookLayoutEffects`的前提是`fiberflags`带有`Update`标识，然后每次执行`effect`回调之前还会进行判断`effect.tag`是否标识`HookLayout | HookHasEffect`，标识了才会去执行。**
 
-`useEffect`和`useLayoutEffect`区别：
-
-- `useEffect`是异步调度，DOM 更新完成且浏览器绘制完成后再去执行，不会阻塞页面渲染。
-- `useLayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在 DOM 更新后、浏览器绘制前同步执行。
-- `useEffect`的`effect.destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。
-- `useLayoutEffect`的`effect.destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成DOM挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
-- `useEffect`是`commitHookPassiveMountEffects` => `commitHookEffectListMount`异步发生在`commit`三阶段之后。
-- `useLayoutEffect`是`commitHookLayoutEffects` => `commitHookEffectListMount`发生在`commit`第三阶段。
-- `useEffect`对应对应effect实例的标识是`HookPassive | HookHasEffect`。
-- `useLayoutEffect`对应effect实例的标识是`HookLayout | HookHasEffect`。
-
 ## 总结
 
 1. `useEffect`的注册可能会调用`mountEffect`或者`updateEffect`；
 2. `mountEffect`会创建一个`hook`实例，和之前的`hook`用`next`相连，然后将其存储到对应`fiber`的`memoizedState`属性上，给对应`fiber`添加`Passive`标志，最后创建`effect`对象存储到`hook`的`memoizedState`上以及`fiber`的`updateQueue`属性上，`fiber`的`updateQueue`属性上的`effect`用`next`链接并收尾相连是一个单向的链表；
 3. `updateEffect`会更新当前`hook`实例，这个更新过程会找上一轮的`hook`状态来决定是否进行复用，接着就是对比第二项参数也就是依赖的`deps`前后是否相同，没变化会直接返回，有变化就会给对应`fiber`打`Passive`标记，最后调用`pushEffect`方法，构造`effect`对象，加入`workInProgress fiber`的`updateQueue`，并且更新当前`hook`的`memorizedState`，如果`deps`无变化那`effect`实例的`tag`不再有`HookHasEffect`标识，后续也就不会重新执行回调函数；
-4. `useEffect`回调函数的执行真正的调用其实取决于`flushPassiveEffects`方法，而在`Concurrency`模式下，任务都通过`scheduleCallback`加入任务队列根据优先级在合适的时机调用，首次挂载时`scheduleCallback`会先把DOM挂载任务加入任务队列并执行，然后挂载任务在`commit`阶段会将`flushPassiveEffects`任务加入队列，在完成挂载任务后就会去执行`flushPassiveEffects`任务，从而把`fiber`树上标志`Passive`的节点的`updateQueue`全部执行掉。更新阶段的话在更新任务的`commit`阶段会直接调用`flushPassiveEffects`。
+4. `useEffect`回调函数的执行真正的调用其实取决于`flushPassiveEffects`方法，而在`Concurrency`模式下，任务都通过`scheduleCallback`加入任务队列根据优先级在合适的时机调用，首次挂载时`scheduleCallback`会先把 DOM 挂载任务加入任务队列并执行，然后挂载任务在`commit`阶段会将`flushPassiveEffects`任务加入队列，在完成挂载任务后就会去执行`flushPassiveEffects`任务，从而把`fiber`树上标志`Passive`的节点的`updateQueue`全部执行掉。更新阶段的话在更新任务的`commit`阶段会直接调用`flushPassiveEffects`。
 5. `flushPassiveEffects`的核心是`commitPassiveUnmountEffects()`和`commitPassiveMountEffects()`，先遍历执行`effect.destroy()`再遍历执行`effect.create()`，`HookHasEffect`标识决定了是否需要执行`effect.create`回调，`HookHasEffect`是由`deps`是否变化决定的。
 6. `useEffect`和`useLayoutEffect`都使用`mountEffectImpl`/`updateEffectImpl`，但是入参`hookFlag`并不相同分别是`HookPassive`/`HookLayout`，两者都会创建对应的`effect`实例，但是`effect`实例的`tag`并不相同。两者回调函数作用时机也不同`useEffect`是发生在`commit`三阶段之后，`useLayoutEffect`是发生在`commit`第三阶段。
-7. `useEffect`和`useLayoutEffect`两者的销毁函数作用时机也不同，`useEffect`和的`effect`实例的`destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。`useLayoutEffect`的`effect`实例的`destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成DOM挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
+7. `useEffect`和`useLayoutEffect`两者的销毁函数作用时机也不同，`useEffect`和的`effect`实例的`destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。`useLayoutEffect`的`effect`实例的`destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成 DOM 挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
 
 ![react](./assets/useEffect/useEffect.png)
+
+`useEffect`和`useLayoutEffect`区别：
+
+- `useEffect`是异步调度，DOM 更新完成且浏览器绘制完成后再去执行，不会阻塞页面渲染。
+- `useLayoutEffect`是在三段`commit`过程中的第三段`commitLayoutEffects`中完成，所以肯定也就是在`useEffect`之前，在 DOM 更新后、浏览器绘制前同步执行。
+- `useEffect`的`effect.destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。
+- `useLayoutEffect`的`effect.destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成 DOM 挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
+- `useEffect`是`commitHookPassiveMountEffects` => `commitHookEffectListMount`异步发生在`commit`三阶段之后。
+- `useLayoutEffect`是`commitHookLayoutEffects` => `commitHookEffectListMount`发生在`commit`第三阶段。
+- `useEffect`需要执行回调时对应 `effect` 实例的标识是`HookPassive | HookHasEffect`。对应`fiber`的`flags`添加`PassiveEffect`标志。
+- `useLayoutEffect`需要执行回调时对应 `effect` 实例的标识是`HookLayout | HookHasEffect`。对应`fiber`的`flags`添加`UpdateEffect`标志。
 
 `useEffect` 主要用于执行不需要立即影响页面布局的副作用，常见的使用场景包括：
 

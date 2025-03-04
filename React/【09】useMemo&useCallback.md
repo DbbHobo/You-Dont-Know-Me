@@ -1,8 +1,8 @@
-# 缓存hook
+# 缓存 hook
 
 ## useMemo
 
-useMemo is a React Hook that lets you cache the result of a calculation between re-renders.
+`useMemo` is a React Hook that lets you cache the **result of a calculation** between re-renders.
 
 - useMemo is a Hook, so you can only call it at the top level of your component or your own Hooks. You can’t call it inside loops or conditions. If you need that, extract a new component and move the state into it.
 - In Strict Mode, React will call your calculation function twice in order to help you find accidental impurities. This is development-only behavior and does not affect production. If your calculation function is pure (as it should be), this should not affect your logic. The result from one of the calls will be ignored.
@@ -19,23 +19,27 @@ useMemo is a React Hook that lets you cache the result of a calculation between 
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [count,setCount] = React.useState(1)
-        const number = React.useMemo(()=>{
-          return count+1000
-        },[count]) 
+        const [count, setCount] = React.useState(1)
+        const number = React.useMemo(() => {
+          return count + 1000
+        }, [count])
 
-        const handleClick = ()=>{
+        const handleClick = () => {
           setCount(101)
         }
 
-        return <div>
-                  <h2>count is : {count},number is : {number}</h2>
-                  <h1 onClick={handleClick}>Hello World!</h1>
-                </div>
-        }
+        return (
+          <div>
+            <h2>
+              count is : {count},number is : {number}
+            </h2>
+            <h1 onClick={handleClick}>Hello World!</h1>
+          </div>
+        )
+      }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -91,17 +95,17 @@ useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function mountMemo<T>(
   nextCreate: () => T,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): T {
-  const hook = mountWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
   if (shouldDoubleInvokeUserFnsInHooksDEV) {
-    nextCreate();
+    nextCreate()
   }
-  const nextValue = nextCreate();
+  const nextValue = nextCreate()
   // 【缓存值，缓存依赖数据构造成一个数组存在当前hook上】
-  hook.memoizedState = [nextValue, nextDeps];
-  return nextValue;
+  hook.memoizedState = [nextValue, nextDeps]
+  return nextValue
 }
 ```
 
@@ -116,31 +120,31 @@ function mountMemo<T>(
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function updateMemo<T>(
   nextCreate: () => T,
-  deps: Array<mixed> | void | null,
+  deps: Array<mixed> | void | null
 ): T {
-  const hook = updateWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
-  const prevState = hook.memoizedState;
+  const hook = updateWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  const prevState = hook.memoizedState
   // Assume these are defined. If they're not, areHookInputsEqual will warn.
   // 【依赖值前后是否相同，相同直接返回原来存储的计算值】
   if (nextDeps !== null) {
-    const prevDeps: Array<mixed> | null = prevState[1];
+    const prevDeps: Array<mixed> | null = prevState[1]
     if (areHookInputsEqual(nextDeps, prevDeps)) {
-      return prevState[0];
+      return prevState[0]
     }
   }
   if (shouldDoubleInvokeUserFnsInHooksDEV) {
-    nextCreate();
+    nextCreate()
   }
   // 【不相同重新计算，然后返回新值】
-  const nextValue = nextCreate();
-  hook.memoizedState = [nextValue, nextDeps];
-  return nextValue;
+  const nextValue = nextCreate()
+  hook.memoizedState = [nextValue, nextDeps]
+  return nextValue
 }
 
 function areHookInputsEqual(
   nextDeps: Array<mixed>,
-  prevDeps: Array<mixed> | null,
+  prevDeps: Array<mixed> | null
 ): boolean {
   // 【省略代码...】
   // 【循环遍历deps用Object.is对比新旧dep是否相同】
@@ -148,11 +152,11 @@ function areHookInputsEqual(
   for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
     // $FlowFixMe[incompatible-use] found when upgrading Flow
     if (is(nextDeps[i], prevDeps[i])) {
-      continue;
+      continue
     }
-    return false;
+    return false
   }
-  return true;
+  return true
 }
 ```
 
@@ -162,7 +166,7 @@ function areHookInputsEqual(
 
 ## useCallback
 
-useCallback is a React Hook that lets you cache a function definition between re-renders.
+`useCallback` is a React Hook that lets you cache **a function definition** between re-renders.
 
 - useCallback is a Hook, so you can only call it at the top level of your component or your own Hooks. You can’t call it inside loops or conditions. If you need that, extract a new component and move the state into it.
 - React will not throw away the cached function unless there is a specific reason to do that. For example, in development, React throws away the cache when you edit the file of your component. Both in development and in production, React will throw away the cache if your component suspends during the initial mount. In the future, React may add more features that take advantage of throwing away the cache—for example, if React adds built-in support for virtualized lists in the future, it would make sense to throw away the cache for items that scroll out of the virtualized table viewport. This should match your expectations if you rely on useCallback as a performance optimization. Otherwise, a state variable or a ref may be more appropriate.
@@ -178,18 +182,23 @@ useCallback is a React Hook that lets you cache a function definition between re
     <div id="container"></div>
     <script type="text/babel">
       function App() {
-        const [count,setCount] = React.useState(1)
-        const getInfo  = useCallback((sonName)=>{
-          console.log(sonName)
-        },[id])
-        return <div>
-                  <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
-                  <h2>HOBO~{count}</h2>
-                </div>
+        const [count, setCount] = React.useState(1)
+        const getInfo = useCallback(
+          (sonName) => {
+            console.log(sonName)
+          },
+          [id]
+        )
+        return (
+          <div>
+            <h1 onClick={() => setCount(count + 100)}>Hello World!</h1>
+            <h2>HOBO~{count}</h2>
+          </div>
+        )
       }
 
-      const root = ReactDOM.createRoot(document.getElementById('container'))
-      root.render(<App />);
+      const root = ReactDOM.createRoot(document.getElementById("container"))
+      root.render(<App />)
     </script>
   </body>
 </html>
@@ -228,11 +237,11 @@ useCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
-  const hook = mountWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
   // 【缓存函数，缓存依赖数据构造成一个数组存在当前hook上】
-  hook.memoizedState = [callback, nextDeps];
-  return callback;
+  hook.memoizedState = [callback, nextDeps]
+  return callback
 }
 ```
 
@@ -245,17 +254,17 @@ function mountCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
 function updateCallback<T>(callback: T, deps: Array<mixed> | void | null): T {
-  const hook = updateWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
-  const prevState = hook.memoizedState;
+  const hook = updateWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  const prevState = hook.memoizedState
   if (nextDeps !== null) {
-    const prevDeps: Array<mixed> | null = prevState[1];
+    const prevDeps: Array<mixed> | null = prevState[1]
     if (areHookInputsEqual(nextDeps, prevDeps)) {
-      return prevState[0];
+      return prevState[0]
     }
   }
-  hook.memoizedState = [callback, nextDeps];
-  return callback;
+  hook.memoizedState = [callback, nextDeps]
+  return callback
 }
 ```
 
@@ -269,21 +278,21 @@ A React component should always have pure rendering logic. This means that it mu
 
 ### 原理
 
-`React.memo()`入口如下，可以看到其实就是创建了了一个`elementType`对象：
+`React.memo()`入口如下，可以看到其实就是创建了一个`elementType`对象所以在 `beginWork` 和 `completeWork` 阶段会进入不同的分支进行处理：
 
 ```ts
 export function memo<Props>(
   type: React$ElementType,
-  compare?: (oldProps: Props, newProps: Props) => boolean,
+  compare?: (oldProps: Props, newProps: Props) => boolean
 ) {
   // 【省略代码...】
   const elementType = {
     $$typeof: REACT_MEMO_TYPE,
     type,
     compare: compare === undefined ? null : compare,
-  };
+  }
   // 【省略代码...】
-  return elementType;
+  return elementType
 }
 ```
 
@@ -320,7 +329,7 @@ case SimpleMemoComponent: {
 }
 ```
 
-首次`beginWork`会进入`updateMemoComponent`，在`isSimpleFunctionComponent`为true并且`React.memo`方法没传入`compare`方法的情况下会把`fiber`的`tag`改成`SimpleMemoComponent`并进入`updateSimpleMemoComponent`方法。
+首次`beginWork`会进入`updateMemoComponent`，在`isSimpleFunctionComponent`为 true 并且`React.memo`方法没传入`compare`方法的情况下会把`fiber`的`tag`改成`SimpleMemoComponent`并进入`updateSimpleMemoComponent`方法。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -412,6 +421,8 @@ export function isSimpleFunctionComponent(type: any): boolean {
 
 可以看到`updateSimpleMemoComponent`会简单的根据新旧`props`以及节点上是否有更新任务进行判断，如果不需要`rerender`就会进入`bailoutOnAlreadyFinishedWork`，否则还是走正常的函数组件流程。
 
+这个对比新旧`props`的方法`shallowEqual`不同于前文提到的`===`，如果前后两次`props`对象并非同一个对象但是所有的属性严格相同的情况下会判定为新旧`props`相同，因此就不会对组件进行`rerender`。
+
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function updateSimpleMemoComponent(
@@ -419,13 +430,13 @@ function updateSimpleMemoComponent(
   workInProgress: Fiber,
   Component: any,
   nextProps: any,
-  renderLanes: Lanes,
+  renderLanes: Lanes
 ): null | Fiber {
   // TODO: current can be non-null here even if the component
   // hasn't yet mounted. This happens when the inner render suspends.
   // We'll need to figure out if this is fine or can cause issues.
   if (current !== null) {
-    const prevProps = current.memoizedProps;
+    const prevProps = current.memoizedProps
     // 【对比新旧props，相同的话，并且在该节点上没有更新任务，就可以跳过rerender进入bailoutOnAlreadyFinishedWork】
     if (
       shallowEqual(prevProps, nextProps) &&
@@ -433,7 +444,7 @@ function updateSimpleMemoComponent(
       // Prevent bailout if the implementation changed due to hot reload.
       (__DEV__ ? workInProgress.type === current.type : true)
     ) {
-      didReceiveUpdate = false;
+      didReceiveUpdate = false
 
       // The props are shallowly equal. Reuse the previous props object, like we
       // would during a normal fiber bailout.
@@ -450,7 +461,7 @@ function updateSimpleMemoComponent(
       // like forwardRef (MemoComponent). But this is an implementation detail.
       // Wrapping a component in forwardRef (or React.lazy, etc) shouldn't
       // affect whether the props object is reused during a bailout.
-      workInProgress.pendingProps = nextProps = prevProps;
+      workInProgress.pendingProps = nextProps = prevProps
 
       if (!checkScheduledUpdateOrContext(current, renderLanes)) {
         // The pending lanes were cleared at the beginning of beginWork. We're
@@ -466,16 +477,16 @@ function updateSimpleMemoComponent(
         // contains hooks.
         // TODO: Move the reset at in beginWork out of the common path so that
         // this is no longer necessary.
-        workInProgress.lanes = current.lanes;
+        workInProgress.lanes = current.lanes
         return bailoutOnAlreadyFinishedWork(
           current,
           workInProgress,
-          renderLanes,
-        );
+          renderLanes
+        )
       } else if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
         // See https://github.com/facebook/react/pull/19216.
-        didReceiveUpdate = true;
+        didReceiveUpdate = true
       }
     }
   }
@@ -485,8 +496,49 @@ function updateSimpleMemoComponent(
     workInProgress,
     Component,
     nextProps,
-    renderLanes,
-  );
+    renderLanes
+  )
+}
+
+/**
+ * Performs equality by iterating through keys on an object and returning false
+ * when any key has values which are not strictly equal between the arguments.
+ * Returns true when the values of all keys are strictly equal.
+ */
+function shallowEqual(objA: mixed, objB: mixed): boolean {
+  if (is(objA, objB)) {
+    return true
+  }
+
+  if (
+    typeof objA !== "object" ||
+    objA === null ||
+    typeof objB !== "object" ||
+    objB === null
+  ) {
+    return false
+  }
+
+  const keysA = Object.keys(objA)
+  const keysB = Object.keys(objB)
+
+  if (keysA.length !== keysB.length) {
+    return false
+  }
+
+  // Test for A's keys different from B.
+  for (let i = 0; i < keysA.length; i++) {
+    const currentKey = keysA[i]
+    if (
+      !hasOwnProperty.call(objB, currentKey) ||
+      // $FlowFixMe[incompatible-use] lost refinement of `objB`
+      !is(objA[currentKey], objB[currentKey])
+    ) {
+      return false
+    }
+  }
+
+  return true
 }
 ```
 
@@ -503,3 +555,9 @@ function updateSimpleMemoComponent(
 [useMemo](https://react.dev/reference/react/useMemo)
 
 [useCallback](https://react.dev/reference/react/useCallback)
+
+[memo](https://react.dev/reference/react/memo)
+
+[How React Compiler Performs on Real Code](https://www.developerway.com/posts/how-react-compiler-performs-on-real-code)
+
+[Before You memo()](https://overreacted.io/before-you-memo/)
