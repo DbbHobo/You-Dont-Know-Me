@@ -254,6 +254,38 @@ HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<scr
 const isNotModuleScript = this !== undefined
 ```
 
+### 动态导入 import()
+
+ESM 的 `import` 语法是静态导入，但有时我们希望在需要时才加载模块，可以使用动态导入 (`import()`)。`import()`返回一个 `Promise` 对象。
+
+`import()`函数可以用在任何地方，不仅仅是模块，非模块的脚本也可以使用。它是运行时执行，也就是说，什么时候运行到这一句，就会加载指定的模块。`import()`类似于 Node.js 的`require()`方法，区别主要是前者是异步加载，后者是同步加载。
+
+```js
+import("./math.js").then((math) => {
+  console.log(math.add(2, 3)) // 5
+})
+
+// 结合async/await使用
+async function loadMath() {
+  const math = await import("./math.js")
+  console.log(math.add(2, 3))
+}
+loadMath()
+
+// export1和export2都是myModule.js的输出接口，可以解构获得
+import("./myModule.js").then(({ export1, export2 }) => {
+  // ...·
+})
+```
+
+`import.meta` 是 ES Module (ESM) 的一个内置属性，它包含当前模块的元信息（metadata），主要用于获取模块的相关信息，例如文件路径、运行环境等。`import.meta` 只能在模块内部使用，如果在模块外部使用会报错。
+
+`import.meta` 主要包含以下常见属性：
+
+- `import.meta.url`: 当前模块的文件路径（绝对路径）
+- `import.meta.resolve()`: 解析相对路径为绝对路径（Node.js 18+）
+- `import.meta.env`: Vite 等工具会扩展这个对象，用于存储环境变量
+
 ## 参考资料
 
 [Module 的语法](https://es6.ruanyifeng.com/?search=map%28parseInt%29&x=0&y=0#docs/module)
@@ -263,3 +295,5 @@ const isNotModuleScript = this !== undefined
 [ES6 In Depth: Modules](https://hacks.mozilla.org/2015/08/es6-in-depth-modules/)
 
 [Script Tag - async & defer](https://stackoverflow.com/questions/10808109/script-tag-async-defer#)
+
+[ECMAScript feature: import attributes](https://2ality.com/2025/01/import-attributes.html)
