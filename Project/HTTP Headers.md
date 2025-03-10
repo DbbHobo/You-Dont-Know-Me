@@ -1,4 +1,4 @@
-# 需要知道的常用HTTP Headers
+# 需要知道的常用 HTTP Headers
 
 ## Strict-Transport-Security
 

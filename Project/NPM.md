@@ -289,7 +289,7 @@ It's even more important to follow the above rule when publishing your packages 
 
 假设你开发的是一个功能包B，然后你需要在项目C中调试它，你可以直接暴力的将功能包B的代码拷贝到需要项目C中调试，但这不是很好的办法。我们可以执行如下操作：
 
-```js
+```shell
 // 功能包 B 中，把 B link 到全局
 npm link
 // 项目 C 中，link 功能包 B
@@ -309,6 +309,23 @@ npm unlink
 - 为目标`npm`模块的可执行`bin`文件创建软链接，将其链接到全局`node`命令安装路径`/usr/local/bin/`。
 
 硬连接就是同一个文件的不同引用，而软链接是新建一个文件，文件内容指向另一个路径。当然，这俩链接使用起来是差不多的。
+
+### npm audit
+
+`npm audit` 命令通过将项目依赖与已知的漏洞数据库进行比对，来检查项目依赖中的安全问题。它会扫描项目的 `package.json`、`package-lock.json` 和 `node_modules` 文件夹，查找其中的任何存在漏洞的包。
+
+它主要检查以下内容：
+
+- 安全漏洞：这些可能包括代码缺陷、已弃用的函数，或一些不安全的操作方式，可能会让你的应用程序面临安全风险。
+- 严重级别：漏洞根据对应用潜在影响的大小进行分级，包括低（low）、中（moderate）、高（high）或严重（critical）等级。
+
+```shell
+npm audit report
+
+npm audit fix
+
+npm audit fix --force
+```
 
 ## npm npx yarn pnpm
 
@@ -451,3 +468,5 @@ npm unlink
 [关于现代包管理器的深度思考——为什么现在我更推荐 pnpm 而不是 npm/yarn?](https://juejin.cn/post/6932046455733485575#heading-6)
 
 [All About NPM (Node Package Manager)](https://dev.to/olibhiaghosh/all-about-npm-node-package-manager-hk2?context=digest)
+
+[Understanding npm audit and fixing vulnerabilities](https://www.niraj.life/blog/understanding-npm-audit-fixing-vulnerabilities-nodejs/)

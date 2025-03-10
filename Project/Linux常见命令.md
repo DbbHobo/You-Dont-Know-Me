@@ -77,3 +77,7 @@ ping 通过发送数据包 ping 远程主机(服务器)，常用与检测网络�
 ### sudo killall -HUP mDNSResponder
 
 清除 DNS 缓存
+
+## 常见文件夹
+
+![Linux](./assets/Linux1.png)
