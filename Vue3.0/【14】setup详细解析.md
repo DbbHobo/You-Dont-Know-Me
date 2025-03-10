@@ -16,7 +16,7 @@
 
 ## 具体使用
 
-## 源码解析
+## 源码入口
 
 前文中在分析组件化时，组件构造有三个重要步骤，其中第二步就是执行组件的 `setup()` 钩子并确定 `render` 函数。此处执行 `setup()` 是由组件在非单文件组件中通过组合式 `API` 写的 `setup()` 钩子。在 `setup()` 函数中返回的对象会暴露给模板和组件实例，其他的选项也可以通过组件实例来获取 `setup()` 暴露的属性。在单文件组件中使用`<script setup>`也是同样的逻辑，`<script setup>`中的内容会提取当做`setup()`执行。
 
@@ -25,36 +25,36 @@
 ```ts
 // 【packages/runtime-core/src/renderer.ts】
 const mountComponent: MountComponentFn = (
+  initialVNode,
+  container,
+  anchor,
+  parentComponent,
+  parentSuspense,
+  isSVG,
+  optimized
+) => {
+  // 【1.创建组件实例】
+  const instance: ComponentInternalInstance =
+    compatMountInstance ||
+    (initialVNode.component = createComponentInstance(
+      initialVNode,
+      parentComponent,
+      parentSuspense
+    ))
+
+  // 【2.初始化props、slots，调用setup()】
+  setupComponent(instance)
+
+  // 【3.构建render effect】
+  setupRenderEffect(
+    instance,
     initialVNode,
     container,
     anchor,
-    parentComponent,
     parentSuspense,
     isSVG,
     optimized
-  ) => {
-    // 【1.创建组件实例】
-    const instance: ComponentInternalInstance =
-      compatMountInstance ||
-      (initialVNode.component = createComponentInstance(
-        initialVNode,
-        parentComponent,
-        parentSuspense
-      ))
-
-    // 【2.初始化props、slots，调用setup()】
-    setupComponent(instance)
-
-    // 【3.构建render effect】
-    setupRenderEffect(
-      instance,
-      initialVNode,
-      container,
-      anchor,
-      parentSuspense,
-      isSVG,
-      optimized
-    )
+  )
 }
 // 【packages/runtime-core/src/component.ts】
 //【setupComponent入参是当前组件实例instance，初始化有状态组件、props、slots，确定组件render函数】
@@ -125,7 +125,7 @@ function setupStatefulComponent(
           .then((resolvedResult: unknown) => {
             handleSetupResult(instance, resolvedResult, isSSR)
           })
-          .catch(e => {
+          .catch((e) => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
           })
       } else if (__FEATURE_SUSPENSE__) {
@@ -135,7 +135,6 @@ function setupStatefulComponent(
 
         // 【...省略】
       } else if (__DEV__) {
-
         // 【...省略】
       }
     } else {
@@ -167,7 +166,7 @@ export function handleSetupResult(
     // 【...省略】
 
     instance.setupState = proxyRefs(setupResult)
-    
+
     // 【...省略】
   } else if (__DEV__ && setupResult !== undefined) {
     // 【...省略】
@@ -196,7 +195,7 @@ export function finishComponentSetup(
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
-          instance.vnode.props['inline-template']) ||
+          instance.vnode.props["inline-template"]) ||
         Component.template ||
         resolveMergedOptions(instance).template
       if (template) {
@@ -209,18 +208,18 @@ export function finishComponentSetup(
           extend(
             {
               isCustomElement,
-              delimiters
+              delimiters,
             },
             compilerOptions
           ),
           componentCompilerOptions
         )
-        
+
         // 【...省略】
 
         // 【如果setup()返回的并非render函数，那就调用compile编译template生成render函数】
         Component.render = compile(template, finalCompilerOptions)
-        
+
         // 【...省略】
       }
     }
@@ -240,6 +239,8 @@ export function finishComponentSetup(
 ```
 
 这个步骤完成了几件比较重要的事情首先处理了`props`和`slots`，然后调用了`setup()`并处理返回内容，根据返回内容确定组件的`render`函数由`setup`返回还是由`template`编译成。接下来就看一下里面的细节：
+
+<!-- TODO -->
 
 ### props
 
@@ -305,14 +306,14 @@ function setFullProps(
       }
 
       if (__COMPAT__) {
-        if (key.startsWith('onHook:')) {
+        if (key.startsWith("onHook:")) {
           softAssertCompatEnabled(
             DeprecationTypes.INSTANCE_EVENT_HOOKS,
             instance,
             key.slice(2).toLowerCase()
           )
         }
-        if (key === 'inline-template') {
+        if (key === "inline-template") {
           continue
         }
       }
@@ -332,7 +333,7 @@ function setFullProps(
         // into a separate `attrs` object for spreading. Make sure to preserve
         // original key casing
         if (__COMPAT__) {
-          if (isOn(key) && key.endsWith('Native')) {
+          if (isOn(key) && key.endsWith("Native")) {
             key = key.slice(0, -6) // remove Native postfix
           } else if (shouldSkipAttr(key, instance)) {
             continue
@@ -366,9 +367,150 @@ function setFullProps(
 }
 ```
 
-### slots
+```ts
+export function updateProps(
+  instance: ComponentInternalInstance,
+  rawProps: Data | null,
+  rawPrevProps: Data | null,
+  optimized: boolean
+): void {
+  const {
+    props,
+    attrs,
+    vnode: { patchFlag },
+  } = instance
+  const rawCurrentProps = toRaw(props)
+  const [options] = instance.propsOptions
+  let hasAttrsChanged = false
+
+  if (
+    // always force full diff in dev
+    // - #1942 if hmr is enabled with sfc component
+    // - vite#872 non-sfc component used by sfc component
+    !(__DEV__ && isInHmrContext(instance)) &&
+    (optimized || patchFlag > 0) &&
+    !(patchFlag & PatchFlags.FULL_PROPS)
+  ) {
+    if (patchFlag & PatchFlags.PROPS) {
+      // Compiler-generated props & no keys change, just set the updated
+      // the props.
+      const propsToUpdate = instance.vnode.dynamicProps!
+      for (let i = 0; i < propsToUpdate.length; i++) {
+        let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)) {
+          continue
+        }
+        // PROPS flag guarantees rawProps to be non-null
+        const value = rawProps![key]
+        if (options) {
+          // attr / props separation was done on init and will be consistent
+          // in this code path, so just check if attrs have it.
+          if (hasOwn(attrs, key)) {
+            if (value !== attrs[key]) {
+              attrs[key] = value
+              hasAttrsChanged = true
+            }
+          } else {
+            const camelizedKey = camelize(key)
+            props[camelizedKey] = resolvePropValue(
+              options,
+              rawCurrentProps,
+              camelizedKey,
+              value,
+              instance,
+              false /* isAbsent */
+            )
+          }
+        } else {
+          if (__COMPAT__) {
+            if (isOn(key) && key.endsWith("Native")) {
+              key = key.slice(0, -6) // remove Native postfix
+            } else if (shouldSkipAttr(key, instance)) {
+              continue
+            }
+          }
+          if (value !== attrs[key]) {
+            attrs[key] = value
+            hasAttrsChanged = true
+          }
+        }
+      }
+    }
+  } else {
+    // full props update.
+    if (setFullProps(instance, rawProps, props, attrs)) {
+      hasAttrsChanged = true
+    }
+    // in case of dynamic props, check if we need to delete keys from
+    // the props object
+    let kebabKey: string
+    for (const key in rawCurrentProps) {
+      if (
+        !rawProps ||
+        // for camelCase
+        (!hasOwn(rawProps, key) &&
+          // it's possible the original props was passed in as kebab-case
+          // and converted to camelCase (#955)
+          ((kebabKey = hyphenate(key)) === key || !hasOwn(rawProps, kebabKey)))
+      ) {
+        if (options) {
+          if (
+            rawPrevProps &&
+            // for camelCase
+            (rawPrevProps[key] !== undefined ||
+              // for kebab-case
+              rawPrevProps[kebabKey!] !== undefined)
+          ) {
+            props[key] = resolvePropValue(
+              options,
+              rawCurrentProps,
+              key,
+              undefined,
+              instance,
+              true /* isAbsent */
+            )
+          }
+        } else {
+          delete props[key]
+        }
+      }
+    }
+    // in the case of functional component w/o props declaration, props and
+    // attrs point to the same object so it should already have been updated.
+    if (attrs !== rawCurrentProps) {
+      for (const key in attrs) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + "Native")))
+        ) {
+          delete attrs[key]
+          hasAttrsChanged = true
+        }
+      }
+    }
+  }
+
+  // trigger updates for $attrs in case it's used in component slots
+  if (hasAttrsChanged) {
+    trigger(instance.attrs, TriggerOpTypes.SET, "")
+  }
+
+  if (__DEV__) {
+    validateProps(rawProps || {}, props, instance)
+  }
+}
+```
+
+### slots 插槽
 
 ```ts
+// 【packages/runtime-core/src/apiSetupHelpers.ts】
+export function useSlots(): SetupContext["slots"] {
+  return getContext().slots
+}
+
 // 【packages/runtime-core/src/componentSlots.ts】
 export const initSlots = (
   instance: ComponentInternalInstance,
@@ -381,7 +523,7 @@ export const initSlots = (
       // we should avoid the proxy object polluting the slots of the internal instance
       instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
-      def(children as InternalSlots, '_', type)
+      def(children as InternalSlots, "_", type)
     } else {
       normalizeObjectSlots(
         children as RawSlots,
@@ -399,9 +541,153 @@ export const initSlots = (
 }
 ```
 
+```ts
+// 【packages/runtime-core/src/componentSlots.ts】
+export const updateSlots = (
+  instance: ComponentInternalInstance,
+  children: VNodeNormalizedChildren,
+  optimized: boolean
+): void => {
+  const { vnode, slots } = instance
+  let needDeletionCheck = true
+  let deletionComparisonTarget = EMPTY_OBJ
+  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    const type = (children as RawSlots)._
+    if (type) {
+      // compiled slots.
+      if (__DEV__ && isHmrUpdating) {
+        // Parent was HMR updated so slot content may have changed.
+        // force update slots and mark instance for hmr as well
+        assignSlots(slots, children as Slots, optimized)
+        trigger(instance, TriggerOpTypes.SET, "$slots")
+      } else if (optimized && type === SlotFlags.STABLE) {
+        // compiled AND stable.
+        // no need to update, and skip stale slots removal.
+        needDeletionCheck = false
+      } else {
+        // compiled but dynamic (v-if/v-for on slots) - update slots, but skip
+        // normalization.
+        assignSlots(slots, children as Slots, optimized)
+      }
+    } else {
+      needDeletionCheck = !(children as RawSlots).$stable
+      normalizeObjectSlots(children as RawSlots, slots, instance)
+    }
+    deletionComparisonTarget = children as RawSlots
+  } else if (children) {
+    // non slot object children (direct value) passed to a component
+    normalizeVNodeSlots(instance, children)
+    deletionComparisonTarget = { default: 1 }
+  }
+
+  // delete stale slots
+  if (needDeletionCheck) {
+    for (const key in slots) {
+      if (!isInternalKey(key) && deletionComparisonTarget[key] == null) {
+        delete slots[key]
+      }
+    }
+  }
+}
+```
+
+### attributes 透传
+
+```ts
+// 【packages/runtime-core/src/apiSetupHelpers.ts】
+export function useAttrs(): SetupContext["attrs"] {
+  return getContext().attrs
+}
+
+function getContext(): SetupContext {
+  const i = getCurrentInstance()!
+  if (__DEV__ && !i) {
+    warn(`useContext() called without active instance.`)
+  }
+  return i.setupContext || (i.setupContext = createSetupContext(i))
+}
+```
+
+### provide/inject 依赖注入
+
+```ts
+// 【packages/runtime-core/src/apiInject.ts】
+export function provide<T, K = InjectionKey<T> | string | number>(
+  key: K,
+  value: K extends InjectionKey<infer V> ? V : T
+): void {
+  if (!currentInstance) {
+    if (__DEV__) {
+      warn(`provide() can only be used inside setup().`)
+    }
+  } else {
+    let provides = currentInstance.provides
+    // by default an instance inherits its parent's provides object
+    // but when it needs to provide values of its own, it creates its
+    // own provides object using parent provides object as prototype.
+    // this way in `inject` we can simply look up injections from direct
+    // parent and let the prototype chain do the work.
+    const parentProvides =
+      currentInstance.parent && currentInstance.parent.provides
+    if (parentProvides === provides) {
+      provides = currentInstance.provides = Object.create(parentProvides)
+    }
+    // TS doesn't allow symbol as index type
+    provides[key as string] = value
+  }
+}
+
+export function inject(
+  key: InjectionKey<any> | string,
+  defaultValue?: unknown,
+  treatDefaultAsFactory = false
+) {
+  // fallback to `currentRenderingInstance` so that this can be called in
+  // a functional component
+  const instance = currentInstance || currentRenderingInstance
+
+  // also support looking up from app-level provides w/ `app.runWithContext()`
+  if (instance || currentApp) {
+    // #2400
+    // to support `app.use` plugins,
+    // fallback to appContext's `provides` if the instance is at root
+    // #11488, in a nested createApp, prioritize using the provides from currentApp
+    const provides = currentApp
+      ? currentApp._context.provides
+      : instance
+      ? instance.parent == null
+        ? instance.vnode.appContext && instance.vnode.appContext.provides
+        : instance.parent.provides
+      : undefined
+
+    if (provides && (key as string | symbol) in provides) {
+      // TS doesn't allow symbol as index type
+      return provides[key as string]
+    } else if (arguments.length > 1) {
+      return treatDefaultAsFactory && isFunction(defaultValue)
+        ? defaultValue.call(instance && instance.proxy)
+        : defaultValue
+    } else if (__DEV__) {
+      warn(`injection "${String(key)}" not found.`)
+    }
+  } else if (__DEV__) {
+    warn(`inject() can only be used inside setup() or functional components.`)
+  }
+}
+```
+
 ## 总结
 
 ## 参考资料
 
 [组合式 API：`setup()`](https://cn.vuejs.org/api/composition-api-setup.html)
+
 [单文件组件`<script setup>`](https://cn.vuejs.org/api/sfc-script-setup.html)
+
+[Props](https://cn.vuejs.org/guide/components/props.html)
+
+[插槽 Slots](https://cn.vuejs.org/guide/components/slots.html)
+
+[透传 Attributes](https://cn.vuejs.org/guide/components/attrs.html)
+
+[依赖注入](https://cn.vuejs.org/guide/components/provide-inject.html)

@@ -1,4 +1,4 @@
-# 任务队列和nextTick
+# 任务队列和 nextTick
 
 ## nextTick 定义
 
@@ -8,7 +8,7 @@
 
 ## nextTick 实现
 
-`nextTick()`实现在`runtime-core/scheduler.ts`，可以看到Vue3中使用的是`Promise`方法微任务回调用户的内容，Vue2中则是判断当前环境是否能使用几种方法，最差就降级到`setTimeout`方法：
+`nextTick()`实现在`runtime-core/scheduler.ts`，可以看到 Vue3 中使用的是`Promise`方法微任务回调用户的内容，Vue2 中则是判断当前环境是否能使用几种方法，最差就降级到`setTimeout`方法：
 
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
@@ -25,17 +25,17 @@ export function nextTick<T = void>(
 }
 ```
 
-## Vue3中的任务队列执行机制
+## Vue3 中的任务队列执行机制
 
-前文中可以知道在实例化`ReactiveEffect`对象时，有两个至关重要的参数，第一个是`fn`回调，第二个是`scheduler`，这个`scheduler`通常是一个匿名函数，内部会调用`queueJob`、`queuePostRenderEffect`(其实也就是`queuePostFlushCb`)等方法去安排job在哪个阶段执行。
+前文中可以知道在实例化`ReactiveEffect`对象时，有两个至关重要的参数，第一个是`fn`回调，第二个是`scheduler`，这个`scheduler`通常是一个匿名函数，内部会调用`queueJob`、`queuePostRenderEffect`(其实也就是`queuePostFlushCb`)等方法去安排 job 在哪个阶段执行。
 
-Vue3中有三个任务队列：
+Vue3 中有三个任务队列：
 
 - `Pre`队列：组件更新前置任务队列（但没有单独的数据结构，而是把按序执行`queue`任务队列当作执行前置任务队列）
-- `Queue`队列：组件更新时的任务队列`queue[]`，允许插队，按任务id从小大排列执行
-- `Post`队列：组件更新后置任务队列`pendingPostFlushCbs[]`，允许插队，按任务id从小大排列执行
+- `Queue`队列：组件更新时的任务队列`queue[]`，允许插队，按任务 id 从小大排列执行
+- `Post`队列：组件更新后置任务队列`pendingPostFlushCbs[]`，允许插队，按任务 id 从小大排列执行
 
-从加入job队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs -> flushPostFlushCbs -> nextTick的fn回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
+从加入 job 队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs -> flushPostFlushCbs -> nextTick 的 fn 回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
 
 - `queueJob()`/`queuePostFlushCb()`方法把任务加进任务队列
 - `queueFlush`是任务队列开始执行前的准备工作会把任务队列的执行放入`promise.then()`中
@@ -215,7 +215,7 @@ const job: SchedulerJob = () => {
         (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
           ? undefined
           : oldValue,
-        onCleanup
+        onCleanup,
       ])
       // 用新值将旧值覆盖
       oldValue = newValue
@@ -231,9 +231,9 @@ const job: SchedulerJob = () => {
 job.allowRecurse = !!cb
 
 let scheduler: EffectScheduler
-if (flush === 'sync') {
+if (flush === "sync") {
   scheduler = job as any // the scheduler function gets called directly
-} else if (flush === 'post') {
+} else if (flush === "post") {
   scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
 } else {
   // default: 'pre'
@@ -252,7 +252,7 @@ const effect = new ReactiveEffect(getter, scheduler)
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
 // 【加入主任务队列-queue】
-const queue: SchedulerJob[] = []//任务队列
+const queue: SchedulerJob[] = [] //任务队列
 let flushIndex = 0
 
 export function queueJob(job: SchedulerJob) {
@@ -274,12 +274,11 @@ export function queueJob(job: SchedulerJob) {
     if (job.id == null) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)//【二分查找某id的job】
+      queue.splice(findInsertionIndex(job.id), 0, job) //【二分查找某id的job】
     }
     queueFlush()
   }
 }
-
 ```
 
 ### 入队 `queuePostFlushCb()` => `queueFlush()`
@@ -491,3 +490,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 ## 总结
 
 ![nextTick](./assets/nexttick.png)
+
+## 参考资料
+
+[nextTick()](https://cn.vuejs.org/api/general.html#nexttick)

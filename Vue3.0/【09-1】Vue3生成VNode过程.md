@@ -1,4 +1,4 @@
-# Vue3生成VNode过程
+# Vue3 生成 VNode 过程
 
 ## VNode
 
@@ -93,7 +93,7 @@ export interface VNode<
 }
 ```
 
-## 组件实例
+## 组件实例 ComponentInternalInstance
 
 ```ts
 // 【packages/runtime-core/src/component.ts】
@@ -343,11 +343,11 @@ export interface ComponentInternalInstance {
 }
 ```
 
-## 生成根app实例的VNode
+## 生成根 app 实例的 VNode
 
-首先根实例app在挂载时调用mount方法的两个重要步骤：
+首先根实例 `app` 在挂载时调用 `mount` 方法的两个重要步骤：
 
-1. 调用`createVNode`方法生成`VNode`，实际会进入`createBaseVNode`方法；
+1. 调用`createVNode`方法生成`VNode`，实际会进入`createBaseVNode`方法创建（通常是 App 组件）`VNode`；
 2. 调用`render`方法进行挂载，实际会进入`patch`方法；
 
 ```ts
@@ -367,7 +367,7 @@ mount(
 }
 ```
 
-然后我们详细看一下根实例app生成VNode的过程：
+然后我们详细看一下根实例 `app` 生成 `VNode` 的过程：
 
 `createVNode` => `_createVNode` => `createBaseVNode`
 
@@ -383,7 +383,7 @@ function _createVNode(
   children: unknown = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null,
-  isBlockNode = false,
+  isBlockNode = false
 ): VNode {
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
@@ -446,14 +446,14 @@ function _createVNode(
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)
-      ? ShapeFlags.SUSPENSE
-      : isTeleport(type)
-        ? ShapeFlags.TELEPORT
-        : isObject(type)
-          ? ShapeFlags.STATEFUL_COMPONENT
-          : isFunction(type)
-            ? ShapeFlags.FUNCTIONAL_COMPONENT
-            : 0
+    ? ShapeFlags.SUSPENSE
+    : isTeleport(type)
+    ? ShapeFlags.TELEPORT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
+    : isFunction(type)
+    ? ShapeFlags.FUNCTIONAL_COMPONENT
+    : 0
 
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
@@ -463,7 +463,7 @@ function _createVNode(
         `marking the component with \`markRaw\` or using \`shallowRef\` ` +
         `instead of \`ref\`.`,
       `\nComponent that was made reactive: `,
-      type,
+      type
     )
   }
 
@@ -475,7 +475,7 @@ function _createVNode(
     dynamicProps,
     shapeFlag,
     isBlockNode,
-    true,
+    true
   )
 }
 
@@ -487,7 +487,7 @@ function createBaseVNode(
   dynamicProps: string[] | null = null,
   shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
   isBlockNode = false,
-  needFullChildrenNormalization = false,
+  needFullChildrenNormalization = false
 ) {
   // 【构造基础VNode】
   const vnode = {
@@ -519,7 +519,6 @@ function createBaseVNode(
     ctx: currentRenderingInstance,
   } as VNode
 
-  
   if (needFullChildrenNormalization) {
     // 【根实例app此处要处理】
     normalizeChildren(vnode, children)
@@ -569,12 +568,50 @@ function createBaseVNode(
 }
 ```
 
-## 生成组件VNode
+## 生成组件 VNode
+
+`mountComponent` => `createComponentInstance` + `setupComponent` + `setupRenderEffect` => `instance.update` => `effect.run` => `componentUpdateFn` => `renderComponentRoot` + `patch`
+
+```ts
+// 【packages/runtime-core/src/renderer.ts】
+const setupRenderEffect: SetupRenderEffectFn = (
+  instance,
+  initialVNode,
+  container,
+  anchor,
+  parentSuspense,
+  namespace: ElementNamespace,
+  optimized
+) => {
+  const componentUpdateFn = () => {
+    if (!instance.isMounted) {
+      //【...省略】
+    } else {
+      //【...省略】
+    }
+  }
+
+  // create reactive effect for rendering
+  instance.scope.on()
+  const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
+  instance.scope.off()
+
+  const update = (instance.update = effect.run.bind(effect))
+  const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+  job.i = instance
+  job.id = instance.uid
+  effect.scheduler = () => queueJob(job)
+
+  //【...省略】
+  // 【执行effect.run()从而进入componentUpdateFn】
+  update()
+}
+```
 
 前文中讲到在 `componentUpdateFn` 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
 
 1. `renderComponentRoot`根据组件实例`instance`生成最新的`VNode`(`subTree`/`nextTree`)；
-2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`；
+2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`，遇到子组件再继续进入子组件的`patch`方法；
 
 ```ts
 // 【packages/runtime-core/src/renderer.ts】
@@ -599,15 +636,7 @@ const componentUpdateFn = () => {
       //【...省略】
 
       //【2.深度调用patch进行VNode对比然后挂载】
-      patch(
-        null,
-        subTree,
-        container,
-        anchor,
-        instance,
-        parentSuspense,
-        isSVG
-      )
+      patch(null, subTree, container, anchor, instance, parentSuspense, isSVG)
 
       //【...省略】
 
@@ -631,16 +660,16 @@ const componentUpdateFn = () => {
     let { next, bu, u, parent, vnode } = instance
     let originNext = next
     let vnodeHook: VNodeHook | null | undefined
-    
+
     //【...省略】
 
     //【1.const nextTree = renderComponentRoot(instance)构造VNode】
     const nextTree = renderComponentRoot(instance)
-    
+
     //【...省略】
 
-    const prevTree = instance.subTree//【旧VNode】
-    instance.subTree = nextTree//【新VNode】
+    const prevTree = instance.subTree //【旧VNode】
+    instance.subTree = nextTree //【新VNode】
 
     //【...省略】
 
@@ -660,14 +689,14 @@ const componentUpdateFn = () => {
 }
 ```
 
-然后我们详细看一下组件生成VNode的过程：
+然后我们详细看一下组件生成 `VNode` 的过程，核心在于调用组件实例 `instance` 上的 `render` 方法，这样就会生成组件内部所有内容的 `VNode` 但不包括子组件内部的内容，后续 `patch` 过程中再继续对子组件进行解析：
 
-`renderComponentRoot` => `render`
+`renderComponentRoot` => `render`生成 VNode
 
 ```ts
 // 【packages/runtime-core/src/componentRenderUtils.ts】
 export function renderComponentRoot(
-  instance: ComponentInternalInstance,
+  instance: ComponentInternalInstance
 ): VNode {
   // 【根据组件实例instance提取出信息】
   const {
@@ -708,15 +737,15 @@ export function renderComponentRoot(
               get(target, key, receiver) {
                 warn(
                   `Property '${String(
-                    key,
-                  )}' was accessed via 'this'. Avoid using 'this' in templates.`,
+                    key
+                  )}' was accessed via 'this'. Avoid using 'this' in templates.`
                 )
                 return Reflect.get(target, key, receiver)
               },
             })
           : proxyToUse
 
-      // 【组件三步骤中第二步生成的render方法，调用render方法生成VNode】
+      // 【-----组件三步骤中第二步生成的render方法，调用render方法生成VNode-----】
       result = normalizeVNode(
         render!.call(
           thisProxy,
@@ -725,8 +754,8 @@ export function renderComponentRoot(
           __DEV__ ? shallowReadonly(props) : props,
           setupState,
           data,
-          ctx,
-        ),
+          ctx
+        )
       )
       fallthroughAttrs = attrs
     } else {
@@ -749,12 +778,12 @@ export function renderComponentRoot(
                     slots,
                     emit,
                   }
-                : { attrs, slots, emit },
+                : { attrs, slots, emit }
             )
           : render(
               __DEV__ ? shallowReadonly(props) : props,
-              null as any /* we know it doesn't need it */,
-            ),
+              null as any /* we know it doesn't need it */
+            )
       )
       fallthroughAttrs = Component.props
         ? attrs
@@ -791,7 +820,7 @@ export function renderComponentRoot(
           // related: #1543, #1643, #1989
           fallthroughAttrs = filterModelListeners(
             fallthroughAttrs,
-            propsOptions,
+            propsOptions
           )
         }
         root = cloneVNode(root, fallthroughAttrs, false, true)
@@ -815,19 +844,19 @@ export function renderComponentRoot(
         if (extraAttrs.length) {
           warn(
             `Extraneous non-props attributes (` +
-              `${extraAttrs.join(', ')}) ` +
+              `${extraAttrs.join(", ")}) ` +
               `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes.`,
+              `because component renders fragment or text root nodes.`
           )
         }
         if (eventAttrs.length) {
           warn(
             `Extraneous non-emits event listeners (` +
-              `${eventAttrs.join(', ')}) ` +
+              `${eventAttrs.join(", ")}) ` +
               `were passed to component but could not be automatically inherited ` +
               `because component renders fragment or text root nodes. ` +
               `If the listener is intended to be a component custom event listener only, ` +
-              `declare it using the "emits" option.`,
+              `declare it using the "emits" option.`
           )
         }
       }
@@ -846,7 +875,7 @@ export function renderComponentRoot(
         warnDeprecation(
           DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
           instance,
-          getComponentName(instance.type),
+          getComponentName(instance.type)
         )
       }
       root = cloneVNode(
@@ -856,7 +885,7 @@ export function renderComponentRoot(
           style: style,
         },
         false,
-        true,
+        true
       )
     }
   }
@@ -866,7 +895,7 @@ export function renderComponentRoot(
     if (__DEV__ && !isElementRoot(root)) {
       warn(
         `Runtime directive used on component with non-element root node. ` +
-          `The directives will not function as intended.`,
+          `The directives will not function as intended.`
       )
     }
     // clone before mutating since the root may be a hoisted vnode
@@ -878,7 +907,7 @@ export function renderComponentRoot(
     if (__DEV__ && !isElementRoot(root)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
-          `that cannot be animated.`,
+          `that cannot be animated.`
       )
     }
     root.transition = vnode.transition
