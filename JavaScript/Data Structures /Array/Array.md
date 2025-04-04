@@ -2,7 +2,7 @@
 
 收集数组常用的一些内置方法
 
-## Array的静态方法
+## Array 的静态方法
 
 ### Array.isArray()
 
@@ -13,8 +13,8 @@
 ```js
 if (!Array.isArray) {
   Array.isArray = function (arg) {
-    return Object.prototype.toString.call(arg) === "[object Array]";
-  };
+    return Object.prototype.toString.call(arg) === "[object Array]"
+  }
 }
 ```
 
@@ -25,10 +25,10 @@ if (!Array.isArray) {
 - creates a new Array instance from a variable number of arguments, regardless of number or type of the arguments.
 
 ```js
-Array.of(7); // [7]
-Array.of(1, 2, 3); // [1, 2, 3]
-Array(7); // array of 7 empty slots
-Array(1, 2, 3); // [1, 2, 3]
+Array.of(7) // [7]
+Array.of(1, 2, 3) // [1, 2, 3]
+Array(7) // array of 7 empty slots
+Array(1, 2, 3) // [1, 2, 3]
 ```
 
 ### Array.from()
@@ -39,93 +39,93 @@ Array(1, 2, 3); // [1, 2, 3]
 - create Arrays from:array-like objects (objects with a length property and indexed elements) or iterable objects (objects where you can get its elements, such as Map and Set).
 
 ```js
-console.log(Array.from("foo"));
+console.log(Array.from("foo"))
 // expected output: Array ["f", "o", "o"]
 
-console.log(Array.from([1, 2, 3], (x) => x + x));
+console.log(Array.from([1, 2, 3], (x) => x + x))
 // expected output: Array [2, 4, 6]
 ```
 
 ---
 
-## Array的实例方法
+## Array 的实例方法
 
-### Array.prototype.push(item1, item2, ...)*
+### Array.prototype.push(item1, item2, ...)\*
 
 `push()` 方法将指定的元素添加到数组的末尾，并返回新的数组长度。
 
 此方法会**改变原数组**。
 
 ```js
-const animals = ['pigs', 'goats', 'sheep'];
+const animals = ["pigs", "goats", "sheep"]
 
-const count = animals.push('cows');
-console.log(count);
+const count = animals.push("cows")
+console.log(count)
 // Expected output: 4
-console.log(animals);
+console.log(animals)
 // Expected output: Array ["pigs", "goats", "sheep", "cows"]
 
-animals.push('chickens', 'cats', 'dogs');
-console.log(animals);
+animals.push("chickens", "cats", "dogs")
+console.log(animals)
 // Expected output: Array ["pigs", "goats", "sheep", "cows", "chickens", "cats", "dogs"]
 ```
 
-### Array.prototype.pop()*
+### Array.prototype.pop()\*
 
 `pop()` 方法从数组中删除最后一个元素，并返回该元素的值。此方法会更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
 
 此方法会**改变原数组**。
 
 ```js
-const plants = ['broccoli', 'cauliflower', 'cabbage', 'kale', 'tomato'];
+const plants = ["broccoli", "cauliflower", "cabbage", "kale", "tomato"]
 
-console.log(plants.pop());
+console.log(plants.pop())
 // Expected output: "tomato"
 
-console.log(plants);
+console.log(plants)
 // Expected output: Array ["broccoli", "cauliflower", "cabbage", "kale"]
 
-plants.pop();
+plants.pop()
 
-console.log(plants);
+console.log(plants)
 // Expected output: Array ["broccoli", "cauliflower", "cabbage"]
 ```
 
-### Array.prototype.unshift(item1, item2, ...)*
+### Array.prototype.unshift(item1, item2, ...)\*
 
 `unshift()` 方法将指定元素添加到数组的开头，并返回数组的新长度。
 
 此方法会**改变原数组**。
 
 ```js
-const array1 = [1, 2, 3];
+const array1 = [1, 2, 3]
 
-console.log(array1.unshift(4, 5));
+console.log(array1.unshift(4, 5))
 // Expected output: 5
 
-console.log(array1);
+console.log(array1)
 // Expected output: Array [4, 5, 1, 2, 3]
 ```
 
-### Array.prototype.shift()*
+### Array.prototype.shift()\*
 
 `shift()` 方法从数组中删除第一个元素，并返回该元素的值。此方法更改数组的长度。返回从数组中删除的元素（当数组为空时返回 undefined）。
 
 此方法会**改变原数组**。
 
 ```js
-const array1 = [1, 2, 3];
+const array1 = [1, 2, 3]
 
-const firstElement = array1.shift();
+const firstElement = array1.shift()
 
-console.log(array1);
+console.log(array1)
 // Expected output: Array [2, 3]
 
-console.log(firstElement);
+console.log(firstElement)
 // Expected output: 1
 ```
 
-### Array.prototype.splice(start, deleteCount, item1, item2, …, itemN)*
+### Array.prototype.splice(start, deleteCount, item1, item2, …, itemN)\*
 
 通过删除或替换现有元素或者原地添加新的元素来修改数组,并以数组形式返回**被修改的内容**。
 
@@ -134,19 +134,19 @@ console.log(firstElement);
 - changes the contents of an array by removing or replacing existing elements and/or adding new elements
 
 ```js
-var months = ["Jan", "March", "April", "June"];
-months.splice(1, 0, "Feb");
+var months = ["Jan", "March", "April", "June"]
+months.splice(1, 0, "Feb")
 // inserts at index 1
-console.log(months);
+console.log(months)
 // expected output: Array ['Jan', 'Feb', 'March', 'April', 'June']
 
-months.splice(4, 1, "May");
+months.splice(4, 1, "May")
 // replaces 1 element at index 4
-console.log(months);
+console.log(months)
 // expected output: Array ['Jan', 'Feb', 'March', 'April', 'May']
 ```
 
-### Array.prototype.reverse()*
+### Array.prototype.reverse()\*
 
 `reverse()` 方法将数组中元素的位置颠倒，并返回该数组。数组的第一个元素会变成最后一个，数组的最后一个元素变成第一个。
 
@@ -155,20 +155,20 @@ console.log(months);
 - The reverse() method reverses an array in place and returns the reference to the same array, the first array element now becoming the last, and the last array element becoming the first. In other words, elements order in the array will be turned towards the direction opposite to that previously stated.
 
 ```js
-const array1 = ['one', 'two', 'three'];
-console.log('array1:', array1);
+const array1 = ["one", "two", "three"]
+console.log("array1:", array1)
 // Expected output: "array1:" Array ["one", "two", "three"]
 
-const reversed = array1.reverse();
-console.log('reversed:', reversed);
+const reversed = array1.reverse()
+console.log("reversed:", reversed)
 // Expected output: "reversed:" Array ["three", "two", "one"]
 
 // Careful: reverse is destructive -- it changes the original array.
-console.log('array1:', array1);
+console.log("array1:", array1)
 // Expected output: "array1:" Array ["three", "two", "one"]
 ```
 
-### Array.prototype.sort(compareFn)*
+### Array.prototype.sort(compareFn)\*
 
 `sort()` 方法用原地算法对数组的元素进行排序，并返回数组。默认排序顺序是在将元素转换为字符串，然后比较它们的 UTF-16 代码单元值序列时构建的。由于它取决于具体实现，因此无法保证排序的时间和空间复杂性。
 
@@ -177,14 +177,14 @@ console.log('array1:', array1);
 - The sort() method sorts the elements of an array in place and returns the reference to the same array, now sorted. The default sort order is ascending, built upon converting the elements into strings, then comparing their sequences of UTF-16 code units values.The time and space complexity of the sort cannot be guaranteed as it depends on the izhimplementation.
 
 ```js
-const months = ['March', 'Jan', 'Feb', 'Dec'];
-months.sort();
-console.log(months);
+const months = ["March", "Jan", "Feb", "Dec"]
+months.sort()
+console.log(months)
 // Expected output: Array ["Dec", "Feb", "Jan", "March"]
 
-const array1 = [1, 30, 4, 21, 100000];
-array1.sort();
-console.log(array1);
+const array1 = [1, 30, 4, 21, 100000]
+array1.sort()
+console.log(array1)
 // Expected output: Array [1, 100000, 21, 30, 4]
 ```
 
@@ -195,10 +195,10 @@ console.log(array1);
 - is used to merge two or more arrays. This method does not change the existing arrays, but instead returns a new array.
 
 ```js
-var array1 = ["a", "b", "c"];
-var array2 = ["d", "e", "f"];
+var array1 = ["a", "b", "c"]
+var array2 = ["d", "e", "f"]
 
-console.log(array1.concat(array2));
+console.log(array1.concat(array2))
 // expected output: Array ["a", "b", "c", "d", "e", "f"]
 ```
 
@@ -209,15 +209,15 @@ console.log(array1.concat(array2));
 - returns a shallow copy of a portion of an array into a new array object selected from begin to end (end not included) where begin and end represent the index of items in that array. The original array will not be modified.
 
 ```js
-var animals = ["ant", "bison", "camel", "duck", "elephant"];
+var animals = ["ant", "bison", "camel", "duck", "elephant"]
 
-console.log(animals.slice(2));
+console.log(animals.slice(2))
 // expected output: Array ["camel", "duck", "elephant"]
 
-console.log(animals.slice(2, 4));
+console.log(animals.slice(2, 4))
 // expected output: Array ["camel", "duck"]
 
-console.log(animals.slice(1, 5));
+console.log(animals.slice(1, 5))
 // expected output: Array ["bison", "camel", "duck", "elephant"]
 ```
 
@@ -230,11 +230,11 @@ console.log(animals.slice(1, 5));
 - creates and returns a new string by concatenating all of the elements in an array (or an array-like object), separated by commas or a specified separator string. If the array has only one item, then that item will be returned without using the separator.
 
 ```js
-var a = ["Wind", "Water", "Fire"];
-a.join(); // 'Wind,Water,Fire'
-a.join(", "); // 'Wind, Water, Fire'
-a.join(" + "); // 'Wind + Water + Fire'
-a.join(""); // 'WindWaterFire'
+var a = ["Wind", "Water", "Fire"]
+a.join() // 'Wind,Water,Fire'
+a.join(", ") // 'Wind, Water, Fire'
+a.join(" + ") // 'Wind + Water + Fire'
+a.join("") // 'WindWaterFire'
 ```
 
 ### Array.prototype.map((element,index,array)=>{})
@@ -244,12 +244,12 @@ a.join(""); // 'WindWaterFire'
 - creates a new array with the results of calling a provided function on every element in the calling array.
 
 ```js
-var numbers = [1, 2, 3, 4];
+var numbers = [1, 2, 3, 4]
 var filteredNumbers = numbers.map(function (num, index) {
   if (index < 3) {
-    return num;
+    return num
   }
-});
+})
 //index goes from 0,so the filterNumbers are 1,2,3 and undefined.
 // filteredNumbers is [1, 2, 3, undefined]
 // numbers is still [1, 2, 3, 4]
@@ -262,7 +262,7 @@ var filteredNumbers = numbers.map(function (num, index) {
 - tests whether all elements in the array pass the test implemented by the provided function. It returns a Boolean value.
 
 ```js
-[12, 5, 8, 130, 44].every((x) => x >= 10); // false
+;[12, 5, 8, 130, 44].every((x) => x >= 10) // false
 ```
 
 ### Array.prototype.some((element,index,array)=>{})
@@ -272,8 +272,8 @@ var filteredNumbers = numbers.map(function (num, index) {
 - tests whether at least one element in the array passes the test implemented by the provided function. It returns a Boolean value.
 
 ```js
-[2, 5, 8, 1, 4].some((x) => x > 10); //false
-[12, 5, 8, 1, 4].some((x) => x > 10); // true
+;[2, 5, 8, 1, 4].some((x) => x > 10) //false
+;[12, 5, 8, 1, 4].some((x) => x > 10) // true
 ```
 
 ### Array.prototype.filter((element,index,array)=>{})
@@ -283,14 +283,14 @@ var filteredNumbers = numbers.map(function (num, index) {
 - creates a new array with all elements that pass the test implemented by the provided function.
 
 ```js
-const fruits = ["apple", "banana", "grapes", "mango", "orange"];
+const fruits = ["apple", "banana", "grapes", "mango", "orange"]
 const filterItems = (arr, query) => {
   return arr.filter(
     (el) => el.toLowerCase().indexOf(query.toLowerCase()) !== -1
-  );
-};
-console.log(filterItems(fruits, "ap")); // ['apple', 'grapes']
-console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
+  )
+}
+console.log(filterItems(fruits, "ap")) // ['apple', 'grapes']
+console.log(filterItems(fruits, "an")) // ['banana', 'mango', 'orange']
 ```
 
 ### Array.prototype.forEach((element,index,array)=>{})
@@ -299,11 +299,11 @@ console.log(filterItems(fruits, "an")); // ['banana', 'mango', 'orange']
 
 ```js
 const logArrayElements = (element, index /*, array */) => {
-  console.log(`a[${index}] = ${element}`);
-};
+  console.log(`a[${index}] = ${element}`)
+}
 
 // 注意，索引 2 被跳过，因为数组中这个位置没有内容
-[2, 5, , 9].forEach(logArrayElements);
+;[2, 5, , 9].forEach(logArrayElements)
 ```
 
 ### Array.prototype.entries() / Array.prototype.keys() / Array.prototype.values()
@@ -313,20 +313,20 @@ const logArrayElements = (element, index /*, array */) => {
 - returns a new Array Iterator object that contains the key/value pairs for each index in the array.
 
 ```js
-for (let [index, elem] of ['a', 'b'].entries()) {
-  console.log(index, elem);
+for (let [index, elem] of ["a", "b"].entries()) {
+  console.log(index, elem)
 }
 // 0 "a"
 // 1 "b"
 
-for (let index of ['a', 'b'].keys()) {
-  console.log(index);
+for (let index of ["a", "b"].keys()) {
+  console.log(index)
 }
 // 0
 // 1
 
-for (let elem of ['a', 'b'].values()) {
-  console.log(elem);
+for (let elem of ["a", "b"].values()) {
+  console.log(elem)
 }
 // 'a'
 // 'b'
@@ -348,9 +348,9 @@ for (let elem of ['a', 'b'].values()) {
 回调函数第一次执行时，`accumulator` 和 `currentValue` 的取值有两种情况：如果调用 `reduce()` 时提供了 `initialValue`，`accumulator` 取值为 `initialValue`，`currentValue` 取数组中的第一个值；如果没有提供 `initialValue`，那么 `accumulator` 取数组中的第一个值，`currentValue` 取数组中的第二个值。
 
 ```js
-[0, 1, 2, 3, 4].reduce(
+;[0, 1, 2, 3, 4].reduce(
   (accumulator, currentValue, currentIndex, array) => accumulator + currentValue
-);
+)
 ```
 
 ### Array.prototype.reduceRight((accumulator,element,index,array)=>{})
@@ -364,31 +364,31 @@ const array1 = [
   [0, 1],
   [2, 3],
   [4, 5],
-].reduceRight((accumulator, currentValue) => accumulator.concat(currentValue));
+].reduceRight((accumulator, currentValue) => accumulator.concat(currentValue))
 
-console.log(array1);
+console.log(array1)
 // expected output: Array [4, 5, 2, 3, 0, 1]
 ```
 
 ### Array.prototype.find((element,index,array)=>{}) / Array.prototype.findLast((element,index,array)=>{})
 
-数组实例的 `find()` 方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为true的成员，然后**返回该成员**。如果没有符合条件的成员，则返回undefined。
+数组实例的 `find()` 方法，用于**找出第一个符合条件的数组成员**。它的参数是一个回调函数，所有数组成员依次执行该回调函数，直到找出第一个返回值为 true 的成员，然后**返回该成员**。如果没有符合条件的成员，则返回 undefined。
 
 - The find() method returns the first element in the provided array that satisfies the provided testing function. If no values satisfy the testing function, undefined is returned.
 
 ```js
-const array1 = [5, 12, 8, 130, 44];
+const array1 = [5, 12, 8, 130, 44]
 
-const found = array1.find(element => element > 10);
+const found = array1.find((element) => element > 10)
 
-console.log(found);
+console.log(found)
 // Expected output: 12
 
-const array1 = [5, 12, 50, 130, 44];
+const array1 = [5, 12, 50, 130, 44]
 
-const found = array1.findLast((element) => element > 45);
+const found = array1.findLast((element) => element > 45)
 
-console.log(found);
+console.log(found)
 // Expected output: 130
 ```
 
@@ -399,15 +399,15 @@ console.log(found);
 - The findIndex() method returns the index of the first element in an array that satisfies the provided testing function. If no elements satisfy the testing function, -1 is returned.
 
 ```js
-[1, 5, 10, 15].findIndex(function(value, index, arr) {
-  return value > 9;
+;[1, 5, 10, 15].findIndex(function (value, index, arr) {
+  return value > 9
 }) // 2
 
-const array1 = [5, 12, 50, 130, 44];
+const array1 = [5, 12, 50, 130, 44]
 
-const isLargeNumber = (element) => element > 45;
+const isLargeNumber = (element) => element > 45
 
-console.log(array1.findLastIndex(isLargeNumber));
+console.log(array1.findLastIndex(isLargeNumber))
 // Expected output: 3
 // Index of element with value: 130
 ```
@@ -419,17 +419,17 @@ console.log(array1.findLastIndex(isLargeNumber));
 - The includes() method determines whether an array includes a certain value among its entries, returning true or false as appropriate.
 
 ```js
-const array1 = [1, 2, 3];
+const array1 = [1, 2, 3]
 
-console.log(array1.includes(2));
+console.log(array1.includes(2))
 // Expected output: true
 
-const pets = ['cat', 'dog', 'bat'];
+const pets = ["cat", "dog", "bat"]
 
-console.log(pets.includes('cat'));
+console.log(pets.includes("cat"))
 // Expected output: true
 
-console.log(pets.includes('at'));
+console.log(pets.includes("at"))
 // Expected output: false
 ```
 
@@ -440,16 +440,16 @@ console.log(pets.includes('at'));
 - The indexOf() method returns the first index at which a given element can be found in the array, or -1 if it is not present.
 
 ```js
-const beasts = ['ant', 'bison', 'camel', 'duck', 'bison'];
+const beasts = ["ant", "bison", "camel", "duck", "bison"]
 
-console.log(beasts.indexOf('bison'));
+console.log(beasts.indexOf("bison"))
 // Expected output: 1
 
 // Start from index 2
-console.log(beasts.indexOf('bison', 2));
+console.log(beasts.indexOf("bison", 2))
 // Expected output: 4
 
-console.log(beasts.indexOf('giraffe'));
+console.log(beasts.indexOf("giraffe"))
 // Expected output: -1
 ```
 
@@ -460,14 +460,14 @@ console.log(beasts.indexOf('giraffe'));
 - depth 可选指定要提取嵌套数组的结构深度，默认值为 1。
 
 ```js
-const arr1 = [0, 1, 2, [3, 4]];
+const arr1 = [0, 1, 2, [3, 4]]
 
-console.log(arr1.flat());
+console.log(arr1.flat())
 // Expected output: Array [0, 1, 2, 3, 4]
 
-const arr2 = [0, 1, 2, [[[3, 4]]]];
+const arr2 = [0, 1, 2, [[[3, 4]]]]
 
-console.log(arr2.flat(2));
+console.log(arr2.flat(2))
 // Expected output: Array [0, 1, 2, Array [3, 4]]
 ```
 
@@ -478,12 +478,12 @@ console.log(arr2.flat(2));
 - The fill() method changes all elements in an array to a static value, from a start index (default 0) to an end index (default array.length). It returns the modified array.
 
 ```js
-let arr = new Array(3).fill({name: "Mike"});
-arr[0].name = "Ben";
+let arr = new Array(3).fill({ name: "Mike" })
+arr[0].name = "Ben"
 // [{name: "Ben"}, {name: "Ben"}, {name: "Ben"}]
 ```
 
-## Array总结
+## Array 总结
 
 ### 会改变原数组的方法
 
@@ -523,8 +523,8 @@ arr[0].name = "Ben";
 ### 数组扁平化
 
 ```js
-let arr = [1, [2, [3, [4]]], 5];
-let str = JSON.stringify(arr);
+let arr = [1, [2, [3, [4]]], 5]
+let str = JSON.stringify(arr)
 ```
 
 - `Array.prototype.flat()`
@@ -539,6 +539,47 @@ let str = JSON.stringify(arr);
 - `Array.prototype.map()`
 - 解构赋值
 
+### 方法汇总
+
+- `length`: 返回数组中的元素数量。
+- `constructor`: 指定创建数组原型的函数。
+- `prototype`: 允许你向数组的原型对象添加属性和方法。
+- `Symbol.iterator`: 返回用于迭代数组元素的迭代器对象。
+- `concat()`: 连接两个或多个数组并返回一个新数组。
+- `join()`: 将数组的所有元素连接成一个字符串。
+- `push()`: 将一个或多个元素添加到数组的末尾并返回数组的新长度。
+- `pop()`: 从数组中移除最后一个元素并返回该元素。
+- `shift()`: 从数组中移除第一个元素并返回该元素。
+- `unshift()`: 将一个或多个元素添加到数组的开头并返回数组的新长度。
+- `slice()`: 返回一个从开始到结束（不包括结束）选定的部分的浅拷贝。
+- `splice()`: 在指定的索引位置更改数组的内容，删除、替换或添加元素。
+- `indexOf()`: 返回元素在数组中第一次出现的索引，如果不存在则返回-1。
+- `lastIndexOf()`: 返回元素在数组中最后一次出现的索引，如果不存在则返回-1。
+- `forEach()`: 为数组中的每个元素执行提供的函数一次。
+- `map()`: 创建一个新数组，其中包含对数组中的每个元素调用提供的函数的结果。
+- `filter()`: 创建一个新数组，其中包含通过提供的函数实现的测试的所有元素。
+- `reduce()`: 将一个函数应用于累加器和数组中的每个元素，将其减少为单个值。
+- `reduceRight()`: 从右到左应用一个函数于累加器和数组的每个元素，将其减少为单个值。
+- `sort()`: 原地对数组的元素进行排序并返回排序后的数组。
+- `reverse()`: 原地反转数组中元素的顺序。
+- `toString()`: 返回表示指定数组及其元素的字符串。
+- `toLocaleString()`: 返回表示数组元素的本地化字符串。
+- `includes()`: 确定数组是否包含某个值。
+- `some()`: 检查数组中是否至少有一个元素满足提供的条件。
+- `every()`: 检查数组中是否所有元素都满足提供的条件。
+- `find()`: 返回满足提供的条件的数组中的第一个元素。
+- `findIndex()`: 返回满足提供的条件的数组中的第一个元素的索引。
+- `fill()`: 从开始索引到结束索引将数组中的所有元素填充为静态值。
+- `copyWithin()`: 将数组中的一系列元素复制到数组中的另一个位置。
+- `flat()`: 创建一个新数组，其中包含所有子数组元素递归连接到指定深度。
+- `flatMap()`: 使用映射函数映射每个元素并将结果展平到新数组中。
+- `from()`: 从可迭代对象或类似数组对象创建一个新的浅拷贝数组。
+- `isArray()`: 确定传递的值是否为数组。
+- `of()`: 创建一个包含可变数量元素的新数组。
+- `keys()`: 返回包含数组键的新数组迭代器。
+- `values()`: 返回包含数组值的新数组迭代器。
+- `entries()`: 返回包含数组键值对的新数组迭代器。
+
 ## 类数组对象
 
 所谓的类数组对象就是拥有一个 length 属性和若干索引属性的对象。举例如下：
@@ -547,36 +588,36 @@ let str = JSON.stringify(arr);
 - 一些 DOM 方法(`document.getElementsByTagName()`等)也返回类数组对象
 
 ```js
-var array = ['name', 'age', 'sex'];
+var array = ["name", "age", "sex"]
 
 var arrayLike = {
-    0: 'name',
-    1: 'age',
-    2: 'sex',
-    length: 3
+  0: "name",
+  1: "age",
+  2: "sex",
+  length: 3,
 }
 ```
 
 这类对象不能直接调用数组的方法，但是可以通过间接调用的方式：
 
 ```js
-var arrayLike = {0: 'name', 1: 'age', 2: 'sex', length: 3 }
+var arrayLike = { 0: "name", 1: "age", 2: "sex", length: 3 }
 // 1. slice
-Array.prototype.slice.call(arrayLike); // ["name", "age", "sex"] 
+Array.prototype.slice.call(arrayLike) // ["name", "age", "sex"]
 // 2. splice
-Array.prototype.splice.call(arrayLike, 0); // ["name", "age", "sex"] 
+Array.prototype.splice.call(arrayLike, 0) // ["name", "age", "sex"]
 // 3. ES6 Array.from
-Array.from(arrayLike); // ["name", "age", "sex"] 
+Array.from(arrayLike) // ["name", "age", "sex"]
 // 4. apply
 Array.prototype.concat.apply([], arrayLike)
 // 5. join
-Array.prototype.join.call(arrayLike, '&'); // name&age&sex
+Array.prototype.join.call(arrayLike, "&") // name&age&sex
 // 6. slice可以做到类数组转数组
-Array.prototype.slice.call(arrayLike, 0); // ["name", "age", "sex"] 
+Array.prototype.slice.call(arrayLike, 0) // ["name", "age", "sex"]
 // 7. map
-Array.prototype.map.call(arrayLike, function(item){
-    return item.toUpperCase();
-}); 
+Array.prototype.map.call(arrayLike, function (item) {
+  return item.toUpperCase()
+})
 // ["NAME", "AGE", "SEX"]
 ```
 
