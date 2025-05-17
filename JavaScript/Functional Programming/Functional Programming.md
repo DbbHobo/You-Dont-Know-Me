@@ -17,7 +17,7 @@
 - 更少的 Bug：使用纯函数意味着你的函数中不存在指向不明的 this，不存在对全局变量的引用，不存在对参数的修改，这些共享状态往往是绝大多数 bug 的源头。
 
 ```js
-const add = (a,b) => a + b;
+const add = (a, b) => a + b
 ```
 
 ## 函数缓存
@@ -42,8 +42,8 @@ const memoize = function (func, content) {
 }
 
 const calc = memoize(add)
-const num1 = calc(100,200)
-const num2 = calc(100,200) // 缓存得到的结果
+const num1 = calc(100, 200)
+const num2 = calc(100, 200) // 缓存得到的结果
 ```
 
 ## 函数的合成
@@ -58,51 +58,54 @@ const num2 = calc(100,200) // 缓存得到的结果
 // 几种进行函数合成的方式如下：
 const compose = function (f, g) {
   return function (x) {
-    return f(g(x));
-  };
+    return f(g(x))
+  }
 }
 
-const compose = (...fns) => (...args) => fns.reduceRight((val, fn) => fn.apply(null, [].concat(val)), args);
+const compose =
+  (...fns) =>
+  (...args) =>
+    fns.reduceRight((val, fn) => fn.apply(null, [].concat(val)), args)
 
-const compose = (...fns) => x0 => fns.reduceRight(
-    (x, f) => f(x),
-    x0
-);
+const compose =
+  (...fns) =>
+  (x0) =>
+    fns.reduceRight((x, f) => f(x), x0)
 
 // We call this function 'flow' as the values flow,
 // from left to right.
-const flow = (...fns) => x0 => fns.reduce(
-    (x, f) => f(x),
-    x0
-);
+const flow =
+  (...fns) =>
+  (x0) =>
+    fns.reduce((x, f) => f(x), x0)
 
-const pipe = (x0, ...fns) => fns.reduce(
-    (x, f) => f(x),
-    x0
-);
+const pipe = (x0, ...fns) => fns.reduce((x, f) => f(x), x0)
 ```
 
 ```js
 // 函数合成使用实例如下：
-const pipe = (...fns) => x0 => fns.reduce((x, f) => f(x), x0);
- 
-const trace = msg => x => {
-  console.log(msg, x);
-  return x;
+const pipe =
+  (...fns) =>
+  (x0) =>
+    fns.reduce((x, f) => f(x), x0)
+
+const trace = (msg) => (x) => {
+  console.log(msg, x)
+  return x
 }
- 
-const increment = n => n + 1;
-const double = n => n * 2;
-const square = n => n * n;
- 
+
+const increment = (n) => n + 1
+const double = (n) => n * 2
+const square = (n) => n * n
+
 const incDoubleSquare = pipe(
   increment,
-  trace('before double'),
+  trace("before double"),
   double,
-  trace('after double'),
+  trace("after double"),
   square
-);
-incDoubleSquare(3); // 64
+)
+incDoubleSquare(3) // 64
 // Also logs out:
 // before double 4
 // after double 8
@@ -112,35 +115,58 @@ incDoubleSquare(3); // 64
 
 函数柯里化就是将 `f(a,b,c)` 调用形式转化为 `f(a)(b)(c)` 调用形式的一种转化方法。柯里化是一种将使用多个参数的一个函数转换成一系列使用一个参数的函数的技术。
 
+1. 提前固定部分参数，生成一个更具体的新函数，避免重复传递相同参数。
+2. 根据参数组合生成不同的函数逻辑，增强代码复用性。
+
+```js
+// 通用日志函数
+const log = (level, message) => console.log(`[${level}] ${message}`)
+
+// 柯里化后生成特定级别的日志函数
+const curryLog = curry((level, message) => log(level, message))
+const logError = curryLog("ERROR")
+const logInfo = curryLog("INFO")
+
+logError("Connection failed") // [ERROR] Connection failed
+logInfo("User logged in") // [INFO] User logged in
+
+// 动态生成折扣计算函数
+const applyDiscount = curry((discount, price) => price * (1 - discount))
+const summerSale = applyDiscount(0.2) // 打8折
+const blackFriday = applyDiscount(0.3) // 打7折
+
+console.log(summerSale(100)) // 80
+```
+
 ### 柯里化转化方法
 
 柯里化的核心其实就是把用来的多个参数通过返回一个函数来接受原来的参数来达到减少入参的目的，一个简易版柯里化转化方法如下：
 
 ```js
-function curry(func) {
-  return function curried(...args) {
-    if (args.length >= func.length) {
-      return func.apply(this, args);
+function curry(fn) {
+  return function curried(...args1) {
+    if (args1.length >= fn.length) {
+      return fn.apply(this, args1)
     } else {
       return function (...args2) {
-        return curried.apply(this, args.concat(args2));
-      };
+        return curried.apply(this, args1.concat(args2))
+      }
     }
-  };
+  }
 }
 
-const curry = (fn, ...args) => {
-    if (args.length >= fn.length) {
-        return fn(...args)
-    } else {
-        return (...args2) => curry(fn, ...args, ...args2)
-    }
+const curry = (fn, ...args1) => {
+  if (args1.length >= fn.length) {
+    return fn(...args1)
+  } else {
+    return (...args2) => curry(fn, ...args1, ...args2)
+  }
 }
 ```
 
 ### 柯里化的应用
 
-Vue3源码中关于生命周期的逻辑中有对于函数柯里化的应用，`createHook` 方法最终实际上调用了 `injectHook` 方法，但是为了固定参数避免每次都传用户回调函数和组件实例，用了函数柯里化的技巧将参数固定，只需传入生命周期名字即可。然后这些生命周期函数作为对外的API供开发者调用：
+Vue3 源码中关于生命周期的逻辑中有对于函数柯里化的应用，`createHook` 方法最终实际上调用了 `injectHook` 方法，但是为了固定参数避免每次都传用户回调函数和组件实例，用了函数柯里化的技巧将参数固定，只需传入生命周期名字即可。然后这些生命周期函数作为对外的 API 供开发者调用：
 
 ```ts
 export const createHook =
@@ -166,18 +192,18 @@ export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 例如，`Array.prototype.map()`，`Array.prototype.filter()`，`Array.prototype.sort()` 和 `Array.prototype.reduce()` 是语言中内置的一些高阶函数。
 
 ```js
-const mozart = numbers =>
+const mozart = (numbers) =>
   numbers
-    .filter(n => n % 2 === 0)
-    .map(n => n * 2)
-    .reduce((a, b) => a + b, 0);
- 
-mozart([1, 2, 3, 4, 5]); // 12
+    .filter((n) => n % 2 === 0)
+    .map((n) => n * 2)
+    .reduce((a, b) => a + b, 0)
+
+mozart([1, 2, 3, 4, 5]) // 12
 ```
 
 ## 参考资料
 
-[学习JavaScript函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
+[学习 JavaScript 函数式编程](https://www.youtube.com/watch?v=e-5obm1G_FY)
 
 [An introduction to functional programming](https://codewords.recurse.com/issues/one/an-introduction-to-functional-programming)
 
@@ -189,6 +215,6 @@ mozart([1, 2, 3, 4, 5]); // 12
 
 [JavaScript 专题之函数记忆](https://juejin.cn/post/6844903494256705543)
 
-[JavaScript专题之函数组合](https://juejin.cn/post/6844903493740789774)
+[JavaScript 专题之函数组合](https://juejin.cn/post/6844903493740789774)
 
 [JavaScript 专题之函数柯里化](https://juejin.cn/post/6844903490771222542)

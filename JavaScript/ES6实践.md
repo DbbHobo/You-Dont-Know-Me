@@ -8,13 +8,13 @@
 
 ```js
 // bad
-var foo = 'bar';
+var foo = "bar"
 
 // good
-let foo = 'bar';
+let foo = "bar"
 
 // better
-const foo = 'bar';
+const foo = "bar"
 ```
 
 ## 模板字符串
@@ -25,10 +25,10 @@ const foo = 'bar';
 
 ```js
 // bad
-const foo = 'this is a' + example;
+const foo = "this is a" + example
 
 // good
-const foo = `this is a ${example}`;
+const foo = `this is a ${example}`
 ```
 
 - 标签模板
@@ -38,13 +38,13 @@ const foo = `this is a ${example}`;
 ```js
 // 例子 2-2
 
-let url = oneLine `
+let url = oneLine`
     www.taobao.com/example/index.html
     ?foo=${foo}
     &bar=${bar}
-`;
+`
 
-console.log(url); // www.taobao.com/example/index.html?foo=foo&bar=bar
+console.log(url) // www.taobao.com/example/index.html?foo=foo&bar=bar
 ```
 
 ## 箭头函数
@@ -57,10 +57,10 @@ console.log(url); // www.taobao.com/example/index.html?foo=foo&bar=bar
 // bad
 let foo = {
   value: 1,
-  getValue: () => console.log(this.value)
+  getValue: () => console.log(this.value),
 }
 
-foo.getValue();  // undefined
+foo.getValue() // undefined
 ```
 
 - 不要定义原型方法
@@ -74,18 +74,18 @@ function Foo() {
 Foo.prototype.getValue = () => console.log(this.value)
 
 let foo = new Foo()
-foo.getValue();  // undefined
+foo.getValue() // undefined
 ```
 
 - 不要作为事件的回调函数
 
 ```js
 // bad
-const button = document.getElementById('myButton');
-button.addEventListener('click', () => {
-    console.log(this === window); // => true
-    this.innerHTML = 'Clicked button';
-});
+const button = document.getElementById("myButton")
+button.addEventListener("click", () => {
+  console.log(this === window) // => true
+  this.innerHTML = "Clicked button"
+})
 ```
 
 ## Symbol
@@ -124,9 +124,9 @@ element[isMoving] = true;
 
 ```js
 // bad
-const TYPE_AUDIO = 'AUDIO'
-const TYPE_VIDEO = 'VIDEO'
-const TYPE_IMAGE = 'IMAGE'
+const TYPE_AUDIO = "AUDIO"
+const TYPE_VIDEO = "VIDEO"
+const TYPE_IMAGE = "IMAGE"
 
 // good
 const TYPE_AUDIO = Symbol()
@@ -134,7 +134,7 @@ const TYPE_VIDEO = Symbol()
 const TYPE_IMAGE = Symbol()
 
 function handleFileResource(resource) {
-  switch(resource.type) {
+  switch (resource.type) {
     case TYPE_AUDIO:
       playAudio(resource)
       break
@@ -145,7 +145,7 @@ function handleFileResource(resource) {
       previewImage(resource)
       break
     default:
-      throw new Error('Unknown type of resource')
+      throw new Error("Unknown type of resource")
   }
 }
 ```
@@ -155,25 +155,25 @@ function handleFileResource(resource) {
 `Symbol` 也可以用于私有变量的实现。
 
 ```js
-const Example = (function() {
-    var _private = Symbol('private');
+const Example = (function () {
+  var _private = Symbol("private")
 
-    class Example {
-        constructor() {
-          this[_private] = 'private';
-        }
-        getName() {
-          return this[_private];
-        }
+  class Example {
+    constructor() {
+      this[_private] = "private"
     }
+    getName() {
+      return this[_private]
+    }
+  }
 
-    return Example;
-})();
+  return Example
+})()
 
-var ex = new Example();
+var ex = new Example()
 
-console.log(ex.getName()); // private
-console.log(ex.name); // undefined
+console.log(ex.getName()) // private
+console.log(ex.name) // undefined
 ```
 
 ## Set 和 Map
@@ -181,7 +181,7 @@ console.log(ex.name); // undefined
 - 数组去重
 
 ```js
-[...new Set(array)]
+;[...new Set(array)]
 ```
 
 - 条件语句的优化
@@ -192,36 +192,36 @@ console.log(ex.name); // undefined
 // bad
 function test(color) {
   switch (color) {
-    case 'red':
-      return ['apple', 'strawberry'];
-    case 'yellow':
-      return ['banana', 'pineapple'];
-    case 'purple':
-      return ['grape', 'plum'];
+    case "red":
+      return ["apple", "strawberry"]
+    case "yellow":
+      return ["banana", "pineapple"]
+    case "purple":
+      return ["grape", "plum"]
     default:
-      return [];
+      return []
   }
 }
 
-test('yellow'); // ['banana', 'pineapple']
+test("yellow") // ['banana', 'pineapple']
 // good
 const fruitColor = {
-  red: ['apple', 'strawberry'],
-  yellow: ['banana', 'pineapple'],
-  purple: ['grape', 'plum']
-};
+  red: ["apple", "strawberry"],
+  yellow: ["banana", "pineapple"],
+  purple: ["grape", "plum"],
+}
 
 function test(color) {
-  return fruitColor[color] || [];
+  return fruitColor[color] || []
 }
 // better
 const fruitColor = new Map()
-  .set('red', ['apple', 'strawberry'])
-  .set('yellow', ['banana', 'pineapple'])
-  .set('purple', ['grape', 'plum']);
+  .set("red", ["apple", "strawberry"])
+  .set("yellow", ["banana", "pineapple"])
+  .set("purple", ["grape", "plum"])
 
 function test(color) {
-  return fruitColor.get(color) || [];
+  return fruitColor.get(color) || []
 }
 ```
 
@@ -239,16 +239,16 @@ Generator 对象
 字符串
 
 - 优势
-ES2015 引入了 `for..of` 循环，它结合了 `forEach` 的简洁性和中断循环的能力：
+  ES2015 引入了 `for..of` 循环，它结合了 `forEach` 的简洁性和中断循环的能力：
 
 ```js
-for (const v of ['a', 'b', 'c']) {
-  console.log(v);
+for (const v of ["a", "b", "c"]) {
+  console.log(v)
 }
 // a b c
 
-for (const [i, v] of ['a', 'b', 'c'].entries()) {
-  console.log(i, v);
+for (const [i, v] of ["a", "b", "c"].entries()) {
+  console.log(i, v)
 }
 // 0 "a"
 // 1 "b"
@@ -258,21 +258,21 @@ for (const [i, v] of ['a', 'b', 'c'].entries()) {
 - 遍历 Map
 
 ```js
-let map = new Map(arr);
+let map = new Map(arr)
 
 // 遍历 key 值
 for (let key of map.keys()) {
-  console.log(key);
+  console.log(key)
 }
 
 // 遍历 value 值
 for (let value of map.values()) {
-  console.log(value);
+  console.log(value)
 }
 
 // 遍历 key 和 value 值(一)
 for (let item of map.entries()) {
-  console.log(item[0], item[1]);
+  console.log(item[0], item[1])
 }
 
 // 遍历 key 和 value 值(二)
@@ -287,35 +287,35 @@ for (let [key, value] of data) {
 
 ```js
 // bad
-request(url, function(err, res, body) {
-    if (err) handleError(err);
-    fs.writeFile('1.txt', body, function(err) {
-        request(url2, function(err, res, body) {
-            if (err) handleError(err)
-        })
+request(url, function (err, res, body) {
+  if (err) handleError(err)
+  fs.writeFile("1.txt", body, function (err) {
+    request(url2, function (err, res, body) {
+      if (err) handleError(err)
     })
-});
+  })
+})
 
 // good
 request(url)
-.then(function(result) {
-    return writeFileAsynv('1.txt', result)
-})
-.then(function(result) {
+  .then(function (result) {
+    return writeFileAsynv("1.txt", result)
+  })
+  .then(function (result) {
     return request(url2)
-})
-.catch(function(e){
+  })
+  .catch(function (e) {
     handleError(e)
-});
+  })
 ```
 
 - finally
 
 ```js
-fetch('file.json')
-.then(data => data.json())
-.catch(error => console.error(error))
-.finally(() => console.log('finished'));
+fetch("file.json")
+  .then((data) => data.json())
+  .catch((error) => console.error(error))
+  .finally(() => console.log("finished"))
 ```
 
 ## Async
@@ -370,15 +370,13 @@ async function fetch() {
 ```js
 // good
 function fetch() {
-  return (
-    fetchData()
-    .then(value1 => {
+  return fetchData()
+    .then((value1) => {
       return fetchMoreData(value1)
     })
-    .then(value2 => {
+    .then((value2) => {
       return fetchMoreData2(value2)
     })
-  )
 }
 
 // better
@@ -386,7 +384,7 @@ async function fetch() {
   const value1 = await fetchData()
   const value2 = await fetchMoreData(value1)
   return fetchMoreData2(value2)
-};
+}
 ```
 
 - 错误处理
@@ -396,7 +394,7 @@ async function fetch() {
 function fetch() {
   try {
     fetchData()
-      .then(result => {
+      .then((result) => {
         const data = JSON.parse(result)
       })
       .catch((err) => {
@@ -414,7 +412,7 @@ async function fetch() {
   } catch (err) {
     console.log(err)
   }
-};
+}
 ```
 
 - "async 地狱"
@@ -446,34 +444,34 @@ async function fetch() {
 
 ```js
 class Foo {
-  static bar () {
-    this.baz();
+  static bar() {
+    this.baz()
   }
-  static baz () {
-    console.log('hello');
+  static baz() {
+    console.log("hello")
   }
-  baz () {
-    console.log('world');
+  baz() {
+    console.log("world")
   }
 }
 
-Foo.bar(); // hello
+Foo.bar() // hello
 ```
 
 ```js
 class Shape {
   constructor(width, height) {
-    this._width = width;
-    this._height = height;
+    this._width = width
+    this._height = height
   }
   get area() {
-    return this._width * this._height;
+    return this._width * this._height
   }
 }
 
-const square = new Shape(10, 10);
-console.log(square.area);    // 100
-console.log(square._width);  // 10
+const square = new Shape(10, 10)
+console.log(square.area) // 100
+console.log(square._width) // 10
 ```
 
 ## Decorator
@@ -484,7 +482,7 @@ console.log(square._width);  // 10
 class Math {
   @log
   add(a, b) {
-    return a + b;
+    return a + b
   }
 }
 ```
@@ -493,18 +491,13 @@ class Math {
 
 ```js
 class Toggle extends React.Component {
-
   @autobind
   handleClick() {
     console.log(this)
   }
 
   render() {
-    return (
-      <button onClick={this.handleClick}>
-        button
-      </button>
-    );
+    return <button onClick={this.handleClick}>button</button>
   }
 }
 ```
@@ -513,18 +506,13 @@ class Toggle extends React.Component {
 
 ```js
 class Toggle extends React.Component {
-
   @debounce(500, true)
   handleClick() {
-    console.log('toggle')
+    console.log("toggle")
   }
 
   render() {
-    return (
-      <button onClick={this.handleClick}>
-        button
-      </button>
-    );
+    return <button onClick={this.handleClick}>button</button>
   }
 }
 ```
@@ -602,12 +590,14 @@ Button.defaultProps = {
 ```
 
 ```js
-const required = () => {throw new Error('Missing parameter')};
+const required = () => {
+  throw new Error("Missing parameter")
+}
 
-const add = (a = required(), b = required()) => a + b;
+const add = (a = required(), b = required()) => a + b
 
 add(1, 2) // 3
-add(1); // Error: Missing parameter.
+add(1) // Error: Missing parameter.
 ```
 
 ## 解构赋值
@@ -629,23 +619,22 @@ componentWillReceiveProps({active}) {
 ```js
 handleEvent = () => {
   this.setState({
-    data: this.state.data.set("key", "value")
+    data: this.state.data.set("key", "value"),
   })
-};
+}
 
 // good
 handleEvent = () => {
-  this.setState(({data}) => ({
-    data: data.set("key", "value")
+  this.setState(({ data }) => ({
+    data: data.set("key", "value"),
   }))
-};
+}
 ```
 
 ```js
-Promise.all([Promise.resolve(1), Promise.resolve(2)])
-.then(([x, y]) => {
-    console.log(x, y);
-});
+Promise.all([Promise.resolve(1), Promise.resolve(2)]).then(([x, y]) => {
+  console.log(x, y)
+})
 ```
 
 - 对象深度解构
@@ -653,88 +642,88 @@ Promise.all([Promise.resolve(1), Promise.resolve(2)])
 ```js
 // bad
 function test(fruit) {
-  if (fruit && fruit.name)  {
-    console.log (fruit.name);
+  if (fruit && fruit.name) {
+    console.log(fruit.name)
   } else {
-    console.log('unknown');
+    console.log("unknown")
   }
 }
 
 // good
-function test({name} = {}) {
-  console.log (name || 'unknown');
+function test({ name } = {}) {
+  console.log(name || "unknown")
 }
 ```
 
 ```js
 let obj = {
-    a: {
-      b: {
-        c: 1
-      }
-    }
-};
+  a: {
+    b: {
+      c: 1,
+    },
+  },
+}
 
-const {a: {b: {c = ''} = ''} = ''} = obj;
+const { a: { b: { c = "" } = "" } = "" } = obj
 ```
 
 - 数组解构
 
 ```js
 // bad
-const splitLocale = locale.split("-");
-const language = splitLocale[0];
-const country = splitLocale[1];
+const splitLocale = locale.split("-")
+const language = splitLocale[0]
+const country = splitLocale[1]
 
 // good
-const [language, country] = locale.split('-');
+const [language, country] = locale.split("-")
 ```
 
 - 变量重命名
 
 ```js
-let { foo: baz } = { foo: 'aaa', bar: 'bbb' };
-console.log(baz); // "aaa"
+let { foo: baz } = { foo: "aaa", bar: "bbb" }
+console.log(baz) // "aaa"
 ```
 
 - 仅获取部分属性
 
 ```js
 function test(input) {
-  return [left, right, top, bottom];
+  return [left, right, top, bottom]
 }
-const [left, __, top] = test(input);
+const [left, __, top] = test(input)
 
 function test(input) {
-  return { left, right, top, bottom };
+  return { left, right, top, bottom }
 }
-const { left, right } = test(input);
+const { left, right } = test(input)
 ```
 
 - 增强的对象字面量
 
 ```js
 // bad
-const something = 'y'
+const something = "y"
 const x = {
-  something: something
+  something: something,
 }
 
 // good
-const something = 'y'
+const something = "y"
 const x = {
-  something
-};
+  something,
+}
 ```
 
 - 动态属性
 
 ```js
 const x = {
-  ['a' + '_' + 'b']: 'z'
+  ["a" + "_" + "b"]: "z",
 }
 
-console.log(x.a_b); // z
+console.log(x.a_b) // z
 ```
 
 ## 数组的拓展方法
@@ -742,34 +731,34 @@ console.log(x.a_b); // z
 - keys
 
 ```js
-var arr = ["a", , "c"];
+var arr = ["a", , "c"]
 
-var sparseKeys = Object.keys(arr);
-console.log(sparseKeys); // ['0', '2']
+var sparseKeys = Object.keys(arr)
+console.log(sparseKeys) // ['0', '2']
 
-var denseKeys = [...arr.keys()];
-console.log(denseKeys);  // [0, 1, 2]
+var denseKeys = [...arr.keys()]
+console.log(denseKeys) // [0, 1, 2]
 ```
 
 - entries
 
 ```js
-var arr = ["a", "b", "c"];
-var iterator = arr.entries();
+var arr = ["a", "b", "c"]
+var iterator = arr.entries()
 
 for (let e of iterator) {
-    console.log(e);
+  console.log(e)
 }
 ```
 
 - values
 
 ```js
-let arr = ['w', 'y', 'k', 'o', 'p'];
-let eArr = arr.values();
+let arr = ["w", "y", "k", "o", "p"]
+let eArr = arr.values()
 
 for (let letter of eArr) {
-  console.log(letter);
+  console.log(letter)
 }
 ```
 
@@ -778,16 +767,16 @@ for (let letter of eArr) {
 ```js
 // bad
 function test(fruit) {
-  if (fruit == 'apple' || fruit == 'strawberry') {
-    console.log('red');
+  if (fruit == "apple" || fruit == "strawberry") {
+    console.log("red")
   }
 }
 
 // good
 function test(fruit) {
-  const redFruits = ['apple', 'strawberry', 'cherry', 'cranberries'];
+  const redFruits = ["apple", "strawberry", "cherry", "cranberries"]
   if (redFruits.includes(fruit)) {
-    console.log('red');
+    console.log("red")
   }
 }
 ```
@@ -796,38 +785,38 @@ function test(fruit) {
 
 ```js
 var inventory = [
-    {name: 'apples', quantity: 2},
-    {name: 'bananas', quantity: 0},
-    {name: 'cherries', quantity: 5}
-];
+  { name: "apples", quantity: 2 },
+  { name: "bananas", quantity: 0 },
+  { name: "cherries", quantity: 5 },
+]
 
 function findCherries(fruit) {
-    return fruit.name === 'cherries';
+  return fruit.name === "cherries"
 }
 
-console.log(inventory.find(findCherries)); // { name: 'cherries', quantity: 5 }
+console.log(inventory.find(findCherries)) // { name: 'cherries', quantity: 5 }
 ```
 
 - findIndex
 
 ```js
 function isPrime(element, index, array) {
-  var start = 2;
+  var start = 2
   while (start <= Math.sqrt(element)) {
     if (element % start++ < 1) {
-      return false;
+      return false
     }
   }
-  return element > 1;
+  return element > 1
 }
 
-console.log([4, 6, 8, 12].findIndex(isPrime)); // -1, not found
-console.log([4, 6, 7, 12].findIndex(isPrime)); // 2
+console.log([4, 6, 8, 12].findIndex(isPrime)) // -1, not found
+console.log([4, 6, 7, 12].findIndex(isPrime)) // 2
 ```
 
-## 数组新增方法includes、find等
+## 数组新增方法 includes、find 等
 
-- if中判断条件，利用数组的includes方法：
+- if 中判断条件，利用数组的 includes 方法：
 
 ```js
 // bad
@@ -852,31 +841,27 @@ if( condition.includes(type) ){
 
 ```js
 // bad
-const a = [1,2,3,4,5];
-const result = a.filter( 
-  item =>{
-    return item === 3
-  }
-)
+const a = [1, 2, 3, 4, 5]
+const result = a.filter((item) => {
+  return item === 3
+})
 // good
-const a = [1,2,3,4,5];
-const result = a.find( 
-  item =>{
-    return item === 3
-  }
-)
+const a = [1, 2, 3, 4, 5]
+const result = a.find((item) => {
+  return item === 3
+})
 ```
 
 - 输入框非空判断
-  
+
 ```js
 // bad
-if(value !== null && value !== undefined && value !== ''){
-    //...
+if (value !== null && value !== undefined && value !== "") {
+  //...
 }
 
 // good
-if((value??'') !== ''){
+if ((value ?? "") !== "") {
   //...
 }
 ```
@@ -888,11 +873,11 @@ if((value??'') !== ''){
 ```js
 // bad
 function sortNumbers() {
-  return Array.prototype.slice.call(arguments).sort();
+  return Array.prototype.slice.call(arguments).sort()
 }
 
 // good
-const sortNumbers = (...numbers) => numbers.sort();
+const sortNumbers = (...numbers) => numbers.sort()
 ```
 
 - 调用参数
@@ -904,16 +889,16 @@ Math.max.apply(null, [14, 3, 77])
 // good
 Math.max(...[14, 3, 77])
 // 等同于
-Math.max(14, 3, 77);
+Math.max(14, 3, 77)
 ```
 
 - 构建对象
-剔除部分属性，将剩下的属性构建一个新的对象
+  剔除部分属性，将剩下的属性构建一个新的对象
 
 ```js
-let [a, b, ...arr] = [1, 2, 3, 4, 5];
+let [a, b, ...arr] = [1, 2, 3, 4, 5]
 
-const { a, b, ...others } = { a: 1, b: 2, c: 3, d: 4, e: 5 };
+const { a, b, ...others } = { a: 1, b: 2, c: 3, d: 4, e: 5 }
 ```
 
 有条件的构建对象
@@ -921,14 +906,13 @@ const { a, b, ...others } = { a: 1, b: 2, c: 3, d: 4, e: 5 };
 ```js
 // bad
 function pick(data) {
-  const { id, name, age} = data
+  const { id, name, age } = data
 
   const res = { guid: id }
 
   if (name) {
     res.name = name
-  }
-  else if (age) {
+  } else if (age) {
     res.age = age
   }
 
@@ -936,11 +920,11 @@ function pick(data) {
 }
 
 // good
-function pick({id, name, age}) {
+function pick({ id, name, age }) {
   return {
     guid: id,
-    ...(name && {name}),
-    ...(age && {age})
+    ...(name && { name }),
+    ...(age && { age }),
   }
 }
 ```
@@ -948,13 +932,13 @@ function pick({id, name, age}) {
 合并对象
 
 ```js
-let obj1 = { a: 1, b: 2,c: 3 }
-let obj2 = { b: 4, c: 5, d: 6}
-let merged = {...obj1, ...obj2};
+let obj1 = { a: 1, b: 2, c: 3 }
+let obj2 = { b: 4, c: 5, d: 6 }
+let merged = { ...obj1, ...obj2 }
 ```
 
 - React
-将对象全部传入组件
+  将对象全部传入组件
 
 ```js
 const parmas =  {value1: 1, value2: 2, value3: 3}
@@ -965,24 +949,24 @@ const parmas =  {value1: 1, value2: 2, value3: 3}
 ## 双冒号运算符(::)
 
 ```js
-foo::bar;
+foo::bar
 // 等同于
-bar.bind(foo);
+bar.bind(foo)
 
-foo::bar(...arguments);
+foo::bar(...arguments)
 // 等同于
-bar.apply(foo, arguments);
+bar.apply(foo, arguments)
 // 如果双冒号左边为空，右边是一个对象的方法，则等于将该方法绑定在该对象上面。
 ```
 
 ```js
-var method = obj::obj.foo;
+var method = obj::obj.foo
 // 等同于
-var method = ::obj.foo;
+var method = ::obj.foo
 
-let log = ::console.log;
+let log = ::console.log
 // 等同于
-var log = console.log.bind(console);
+var log = console.log.bind(console)
 ```
 
 ## optional-chaining(?.)
@@ -994,74 +978,74 @@ const obj = {
       baz: 42,
     },
   },
-};
+}
 
-const baz = obj?.foo?.bar?.baz; // 42
+const baz = obj?.foo?.bar?.baz // 42
 ```
 
 同样支持函数：
 
 ```js
 function test() {
-  return 42;
+  return 42
 }
-test?.(); // 42
+test?.() // 42
 
-exists?.(); // undefined
+exists?.() // undefined
 ```
 
 需要添加 @babel/plugin-proposal-optional-chaining 插件支持
 
 ## 逻辑或(||)
 
-对于一组操作数的逻辑或（**||**，逻辑析取）运算符，当且仅当其一个或多个操作数为真，其运算结果为真。
+返回第一个真值（Truthy），若左侧为假值（Falsy），则返回右侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
 
 ```js
 // Basic boolean operations
-true || false     // returns true
-false || true     // returns true
-false || false    // returns false
+true || false // returns true
+false || true // returns true
+false || false // returns false
 
 // Working with different types
-"hello" || "world"    // returns "hello"
-"" || "fallback"      // returns "fallback"
-null || "default"     // returns "default"
-undefined || 42       // returns 42
+"hello" || "world" // returns "hello"
+"" || "fallback" // returns "fallback"
+null || "default" // returns "default"
+undefined || 42 // returns 42
 
 // Clean default value syntax
 function greet(name) {
-  return `Hello, ${name || 'friend'}!`;
+  return `Hello, ${name || "friend"}!`
 }
 
 // Useful for configuration objects
 const config = {
   port: process.env.PORT || 3000,
-  host: process.env.HOST || 'localhost',
-  timeout: process.env.TIMEOUT || 5000
-};
+  host: process.env.HOST || "localhost",
+  timeout: process.env.TIMEOUT || 5000,
+}
 ```
 
 ## 逻辑与(&&)
 
-当且仅当所有操作数为 true 时，一组布尔操作数的逻辑与（**&&**，逻辑连接）运算结果为 true，否则为 false。
+若左侧为真值（Truthy），返回右侧；否则返回左侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
 
 ```js
 // Boolean operations
-true && false     // returns false
-true && true      // returns true
-false && true     // returns false
+true && false // returns false
+true && true // returns true
+false && true // returns false
 
 // Working with values
-"hello" && "world"    // returns "world"
-"" && "test"         // returns ""
-null && "anything"    // returns null
+"hello" && "world" // returns "world"
+"" && "test" // returns ""
+null && "anything" // returns null
 
 // Pattern 1: Single-line conditional execution
-isValid && sendToServer(data);
+isValid && sendToServer(data)
 
 // Under the hood, this is doing:
 if (isValid) {
-  sendToServer(data);
+  sendToServer(data)
 }
 
 // Pattern 2: Conditional rendering in React
@@ -1070,70 +1054,63 @@ return (
     {isLoggedIn && <UserDashboard />}
     {hasError && <ErrorMessage text={errorText} />}
   </div>
-);
+)
 
 // React processes this as:
-{true && <Component />}  // renders <Component />
-{false && <Component />} // renders false (React ignores it)
+{
+  true && <Component />
+} // renders <Component />
+{
+  false && <Component />
+} // renders false (React ignores it)
 ```
 
 ## 空值合并运算符(??)
 
-空值合并运算符（**??**）是一个逻辑运算符，当左侧的操作数为 null 或者 undefined 时，返回其右侧操作数，否则返回左侧操作数。
-
-```js
-a ?? b
-// 相当于
-(a !== null && a !== void 0) ? a : b
-
-var foo = object.foo ?? "default";
-// 相当于
-var foo = (object.foo != null) ? object.foo : "default";
-```
+返回第一个非 `null`/`undefined` 的值，仅在左侧为 `null` 或 `undefined` 时返回右侧。
 
 ```js
 // Let's see what || considers "falsy":
-0 || "default"         // returns "default"
-"" || "default"        // returns "default"
-false || "default"     // returns "default"
-null || "default"      // returns "default"
+0 || "default" // returns "default"
+"" || "default" // returns "default"
+false || "default" // returns "default"
+null || "default" // returns "default"
 undefined || "default" // returns "default"
 
 // Now compare with ??:
-0 ?? "default"         // returns 0 ✨
-"" ?? "default"        // returns "" ✨
-false ?? "default"     // returns false ✨
-null ?? "default"      // returns "default"
+0 ?? "default" // returns 0 ✨
+"" ?? "default" // returns "" ✨
+false ?? "default" // returns false ✨
+null ?? "default" // returns "default"
 undefined ?? "default" // returns "default"
-
 
 // Working with quantities
 function updateQuantity(newQuantity) {
   // BAD: || turns 0 into 1
-  cart.quantity = newQuantity || 1;  // 0 becomes 1
+  cart.quantity = newQuantity || 1 // 0 becomes 1
 
   // GOOD: ?? keeps 0 as 0
-  cart.quantity = newQuantity ?? 1;   // 0 stays 0
+  cart.quantity = newQuantity ?? 1 // 0 stays 0
 }
 
 // Working with form inputs
 function updateProfile(formData) {
   // BAD: || replaces empty string with default
-  user.bio = formData.bio || "No bio yet";  // "" becomes "No bio yet"
+  user.bio = formData.bio || "No bio yet" // "" becomes "No bio yet"
 
   // GOOD: ?? keeps empty string
-  user.bio = formData.bio ?? "No bio yet";   // "" stays as ""
+  user.bio = formData.bio ?? "No bio yet" // "" stays as ""
 }
 
 // Real-world example: API response handling
 function processUserData(response) {
   return {
-    name: response.name ?? 'Anonymous',
+    name: response.name ?? "Anonymous",
     posts: response.posts ?? [],
-    score: response.score ?? 0,        // 0 is a valid score
-    bio: response.bio ?? '',           // Empty bio is valid
-    lastLogin: response.lastLogin ?? null
-  };
+    score: response.score ?? 0, // 0 is a valid score
+    bio: response.bio ?? "", // Empty bio is valid
+    lastLogin: response.lastLogin ?? null,
+  }
 }
 ```
 
@@ -1141,66 +1118,63 @@ function processUserData(response) {
 
 ## Nullish coalescing assignment(??=)
 
-逻辑空赋值运算符（x ??= y）仅在 **x 是空值**（null 或 undefined）时对其赋值。
+逻辑空赋值运算符（`x ??= y`）仅在 **x 是空值**（`null` 或 `undefined`）时对其赋值。
 
 ```js
-const a = { duration: 50 };
+const a = { duration: 50 }
 
-a.speed ??= 25;
-console.log(a.speed);
+a.speed ??= 25
+console.log(a.speed)
 // Expected output: 25
 
-a.duration ??= 10;
-console.log(a.duration);
+a.duration ??= 10
+console.log(a.duration)
 // Expected output: 50
 ```
 
 ```js
 // Using if statement - verbose and repetitive
 if (user.name === null || user.name === undefined) {
-  user.name = 'Anonymous';
+  user.name = "Anonymous"
 }
 
 // Using || operator - catches too much
-user.name = user.name || 'Anonymous';  // Replaces '', 0, false too
+user.name = user.name || "Anonymous" // Replaces '', 0, false too
 
 // Using ternary - gets messy with longer expressions
-user.name = user.name === null || user.name === undefined
-  ? 'Anonymous'
-  : user.name;
+user.name =
+  user.name === null || user.name === undefined ? "Anonymous" : user.name
 
 // Using ??= - clean and precise
-user.name ??= 'Anonymous';
+user.name ??= "Anonymous"
 ```
 
 ## logical-assignment-operators(||= &&=)
 
-逻辑或赋值（x ||= y）运算仅在 **x 为假**值时为其赋值。
+逻辑或赋值（`x ||= y`）运算仅在 **x 为假**值时为其赋值。
 
-逻辑与赋值（x &&= y）运算仅在 **x 为真**值时为其赋值。
+逻辑与赋值（`x &&= y`）运算仅在 **x 为真**值时为其赋值。
 
 ```js
-a ||= b;
+a ||= b
 
-obj.a.b ||= c;
+obj.a.b ||= c
 
-a &&= b;
+a &&= b
 
-obj.a.b &&= c;
+obj.a.b &&= c
 ```
 
 Babel 编译为：
 
 ```js
-var _obj$a, _obj$a2;
+var _obj$a, _obj$a2
 
-a || (a = b);
+a || (a = b)
+;(_obj$a = obj.a).b || (_obj$a.b = c)
 
-(_obj$a = obj.a).b || (_obj$a.b = c);
-
-a && (a = b);
-
-(_obj$a2 = obj.a).b && (_obj$a2.b = c);
+a && (a = b)
+;(_obj$a2 = obj.a).b && (_obj$a2.b = c)
 ```
 
 出现的原因：
@@ -1209,27 +1183,27 @@ a && (a = b);
 function example(a = b) {
   // a 必须是 undefined
   if (!a) {
-    a = b;
+    a = b
   }
 }
 
 function numeric(a = b) {
   // a 必须是 null 或者 undefined
   if (a == null) {
-    a = b;
+    a = b
   }
 }
 
 // a 可以是任何 falsy 的值
 function example(a = b) {
   // 可以，但是一定会触发 setter
-  a = a || b;
+  a = a || b
 
   // 不会触发 setter，但可能会导致 lint error
-  a || (a = b);
+  a || (a = b)
 
   // 就有人提出了这种写法：
-  a ||= b;
+  a ||= b
 }
 ```
 
@@ -1238,21 +1212,21 @@ function example(a = b) {
 ## pipeline-operator(|>)
 
 ```js
-const double = (n) => n * 2;
-const increment = (n) => n + 1;
+const double = (n) => n * 2
+const increment = (n) => n + 1
 
 // 没有用管道操作符
-double(increment(double(5))); // 22
+double(increment(double(5))) // 22
 
 // 用上管道操作符之后
-5 |> double |> increment |> double; // 22
+5 |> double |> increment |> double // 22
 ```
 
 ## 参考资料
 
 [ES6 完全使用手册](https://github.com/mqyqingfeng/Blog/issues/111)
 
-[你会用ES6，那倒是用啊！](https://juejin.cn/post/7016520448204603423)
+[你会用 ES6，那倒是用啊！](https://juejin.cn/post/7016520448204603423)
 
 [The long path of JavaScript - from ES6 until today.](https://dev.to/fsh02/the-long-path-of-javascript-from-es6-until-today-3gc3?context=digest)
 
@@ -1263,3 +1237,5 @@ double(increment(double(5))); // 22
 [JavaScript's ??= Operator: Default Values Made Simple](https://www.trevorlasn.com/blog/javascript-nullish-coalescing-assignment-operator)
 
 [JavaScript Operators: '||' vs '&&' vs '??'](https://www.trevorlasn.com/blog/javascript-logical-operators)
+
+[Mastering default values in JavaScript with the nullish coalescing (??) operator](https://allthingssmitty.com/2025/04/10/mastering-default-values-in-javascript-with-the-nullish-coalescing-operator/)

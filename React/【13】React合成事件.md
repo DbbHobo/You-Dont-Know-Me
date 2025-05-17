@@ -91,7 +91,7 @@ export function createRoot(
 }
 ```
 
-其中一个重要步骤`listenToAllSupportedEvents`方法主要的任务就是遍历监听所有的原生事件`allNativeEvents`，在`root`节点上初始化所有原生事件的监听回调函数。
+其中一个重要步骤`listenToAllSupportedEvents`方法主要的任务就是遍历监听几乎所有的原生事件`allNativeEvents`，在`root`节点上初始化所有原生事件的监听回调函数。
 
 `listenToAllSupportedEvents` => `listenToNativeEvent` => `addTrappedEventListener` => `createEventListenerWrapperWithPriority` + `addEventCaptureListener`
 
@@ -334,7 +334,7 @@ addEventListener(type, listener, options)
 addEventListener(type, listener, useCapture)
 ```
 
-在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
+在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建包装后的事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/ReactDOMEventListener.js】
@@ -469,13 +469,131 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
       return DefaultEventPriority
   }
 }
+
+function dispatchDiscreteEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  container: EventTarget,
+  nativeEvent: AnyNativeEvent
+) {
+  const prevTransition = ReactSharedInternals.T
+  ReactSharedInternals.T = null
+  const previousPriority = getCurrentUpdatePriority()
+  try {
+    setCurrentUpdatePriority(DiscreteEventPriority)
+    // 【实际调用dispatchEvent】
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent)
+  } finally {
+    setCurrentUpdatePriority(previousPriority)
+    ReactSharedInternals.T = prevTransition
+  }
+}
+
+function dispatchContinuousEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  container: EventTarget,
+  nativeEvent: AnyNativeEvent
+) {
+  const prevTransition = ReactSharedInternals.T
+  ReactSharedInternals.T = null
+  const previousPriority = getCurrentUpdatePriority()
+  try {
+    setCurrentUpdatePriority(ContinuousEventPriority)
+    // 【实际调用dispatchEvent】
+    dispatchEvent(domEventName, eventSystemFlags, container, nativeEvent)
+  } finally {
+    setCurrentUpdatePriority(previousPriority)
+    ReactSharedInternals.T = prevTransition
+  }
+}
+
+export function dispatchEvent(
+  domEventName: DOMEventName,
+  eventSystemFlags: EventSystemFlags,
+  targetContainer: EventTarget,
+  nativeEvent: AnyNativeEvent
+): void {
+  if (!_enabled) {
+    return
+  }
+
+  let blockedOn = findInstanceBlockingEvent(nativeEvent)
+  if (blockedOn === null) {
+    dispatchEventForPluginEventSystem(
+      domEventName,
+      eventSystemFlags,
+      nativeEvent,
+      return_targetInst,
+      targetContainer
+    )
+    clearIfContinuousEvent(domEventName, nativeEvent)
+    return
+  }
+
+  if (
+    queueIfContinuousEvent(
+      blockedOn,
+      domEventName,
+      eventSystemFlags,
+      targetContainer,
+      nativeEvent
+    )
+  ) {
+    nativeEvent.stopPropagation()
+    return
+  }
+  // We need to clear only if we didn't queue because
+  // queueing is accumulative.
+  clearIfContinuousEvent(domEventName, nativeEvent)
+
+  if (
+    eventSystemFlags & IS_CAPTURE_PHASE &&
+    isDiscreteEventThatRequiresHydration(domEventName)
+  ) {
+    while (blockedOn !== null) {
+      const fiber = getInstanceFromNode(blockedOn)
+      if (fiber !== null) {
+        attemptSynchronousHydration(fiber)
+      }
+      const nextBlockedOn = findInstanceBlockingEvent(nativeEvent)
+      if (nextBlockedOn === null) {
+        dispatchEventForPluginEventSystem(
+          domEventName,
+          eventSystemFlags,
+          nativeEvent,
+          return_targetInst,
+          targetContainer
+        )
+      }
+      if (nextBlockedOn === blockedOn) {
+        break
+      }
+      blockedOn = nextBlockedOn
+    }
+    if (blockedOn !== null) {
+      nativeEvent.stopPropagation()
+    }
+    return
+  }
+
+  // This is not replayable so we'll invoke it but without a target,
+  // in case the event system needs to trace it.
+  dispatchEventForPluginEventSystem(
+    domEventName,
+    eventSystemFlags,
+    nativeEvent,
+    null,
+    targetContainer
+  )
+}
 ```
 
 - `DiscreteEventPriority`: 优先级最高，包括`click`、`keyDown`、`input`等事件，对应的`listener`是`dispatchDiscreteEvent`
 - `ContinuousEventPriority`: 优先级最低，包括`drag`、`mouseenter`等事件，对应的`listener`是`dispatchContinuousEvent`
 - `DefaultEventPriority`: 优先级适中，包括`animation`、`load`等事件，对应的`listener`是`dispatchEvent`
 
-以上这 3 种`listener`实际上都是对`dispatchEvent`的包装。所以经过`listenToAllSupportedEvents`一系列的操作之后，我们将所有事件的回调监听都绑定到了根元素 `container` 上，一旦触发事件就会进入我们绑定的回调`dispatchEvent`中。
+以上这 3 种`listener`实际上都是对`dispatchEvent`的包装。所以经过`listenToAllSupportedEvents`一系列的操作之后，我们将所有事件的回调监听都绑定到了根元素 `container` 上，一旦触发事件就会进入我们绑定的回调`dispatchEvent`中，而经过包装的`dispatchEvent`的主要流程是交给事件插件系统统一进行处理。
 
 ![react](./assets/SyntheticEvent/SyntheticEvent1.png)
 ![react](./assets/SyntheticEvent/SyntheticEvent2.png)
@@ -486,8 +604,8 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
 
 触发一个原生事件时，大致的执行流程如下：
 
-1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，获取到原生事件对象`nativeEvent`；
-2. `findInstanceBlockingEvent` 方法根据该原生事件对象`nativeEvent`查找到事件触发所在的 `DOM` 节点和其对应的 `fiber` 节点；
+1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，获取到原生事件对象 `nativeEvent`；
+2. `findInstanceBlockingEvent` 方法根据该原生事件对象 `nativeEvent` 查找到事件触发所在的 `DOM` 节点和其对应的 `fiber` 节点；
 3. 触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
 4. `extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
 5. 最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
@@ -790,7 +908,7 @@ function dispatchEventsForPlugins(
 
 可以看到在 React 中将 DOM 事件插件系统分为了几如下类，不同的事件插件实例分别去调用`extractEvents`方法，其中最常见的事件都会由`SimpleEventPlugin.extractEvents`进行处理。
 
-然后在`extractEvents`方法中调用`accumulateEventHandleNonManagedNodeListeners`方法从当前 `fiber` 节点往上一步步寻找所有注册了事件回调的并推入`listeners`数组，如果`listeners`数组有内容那么就生成合成事件`SyntheticEventCtor`实例并入队`dispatchQueue`以供后续处理，这个合成事件实例可以通过`nativeEvent`访问原生事件对象。
+然后在`extractEvents`方法中调用`accumulateEventHandleNonManagedNodeListeners`方法从当前 `fiber` 节点往上一步步寻找所有注册了当前这个事件回调的并推入`listeners`数组，如果`listeners`数组有内容那么就生成合成事件`SyntheticEventCtor`实例并入队`dispatchQueue`以供后续处理，这个合成事件实例`SyntheticEventCtor`可以通过`nativeEvent`访问原生事件对象（在回调的入参中访问）。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/DOMPluginEventSystem.js】

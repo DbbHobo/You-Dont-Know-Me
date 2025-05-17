@@ -7,7 +7,7 @@
 `Plugin` 的配置很简单，`plugins` 配置项接受一个数组，数组里每一项都是一个要使用的 `Plugin` 的实例，`Plugin` 需要的参数通过构造函数传入。
 
 ```js
-const CommonsChunkPlugin = require("webpack/lib/optimize/CommonsChunkPlugin");
+const CommonsChunkPlugin = require("webpack/lib/optimize/CommonsChunkPlugin")
 
 module.exports = {
   plugins: [
@@ -17,7 +17,7 @@ module.exports = {
       chunks: ["a", "b"],
     }),
   ],
-};
+}
 ```
 
 使用 `Plugin` 的难点在于掌握 `Plugin` 本身提供的配置项，而不是如何在 `Webpack` 中接入 `Plugin`。
@@ -36,22 +36,22 @@ class BasicPlugin {
   // Webpack 会调用 BasicPlugin 实例的 apply 方法给插件实例传入 compiler 对象，compiler 对象注册各个广播事件的回调
   apply(compiler) {
     compiler.hooks.run.tap(pluginName, (compilation) => {
-      console.log('The webpack build process is starting!');
-    });
+      console.log("The webpack build process is starting!")
+    })
   }
 }
 
 // 导出 Plugin
-module.exports = BasicPlugin;
+module.exports = BasicPlugin
 ```
 
 在使用这个 `Plugin` 时，相关配置代码如下：
 
 ```js
-const BasicPlugin = require("./BasicPlugin.js");
+const BasicPlugin = require("./BasicPlugin.js")
 module.export = {
   plugins: [new BasicPlugin(options)],
-};
+}
 ```
 
 `Webpack` 启动后，在读取配置的过程中会先执行 `new BasicPlugin(options)` 初始化一个 `BasicPlugin` 实例。 在初始化 `compiler` 对象后，再调用 `basicPlugin.apply(compiler)`给插件实例传入 `compiler` 对象。 插件实例在获取到 `compiler` 对象后，就可以通过 `compiler.plugin(事件名称, 回调函数)` 监听到 `Webpack` 广播出来的事件。 并且可以通过 `compiler` 对象去操作 `Webpack`。
@@ -66,38 +66,36 @@ module.export = {
 
 ```js
 /**
-* 广播出事件
-* event-name 为事件名称，注意不要和现有的事件重名
-* params 为附带的参数
-*/
-compiler.apply('event-name',params);
+ * 广播出事件
+ * event-name 为事件名称，注意不要和现有的事件重名
+ * params 为附带的参数
+ */
+compiler.apply("event-name", params)
 
 /**
-* 监听名称为 event-name 的事件，当 event-name 事件发生时，函数就会被执行。
-* 同时函数中的 params 参数为广播事件时附带的参数。
-*/
-compiler.plugin('event-name',function(params) {
-
-});
+ * 监听名称为 event-name 的事件，当 event-name 事件发生时，函数就会被执行。
+ * 同时函数中的 params 参数为广播事件时附带的参数。
+ */
+compiler.plugin("event-name", function (params) {})
 ```
 
 同理，`compilation.apply` 和 `compilation.plugin` 使用方法和上面一致。
 
 ## Plugin 开发和调试
 
-在项目的开发过程中，为了方便资源的共享，创建了 `npm` 私有包。在开发私有包的时候，频繁的发版上线很繁琐，如何在本地项目直接访问 `npm` 私有包。进入 `npmPackage`, 执行下面代码：
+在项目的开发过程中，为了方便资源的共享，创建了 `npm` 私有包。在开发私有包的时候，频繁的发版上线很繁琐，如何在本地项目直接访问 `npm` 私有包。进入 `npmPackage`， 执行下面代码：
 
 ```shell
 npm link <packageName>
 ```
 
-执行该命令后，`npmPackage` 会根据 `package.json` 中的配置链接到全局, `{prefix}/lib/node_modules/<packageName>` 可以理解为一个快捷方式。进入本地项目,连接到 `npmPackage` 的名字，取自 `package.json` 中的 `name` 字段，导入私有包：
+执行该命令后，`npmPackage` 会根据 `package.json` 中的配置链接到全局， `{prefix}/lib/node_modules/<packageName>` 可以理解为一个快捷方式。进入本地项目，连接到 `npmPackage` 的名字，取自 `package.json` 中的 `name` 字段，导入私有包：
 
 ```js
 import sth from <packageName>
 ```
 
-使用 `npmPackage`,当修改 `npmPackage` 中的代码，就能实时同步到本地项目的响应。最后，如果要取消链接：
+使用 `npmPackage`，当修改 `npmPackage` 中的代码，就能实时同步到本地项目的响应。最后，如果要取消链接：
 
 ```shell
 npm unlink <packageName>
@@ -110,31 +108,31 @@ npm unlink <packageName>
 ### compiler 对象相关钩子
 
 ```js
-compiler.hooks.someHook.tap('MyPlugin', (params) => {
+compiler.hooks.someHook.tap("MyPlugin"， (params) => {
   /* ... */
-});
+})
 ```
 
 - `environment`
-  
+
   在编译器准备环境时调用，时机就在配置文件中初始化插件之后。
 
 - `entryOption`
 
-  在 `webpack` 选项中的 `entry` 被处理过之后调用。回调参数：`context`, `entry`。
+  在 `webpack` 选项中的 `entry` 被处理过之后调用。回调参数：`context`， `entry`。
 
 ```js
-compiler.hooks.entryOption.tap('MyPlugin', (context, entry) => {
+compiler.hooks.entryOption.tap("MyPlugin", (context, entry) => {
   /* ... */
-});
+})
 ```
 
 - `afterPlugins`
-  
+
   在初始化内部插件集合完成设置之后调用。回调参数：`compiler`。
 
 - `initialize`
-  
+
   当编译器对象被初始化时调用。
 
 - `beforeRun`
@@ -144,11 +142,11 @@ compiler.hooks.entryOption.tap('MyPlugin', (context, entry) => {
   在开始读取 `records` 之前调用。回调参数：`compiler`。
 
 - `watchRun`
-  
+
   在监听模式下，一个新的 `compilation` 触发之后，但在 `compilation` 实际开始之前执行。回调参数：`compiler`。
 
 - `beforeCompile`
-  
+
   在创建 `compilation parameter` 之后 `compilation` 创建之前执行。回调参数：`compilationParams`。
 
   初始化 `compilationParams` 变量的示例如下：
@@ -160,31 +158,33 @@ compilationParams = {
 };
 ```
 
-  此钩子可用于添加/修改 `compilation parameter`：
+此钩子可用于添加/修改 `compilation parameter`：
 
 ```js
-compiler.hooks.beforeCompile.tapAsync('MyPlugin', (params, callback) => {
-  params['MyPlugin - data'] = 'important stuff my plugin will use later';
-  callback();
-});
+compiler.hooks.beforeCompile.tapAsync("MyPlugin", (params, callback) => {
+  params["MyPlugin - data"] = "important stuff my plugin will use later"
+  callback()
+})
 ```
 
 - `compile`
-  
+
   `beforeCompile` 之后立即调用，但在一个新的 `compilation` 创建之前。这个钩子不会被复制到子编译器。回调参数：`compilationParams`。
 
 - `thisCompilation`
+
   初始化 `compilation` 时调用，在触发 `compilation` 事件之前调用。这个钩子不会被复制到子编译器。回调参数：`compilation`, `compilationParams`。
 
 - `compilation`
-  
+
   `compilation` 创建之后执行。回调参数：`compilation`, `compilationParams`。
 
 - `make`
+
   `compilation` 结束之前执行。这个钩子不会被复制到子编译器。回调参数：`compilation`。
 
 - `afterCompile`
-  
+
   `compilation` 结束和封印之后执行。回调参数：`compilation`。
 
 - `shouldEmit`
@@ -192,10 +192,10 @@ compiler.hooks.beforeCompile.tapAsync('MyPlugin', (params, callback) => {
 在输出 `asset` 之前调用。返回一个布尔值，告知**是否输出**。回调参数：`compilation`。
 
 ```js
-compiler.hooks.shouldEmit.tap('MyPlugin', (compilation) => {
+compiler.hooks.shouldEmit.tap("MyPlugin", (compilation) => {
   // 返回 true 以输出 output 结果，否则返回 false
-  return true;
-});
+  return true
+})
 ```
 
 - `emit`
@@ -209,25 +209,25 @@ compiler.hooks.shouldEmit.tap('MyPlugin', (compilation) => {
 ### compilation 对象相关钩子
 
 ```js
-compilation.hooks.someHook.tap(/* ... */);
+compilation.hooks.someHook.tap(/* ... */)
 ```
 
 - `buildModule`
-  
+
   在模块构建开始之前触发，可以用来修改模块。回调参数：`module`。
 
 ```js
 compilation.hooks.buildModule.tap(
-  'SourceMapDevToolModuleOptionsPlugin',
+  "SourceMapDevToolModuleOptionsPlugin",
   (module) => {
-    module.useSourceMap = true;
+    module.useSourceMap = true
   }
-);
+)
 ```
 
 其余常用钩子可查询[官方文档](https://webpack.docschina.org/api/compilation-hooks/)
 
-## Plugin常见开发示例
+## Plugin 常见开发示例
 
 1. 读取输出资源、代码块、模块及其依赖 - `emit`
 
@@ -238,7 +238,7 @@ compilation.hooks.buildModule.tap(
 ```js
 class Plugin {
   apply(compiler) {
-    compiler.plugin('emit', function (compilation, callback) {
+    compiler.plugin("emit", function (compilation, callback) {
       // compilation.chunks 存放所有代码块，是一个数组
       compilation.chunks.forEach(function (chunk) {
         // chunk 代表一个代码块
@@ -246,9 +246,8 @@ class Plugin {
         chunk.forEachModule(function (module) {
           // module 代表一个模块
           // module.fileDependencies 存放当前模块的所有依赖的文件路径，是一个数组
-          module.fileDependencies.forEach(function (filepath) {
-          });
-        });
+          module.fileDependencies.forEach(function (filepath) {})
+        })
 
         // Webpack 会根据 Chunk 去生成输出的文件资源，每个 Chunk 都对应一个及其以上的输出文件
         // 例如在 Chunk 中包含了 CSS 模块并且使用了 ExtractTextPlugin 时，
@@ -256,13 +255,13 @@ class Plugin {
         chunk.files.forEach(function (filename) {
           // compilation.assets 存放当前所有即将输出的资源
           // 调用一个输出资源的 source() 方法能获取到输出资源的内容
-          let source = compilation.assets[filename].source();
-        });
-      });
+          let source = compilation.assets[filename].source()
+        })
+      })
 
       // 这是一个异步事件，要记得调用 callback 通知 Webpack 本次事件监听处理结束。
       // 如果忘记了调用 callback，Webpack 将一直卡在这里而不会往后执行。
-      callback();
+      callback()
     })
   }
 }
@@ -276,25 +275,25 @@ class Plugin {
 
 ```js
 // 当依赖的文件发生变化时会触发 watch-run 事件
-compiler.plugin('watch-run', (watching, callback) => {
-    // 获取发生变化的文件列表
-    const changedFiles = watching.compiler.watchFileSystem.watcher.mtimes;
-    // changedFiles 格式为键值对，键为发生变化的文件路径。
-    if (changedFiles[filePath] !== undefined) {
-      // filePath 对应的文件发生了变化
-    }
-    callback();
-});
+compiler.plugin("watch-run", (watching, callback) => {
+  // 获取发生变化的文件列表
+  const changedFiles = watching.compiler.watchFileSystem.watcher.mtimes
+  // changedFiles 格式为键值对，键为发生变化的文件路径。
+  if (changedFiles[filePath] !== undefined) {
+    // filePath 对应的文件发生了变化
+  }
+  callback()
+})
 ```
 
 默认情况下 `Webpack` 只会监视入口和其依赖的模块是否发生变化，在有些情况下项目可能需要引入新的文件，例如引入一个 `HTML` 文件。 由于 `JavaScript` 文件不会去导入 `HTML` 文件，`Webpack` 就不会监听 `HTML` 文件的变化，编辑 `HTML` 文件时就不会重新触发新的 `Compilation`。 为了监听 `HTML` 文件的变化，我们需要把 `HTML` 文件加入到依赖列表中，为此可以使用如下代码：
 
 ```js
-compiler.plugin('after-compile', (compilation, callback) => {
+compiler.plugin("after-compile", (compilation, callback) => {
   // 把 HTML 文件添加到文件依赖列表，好让 Webpack 去监听 HTML 模块文件，在 HTML 模版文件发生变化时重新启动一次编译
-    compilation.fileDependencies.push(filePath);
-    callback();
-});
+  compilation.fileDependencies.push(filePath)
+  callback()
+})
 ```
 
 - 修改输出资源 - `emit`
@@ -304,35 +303,35 @@ compiler.plugin('after-compile', (compilation, callback) => {
 所有需要输出的资源会存放在 `compilation.assets` 中，`compilation.assets` 是一个键值对，键为需要输出的文件名称，值为文件对应的内容。设置 `compilation.assets` 的代码如下：
 
 ```js
-compiler.plugin('emit', (compilation, callback) => {
+compiler.plugin("emit", (compilation, callback) => {
   // 设置名称为 fileName 的输出资源
   compilation.assets[fileName] = {
     // 返回文件内容
     source: () => {
       // fileContent 既可以是代表文本文件的字符串，也可以是代表二进制文件的 Buffer
-      return fileContent;
-      },
+      return fileContent
+    },
     // 返回文件大小
-      size: () => {
-      return Buffer.byteLength(fileContent, 'utf8');
-    }
-  };
-  callback();
-});
+    size: () => {
+      return Buffer.byteLength(fileContent, "utf8")
+    },
+  }
+  callback()
+})
 ```
 
 读取 `compilation.assets` 的代码如下：
 
 ```js
-compiler.plugin('emit', (compilation, callback) => {
+compiler.plugin("emit", (compilation, callback) => {
   // 读取名称为 fileName 的输出资源
-  const asset = compilation.assets[fileName];
+  const asset = compilation.assets[fileName]
   // 获取输出资源的内容
-  asset.source();
+  asset.source()
   // 获取输出资源的文件大小
-  asset.size();
-  callback();
-});
+  asset.size()
+  callback()
+})
 ```
 
 - 判断 `Webpack` 使用了哪些插件
@@ -344,9 +343,13 @@ compiler.plugin('emit', (compilation, callback) => {
 // compiler 参数即为 Webpack 在 apply(compiler) 中传入的参数
 function hasExtractTextPlugin(compiler) {
   // 当前配置所有使用的插件列表
-  const plugins = compiler.options.plugins;
+  const plugins = compiler.options.plugins
   // 去 plugins 中寻找有没有 ExtractTextPlugin 的实例
-  return plugins.find(plugin=>plugin.__proto__.constructor === ExtractTextPlugin) != null;
+  return (
+    plugins.find(
+      (plugin) => plugin.__proto__.constructor === ExtractTextPlugin
+    ) != null
+  )
 }
 ```
 

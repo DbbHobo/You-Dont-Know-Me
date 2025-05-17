@@ -138,7 +138,7 @@ function dispatchSetState<S, A>(
 
 `scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` + `commitRoot`
 
-前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程**render 流程**（`renderRootSync`/`renderRootConcurrent`）和**commit 流程**（`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前渲染的内容的`fiber`树，然后`prepareFreshStack`中会去调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
+前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程**render 流程**（`renderRootSync`/`renderRootConcurrent`）和**commit 流程**（`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前页面上渲染展示的内容的`fiber`树，然后`prepareFreshStack`中会去调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
 
 `renderRootSync` => `prepareFreshStack` + `workLoopSync` => `finishQueueingConcurrentUpdates`
 
@@ -250,7 +250,7 @@ function workLoopConcurrent() {
 }
 ```
 
-`workLoopSync`/`workLoopConcurrent`方法都是循环遍历调用`performUnitOfWork`依次处理`fiber`节点形成 fiber 树，最大的区别就是是否可暂停的，`workLoopConcurrent`方法可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
+`workLoopSync`/`workLoopConcurrent`方法都是循环遍历调用`performUnitOfWork`依次处理`fiber`节点形成 `fiber` 树，最大的区别就是是否可暂停的，`workLoopConcurrent`方法可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1327,7 +1327,7 @@ function reconcileChildFibersImpl(
 3. 第一遍循环结束后如果新节点还有剩余而旧节点已经遍历完，插入；
 4. 第一遍循环结束后新旧节点皆有剩余进入下一个循环，构造一个`existingChildren`存储所有未遍历的旧节点，开始重新遍历新节点，每一个新节点都在`existingChildren`中寻找是否有可复用的旧节点，如若有则复用然后从`existingChildren`删除掉已复用的旧节点；
 
-其中能复用的节点可能会进入`updateSlot`、`updateElement`等方法，然后调用`useFiber`=>`createWorkInProgress`以已有的`fiber node`去构建新的`fiber node`，不同的内容会存储在`pendingProps`中供后续更新使用。新加入或者需要移动的节点会调用`placeChild`方法给这个节点`flags`标记`Placement`用于后续`commit`过程。不再使用的节点会标记`Deletion`。
+其中能复用的节点可能会进入`updateSlot`、`updateElement`等方法，然后调用`useFiber`=>`createWorkInProgress`以已有的`fiber node`去构建新的`fiber node`，不同的内容会存储在`pendingProps`中供后续更新使用。新加入或者需要移动的节点会调用`placeChild`方法给这个节点`flags`标记`Placement`用于后续`commit`过程。不再使用的节点会加入父节点的`deletions`属性中并标记`ChildDeletion`在后续 `commit` 过程中首先进行删除。
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -1824,7 +1824,7 @@ function reconcileSingleElement(
 
 `diff` 流程结束后，会形成新的 `fiber` 树，树上的 `fiber` 节点通过 `flags` 字段做了副作用标记：
 
-- `Deletion`：会在`commit`阶段对对应的`DOM`做删除操作
+- `ChildDeletion`：会在`commit`阶段对对应的`DOM`做删除操作
 - `Placement`：`Placement` 可能是插入也可能是移动，实际上两种都是插入动作。`React` 在更新时会优先去寻找要插入的 `fiber` 的 `sibling`，如果找到了执行 `DOM` 的 `insertBefore` 方法，如果没有找到就执行 `DOM` 的 `appendChild` 方法，从而实现了新节点插入位置的准确性
 
 总结来说，在每个节点的`beginWork`阶段主要完成两件事，一则查看能否直接复用旧节点，二则根据节点类型进入不同分支的处理方法，相同的是都会由当前`fiber`的`pendingProps`（不同类型可能不同）生成下层的子节点`fiber`，直到到达底部节点（无子节点）进行下一步的`completeWork`。
@@ -2542,7 +2542,7 @@ function bubbleProperties(completedWork: Fiber) {
 }
 ```
 
-总结来说，在每个节点的`completeWork`阶段主要完成的是对比节点上的新旧属性变化并打标记，结束后根据是否有兄弟节点继续进行`beginWork`和`completeWork`，若无则回到上层节点，最后一步步往上回溯形成一棵新的完整的`fiber`树结构。
+总结来说，在每个节点的`completeWork`阶段主要完成的是对比节点上的新旧属性**变化**并打标记，结束后根据是否有兄弟节点继续进行`beginWork`和`completeWork`，若无则回到上层节点，最后一步步往上回溯形成一棵新的完整的`fiber`树结构。
 
 ![react](./assets/update/update_completeWork2.png)
 ![react](./assets/update/update_completeWork3.png)
@@ -2696,6 +2696,8 @@ function updateHostComponent(
 
 `commitRoot` => `commitRootImpl` => `scheduleCallback(flushPassiveEffects)` => `commitBeforeMutationEffects` + `commitMutationEffects` + `commitLayoutEffects`
 
+在这个过程中处理到哪个节点都会通过 `setCurrentFiber` 标记：
+
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
 function commitRootImpl(
@@ -2842,7 +2844,7 @@ export function commitMutationEffects(
 
 1. `commitBeforeMutationEffects`
 
-   - `DOM` 变化之前。主要处理节点标记（`flags`）为`Snapshot`, `Deletion`等的`fiber`节点。
+   - `DOM` 变化之前。主要处理节点标记（`flags`）为`Snapshot`等的`fiber`节点。
 
 2. `commitMutationEffects`
 
@@ -3024,6 +3026,7 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
       break;
     }
     case HostRoot: {
+      // 【beforMutation阶段HostRoot会清空container的内容】
       if ((flags & Snapshot) !== NoFlags) {
         if (supportsMutation) {
           const root = finishedWork.stateNode;
@@ -3097,8 +3100,9 @@ export function commitMutationEffects(
 ```
 
 1. `commitMutationEffectsOnFiber`：主要是根据`fiber node`的`tag`类型进入不同处理方法，通常会进入`recursivelyTraverseMutationEffects`和`commitReconciliationEffects`方法，这两步走完之后处理`flags`是`Update`的情况；
-2. `recursivelyTraverseMutationEffects`：主要先将需要删除的节点`flags`是`Deletion`删除，然后确定下一步是否有需要`mutation`的子节点，然后继续去调用`commitMutationEffectsOnFiber`；
-3. `commitReconciliationEffects`：主要是处理`flags`是`Placement`的节点，也就是新增、插入的节点；
+2. `recursivelyTraverseMutationEffects`：主要先将需要**删除**的节点`flags`是`Deletion`删除，然后确定下一步是否有需要`mutation`的子节点，然后继续去调用`commitMutationEffectsOnFiber`；
+3. `commitReconciliationEffects`：主要是处理`flags`是`Placement`的节点，也就是**新增**、**插入**的节点；
+4. `recursivelyTraverseMutationEffects`和`commitReconciliationEffects`都结束之后，不同类型节点的处理方式不同，但是都会处理`flags`是`Update`的情况，会对节点进行 DOM 操作进行更新；
 
 基于我们的用例，它进入`commitMutationEffects`的整个过程是这样的：
 
@@ -3131,9 +3135,11 @@ function commitMutationEffectsOnFiber(
     case ForwardRef:
     case MemoComponent:
     case SimpleMemoComponent: {
+      // 【1.处理删除操作】
       recursivelyTraverseMutationEffects(root, finishedWork, lanes);
+      // 【2.处理新增、插入操作】
       commitReconciliationEffects(finishedWork);
-
+      // 【3.处理更新操作】
       if (flags & Update) {
         // 【省略代码...】
       }
@@ -3335,6 +3341,7 @@ function recursivelyTraverseMutationEffects(
   parentFiber: Fiber,
   lanes: Lanes,
 ) {
+  // 【先处理需要删除节点的情况】
   // Deletions effects can be scheduled on any fiber type. They need to happen
   // before the children effects hae fired.
   const deletions = parentFiber.deletions;
@@ -4216,10 +4223,14 @@ function commitLayoutEffectOnFiber(
 ## 总结
 
 1. 和首次挂载一样`performSyncWorkOnRoot.bind(null, root)`/`performConcurrentWorkOnRoot.bind(null, root)`还是会进入两个关键步骤，一个是**render 过程**`renderRootSync`/`renderRootConcurrent`，一个是**commit 过程**`commitRoot`；
-2. `render`阶段和首次挂载一样，首先调用`prepareFreshStack`做准备工作，确定`workInProgress`指向的`alternate`节点，然后进入`beginWork`阶段，和初次挂载不同的是，会进 prop 等属性的对比看是否能直接复用旧节点，会对比新旧节点并为节点`flags`打上`Placement`/`Deletion`标签。在遇到多个子节点新旧对比时就是我们通常所说的 diff 算法。不论是首次挂载还是更新，最终会生成新的子`fiber`节点并赋值给`workInProgress.child`，并且作为本次`beginWork`返回值，还会作为下次`performUnitOfWork`执行时`workInProgress`的传参直到`fiber`树底部；
+2. `render`阶段和首次挂载一样，首先调用`prepareFreshStack`做准备工作，复制一份`current`树作为`alternate`，确定`workInProgress`指向的`alternate`节点，然后进入`beginWork`阶段，和初次挂载不同的是，会进 prop 等属性的对比看是否能直接复用旧节点，会对比新旧节点并为节点`flags`打上`Placement`/`Deletion`标签。在遇到多个子节点新旧对比时就是我们通常所说的 diff 算法。不论是首次挂载还是更新，最终会生成新的子`fiber`节点并赋值给`workInProgress.child`，并且作为本次`beginWork`返回值，还会作为下次`performUnitOfWork`执行时`workInProgress`的传参直到`fiber`树底部；
 3. `completeWork`阶段和首次挂载不同的是，会根据当前节点对应 DOM 是否存在决定要新建 DOM 还是仅对比`props`，对比`props`后如果有更新为这个节点标记`Update`需要更新，在`commit`阶段会进行具体的处理，在向上回溯的过程中会把子节点带有的标记往祖先节点带，所以最终在根节点上`subtreeFlags`属性能知道子节点具体到底需不要更新等；
 4. `commit`过程（`commitRoot`）仍然是三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，在`commitMutationEffects`过程中，主要通过判断每一个`fiber`节点的`flags`属性然后进行具体的 DOM 操作，`commitMutationEffects`阶段会按照删除（下一层）、新增（下一层）、更新（本层）DOM 的顺序进行；
-5. 在`completeWork`阶段对比 `props` 的时候可以看到绑定的事件即使没有改变也是判定为前后是两个不同的事件，这也是后续用 `memo`、`useCallback` 进行优化的原因；
+5. 在`completeWork`阶段对比 `props` 的时候可以看到绑定的事件即使没有改变也是判定为前后是两个不同的事件（FunctionComponent 重新执行生成的事件即使函数体相同在内存中也是两个不同函数对象），这也是后续用 `memo`、`useCallback` 进行优化的原因；
 
 ![react](./assets/update/update.png)
 ![react](./assets/update/update_fiber.png)
+
+## 参考资料
+
+[react-reconciliation-deep-div](https://cekrem.github.io/posts/react-reconciliation-deep-dive/)

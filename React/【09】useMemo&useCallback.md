@@ -421,7 +421,7 @@ export function isSimpleFunctionComponent(type: any): boolean {
 
 可以看到`updateSimpleMemoComponent`会简单的根据新旧`props`以及节点上是否有更新任务进行判断，如果不需要`rerender`就会进入`bailoutOnAlreadyFinishedWork`，否则还是走正常的函数组件流程。
 
-这个对比新旧`props`的方法`shallowEqual`不同于前文提到的`===`，如果前后两次`props`对象并非同一个对象但是所有的属性严格相同的情况下会判定为新旧`props`相同，因此就不会对组件进行`rerender`。
+**这个对比新旧`props`的方法`shallowEqual`不同于前文提到的`===`，如果前后两次`props`对象并非同一个对象但是所有的属性严格相同的情况下会判定为新旧`props`相同，因此就不会对组件进行`rerender`。**
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -437,6 +437,7 @@ function updateSimpleMemoComponent(
   // We'll need to figure out if this is fine or can cause issues.
   if (current !== null) {
     const prevProps = current.memoizedProps
+    // 【在beginWork中是否可以提前bailout需要进行oldProps !== newProps的判断】
     // 【对比新旧props，相同的话，并且在该节点上没有更新任务，就可以跳过rerender进入bailoutOnAlreadyFinishedWork】
     if (
       shallowEqual(prevProps, nextProps) &&

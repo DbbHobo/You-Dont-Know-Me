@@ -508,10 +508,49 @@ arr[0].name = "Ben"
 - `[...arguments]`
 - `Array.prototype.concat.apply([], arguments)`
 
-类数组对象有下面两个特性
+所谓的类数组对象就是拥有一个 length 属性和若干索引属性的对象，类数组对象有下面两个特性：
 
 1. 具有：指向对象元素的数字索引下标和 `length` 属性
 2. 不具有：比如 `push` 、`shift`、 `forEach` 以及 `indexOf` 等数组对象具有的方法
+
+举例如下：
+
+- `arguments` 对象就是一个类数组对象
+- 一些 DOM 方法(`document.getElementsByTagName()`等)也返回类数组对象
+
+```js
+var array = ["name", "age", "sex"]
+
+var arrayLike = {
+  0: "name",
+  1: "age",
+  2: "sex",
+  length: 3,
+}
+```
+
+这类对象不能直接调用数组的方法，但是可以通过间接调用的方式：
+
+```js
+var arrayLike = { 0: "name", 1: "age", 2: "sex", length: 3 }
+// 1. slice
+Array.prototype.slice.call(arrayLike) // ["name", "age", "sex"]
+// 2. splice
+Array.prototype.splice.call(arrayLike, 0) // ["name", "age", "sex"]
+// 3. ES6 Array.from
+Array.from(arrayLike) // ["name", "age", "sex"]
+// 4. apply
+Array.prototype.concat.apply([], arrayLike)
+// 5. join
+Array.prototype.join.call(arrayLike, "&") // name&age&sex
+// 6. slice可以做到类数组转数组
+Array.prototype.slice.call(arrayLike, 0) // ["name", "age", "sex"]
+// 7. map
+Array.prototype.map.call(arrayLike, function (item) {
+  return item.toUpperCase()
+})
+// ["NAME", "AGE", "SEX"]
+```
 
 ### 寻找数组中是否包含某个值
 
@@ -579,47 +618,6 @@ let str = JSON.stringify(arr)
 - `keys()`: 返回包含数组键的新数组迭代器。
 - `values()`: 返回包含数组值的新数组迭代器。
 - `entries()`: 返回包含数组键值对的新数组迭代器。
-
-## 类数组对象
-
-所谓的类数组对象就是拥有一个 length 属性和若干索引属性的对象。举例如下：
-
-- `arguments` 对象就是一个类数组对象
-- 一些 DOM 方法(`document.getElementsByTagName()`等)也返回类数组对象
-
-```js
-var array = ["name", "age", "sex"]
-
-var arrayLike = {
-  0: "name",
-  1: "age",
-  2: "sex",
-  length: 3,
-}
-```
-
-这类对象不能直接调用数组的方法，但是可以通过间接调用的方式：
-
-```js
-var arrayLike = { 0: "name", 1: "age", 2: "sex", length: 3 }
-// 1. slice
-Array.prototype.slice.call(arrayLike) // ["name", "age", "sex"]
-// 2. splice
-Array.prototype.splice.call(arrayLike, 0) // ["name", "age", "sex"]
-// 3. ES6 Array.from
-Array.from(arrayLike) // ["name", "age", "sex"]
-// 4. apply
-Array.prototype.concat.apply([], arrayLike)
-// 5. join
-Array.prototype.join.call(arrayLike, "&") // name&age&sex
-// 6. slice可以做到类数组转数组
-Array.prototype.slice.call(arrayLike, 0) // ["name", "age", "sex"]
-// 7. map
-Array.prototype.map.call(arrayLike, function (item) {
-  return item.toUpperCase()
-})
-// ["NAME", "AGE", "SEX"]
-```
 
 ## 参考资料
 

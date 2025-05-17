@@ -21,6 +21,10 @@ app.mount("#app")
 
 创建 `Pinia` 实例使用 `createPinia` 方法，在我们的应用使用 `Pinia` 插件之后会调 `Pinia` 实例的 `install` 方法：
 
+1. 在 `pinia` 对象上存储对应的 `app` 实例；
+2. 全局依赖注入 `piniaSymbol` 作为后续的数据来源；
+3. 全局属性添加 `$pinia`；
+
 ```ts
 // 【packages/pinia/src/createPinia.ts】
 /**
@@ -102,9 +106,9 @@ export const useCounterStore = defineStore("counter", () => {
 })
 ```
 
-要让 `pinia` 正确识别 `state`，你必须在 setup store 中返回 `state` 的所有属性：
+要让 `pinia` 正确识别 `state`，你必须在 `setup` 中返回 `state` 的所有属性：
 
-- `ref()` 就是 `state` 属性
+- `ref()` 就是 `state`
 - `computed()` 就是 `getters`
 - `function()` 就是 `actions`
 
@@ -180,11 +184,11 @@ export interface Pinia {
 
 ## store
 
-定义 `store` 的 `defineStore` 如下，入参是`id`、`setup`、`setupOptions`，返回 `useStore` 函数：
+定义 `store` 的 `defineStore` 如下，入参是`id`、`setup`(可选)、`setupOptions`(可选)，返回 `useStore` 函数：
 
-1. `inject` 依赖注入找到 `pinia` 实例；
-2. 在 `pinia._s` 上寻找对应 `id` 的 `store`，没有的话就根据是 `setup` 还是 `option` 类型去创建；
-3. 返回 `store` 对象；
+1. `inject` 依赖注入 `piniaSymbol` 对象找到 `pinia` 实例；
+2. 在 `pinia._s` 上寻找对应 `id` 的 `store`，没有的话就根据是 `setup` 还是 `setupOptions` 类型去创建 `store` 对象；
+3. 返回 `useStore` 方法，`useStore` 方法会返回创建（找到）的 `store` 对象；
 
 ```ts
 // 【packages/pinia/src/store.ts】
@@ -291,7 +295,7 @@ export function defineStore(
 
 然后用户在组件中调用 `useStore` 函数使用 `store` 时就会进入 `createSetupStore` 创建（或寻找） `store` 对象的逻辑如下：
 
-1. 先由 `reactive` 创建一个基础的 `store` 对象，包含了`$id`、`$patch`、`$reset`、`$subscribe`等属性和方法；
+1. 先由 `reactive` 创建一个基础的 `store` 对象，包含了 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法；
 2. 执行 `setup` 函数得到 `setupStore` 对象包含了 `setup` 函数返回的所有内容，并且遍历返回内容，针对 `store`、`getter`、`action` 分别进行处理；
 3. 将基础 `store` 对象和 `setupStore` 对象结合形成完整的 `store` 对象，最后为其加入 `$state` 属性并返回这个完整的 `store` 对象；
 
@@ -540,19 +544,97 @@ function createSetupStore<
 }
 ```
 
-总结来说，完整的 `store` 对象是一个 `reactive` 响应式对象，包含了 `state`、`getter`、`action` 以及`$id`、`$patch`、`$reset`、`$subscribe`等属性和方法。
+总结来说，完整的 `store` 对象是一个 `reactive` 响应式对象，包含了 `state`、`getter`、`action` 以及 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法。
 
 ### state
 
 在大多数情况下，`state` 都是你的 `store` 的核心。人们通常会先定义能代表他们 APP 的 `state`。在 `Pinia` 中，`state` 被定义为一个返回初始状态的函数。
 
+```js
+import { useCounterStore } from "../stores/counterStore"
+
+export default {
+  setup() {
+    const counterStore = useCounterStore()
+
+    return { counterStore }
+  },
+  computed: {
+    tripleCounter() {
+      return counterStore.counter * 3
+    },
+  },
+}
+```
+
 ### getter
 
 `Getter` 完全等同于 `store` 的 `state` 的计算值。
 
+```js
+import { defineStore } from 'pinia',
+
+const useCounterStore = defineStore('counterStore', {
+  state: () => ({
+    counter: 0
+  }),
+  getters: {
+    doubleCounter() {
+      return this.counter * 2
+    }
+  }
+})
+
+import { useCounterStore } from "../stores/counterStore"
+
+export default {
+  setup() {
+    const counterStore = useCounterStore()
+
+    return { counterStore }
+  },
+  computed: {
+    quadrupleCounter() {
+      return counterStore.doubleCounter * 2
+    },
+  },
+}
+```
+
 ### action
 
 `Action` 相当于组件中的 `method`。
+
+```js
+import { defineStore } from 'pinia',
+
+const useCounterStore = defineStore('counterStore', {
+  state: () => ({
+    counter: 0
+  }),
+  actions: {
+    increment() {
+      this.counter++
+    }
+  }
+})
+
+import { useCounterStore } from "../stores/counterStore"
+
+export default {
+  setup() {
+    const counterStore = useCounterStore()
+
+    return { counterStore }
+  },
+  methods: {
+    incrementAndPrint() {
+      counterStore.increment()
+      console.log("New Count:", counterStore.count)
+    },
+  },
+}
+```
 
 ## 参考资料
 

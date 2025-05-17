@@ -57,7 +57,7 @@
 ## webpack 配置示例
 
 ```js
-const path = require("path");
+const path = require("path")
 
 module.exports = {
   // entry 表示 入口，Webpack 执行构建的第一步将从 Entry 开始，可抽象成输入。
@@ -190,7 +190,7 @@ module.exports = {
     maxEntrypointSize: 400000, // 最大入口文件大小 (单位 bytes)
     assetFilter: function (assetFilename) {
       // 过滤要检查的文件
-      return assetFilename.endsWith(".css") || assetFilename.endsWith(".js");
+      return assetFilename.endsWith(".css") || assetFilename.endsWith(".js")
     },
   },
 
@@ -249,5 +249,5 @@ module.exports = {
     // 判断文件是否发生变化是不停的去询问系统指定文件有没有变化，默认每隔1000毫秒询问一次
     poll: 1000,
   },
-};
+}
 ```

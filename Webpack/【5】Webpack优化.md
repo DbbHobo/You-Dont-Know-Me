@@ -38,4 +38,6 @@
 - 使用 `Prepack`
 - 开启 `Scope Hoisting`
 
+## 参考资料
+
 [webpack 优化配置](http://webpack.wuhaolin.cn/4%E4%BC%98%E5%8C%96/4-1%E7%BC%A9%E5%B0%8F%E6%96%87%E4%BB%B6%E6%90%9C%E7%B4%A2%E8%8C%83%E5%9B%B4.html)

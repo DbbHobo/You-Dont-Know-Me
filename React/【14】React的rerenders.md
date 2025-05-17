@@ -149,16 +149,16 @@ export default function App() {
 
 ## 源码角度分析
 
-根据前文我们知道在`beginWork`阶段有个`bailoutOnAlreadyFinishedWork`方法，就是用于在`props`等没有变化时提前用之前的节点从而避免`rerender`。
+根据前文我们知道在`beginWork`阶段有个`bailoutOnAlreadyFinishedWork`方法，就是用于在`props`等没有变化时提前复用之前的节点从而避免`rerender`。
 
 那我们就来看一下走`bailoutOnAlreadyFinishedWork`这个分支的前提条件：
 
-1. `current!==null`旧节点存在；
+1. `current!==null` 旧节点存在；
 2. `oldProps === newProps` && `hasContextChanged() == false` && `workInProgress.type === current.type`新旧节点的类型`type`和`props`没有改变且上下文没有更新;
-3. `checkScheduledUpdateOrContext()`未检测到当前节点上有 `Update` 任务；
+3. `checkScheduledUpdateOrContext()` 未检测到当前节点上有 `Update` 任务；
 4. `(workInProgress.flags & DidCapture) === NoFlags`当前节点没有捕获错误；
 
-以上条件都符合的情况下那就可以走入`bailoutOnAlreadyFinishedWork`这个分支复用已有节点不需要 rerender 了。
+以上条件都符合的情况下那就可以走入`bailoutOnAlreadyFinishedWork`这个分支复用已有节点不需要`rerender`了。
 
 ```ts
 function beginWork(current, workInProgress, renderLanes) {
@@ -271,9 +271,9 @@ function bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes) {
 }
 ```
 
-所以在前面的案例中，后面两种优化方式都是将与变化的部分隔离开，因此优化前 `ExpensiveTree` 组件对应的`oldProps`和`newProps`虽然都是一个空对象，但是并不是同一个对象，所以无法进入`bailoutOnAlreadyFinishedWork`分支，而优化之后，要么`ExpensiveTree`组件和`Form`组件隔离开，要么`ExpensiveTree`组件被`Fragment`组件包裹，使得`Fragment`组件没有变化所以进入`bailoutOnAlreadyFinishedWork`分支从而不需要 rerender。
+所以在前面的案例中，后面两种优化方式都是将与变化的部分隔离开，因此优化前 `ExpensiveTree` 组件对应的`oldProps`和`newProps`虽然都是一个空对象，但是并不是同一个对象，所以无法进入`bailoutOnAlreadyFinishedWork`分支，而优化之后，要么`ExpensiveTree`组件和`Form`组件隔离开，要么`ExpensiveTree`组件被`Fragment`组件包裹，使得`Fragment`组件没有变化所以进入`bailoutOnAlreadyFinishedWork`分支从而不需要`rerender`。
 
-至于 `memo` 这个 API 是如何做到减少 rerender 的可以参考后文`《useMemo&useCallback》`。
+至于 `memo` 这个 API 是如何做到减少 `rerender` 的可以参考后文`《useMemo&useCallback》`。
 
 ## 参考资料
 

@@ -19,17 +19,17 @@ JS 中有两大类型：**基本数据类型**和**对象类型**（Object）。
 `typeof` 对于对象，除了函数都会显示 `object`
 
 ```js
-typeof 1; // 'number'
-typeof "1"; // 'string'
-typeof undefined; // 'undefined'
-typeof true; // 'boolean'
-typeof Symbol(); // 'symbol'
-typeof b; // b 没有声明，会显示 undefined
-typeof null; // ---'object' 历史遗留问题---
-typeof []; // 'object'
-typeof {}; // 'object'
-typeof console.log; // 'function'
-typeof 9007199887740995n; // 'bigint'
+typeof 1 // 'number'
+typeof "1" // 'string'
+typeof undefined // 'undefined'
+typeof true // 'boolean'
+typeof Symbol() // 'symbol'
+typeof b // b 没有声明，会显示 undefined
+typeof null // ---'object' 历史遗留问题---
+typeof [] // 'object'
+typeof {} // 'object'
+typeof console.log // 'function'
+typeof 9007199887740995n // 'bigint'
 ```
 
 `typeof`可以作为安全防范机制，对在浏览器中运行的 `JavaScript` 代码来说还是很有帮助的，因为多个脚本文件会在共享的全局命名空间中加载变量：
@@ -37,11 +37,11 @@ typeof 9007199887740995n; // 'bigint'
 ```js
 // 这样会抛出错误
 if (DEBUG) {
-  console.log( "Debugging is starting" );
+  console.log("Debugging is starting")
 }
 // 这样是安全的
 if (typeof DEBUG !== "undefined") {
-  console.log( "Debugging is starting" );
+  console.log("Debugging is starting")
 }
 ```
 
@@ -59,14 +59,14 @@ The instanceof operator tests the presence of constructor.prototype in object's 
 ```js
 function fakeInstanceOf(left, right) {
   // 获得类型的原型
-  let prototype = right.prototype;
+  let prototype = right.prototype
   // 获得对象的原型
-  left = left.__proto__;
+  left = left.__proto__
   // 判断对象的类型是否等于类型的原型
   while (true) {
-    if (left === null) return false;
-    if (prototype === left) return true;
-    left = left.__proto__;
+    if (left === null) return false
+    if (prototype === left) return true
+    left = left.__proto__
   }
 }
 ```
@@ -75,7 +75,7 @@ function fakeInstanceOf(left, right) {
 
 ## Object.prototype.toString
 
-Vue源码中用于判断对象类型就是用 `Object.prototype.toString` 方法，此方法能精准的判断对象到底是什么类型：
+Vue 源码中用于判断对象类型就是用 `Object.prototype.toString` 方法，此方法能精准的判断对象到底是什么类型：
 
 ```ts
 export const objectToString = Object.prototype.toString
@@ -88,15 +88,15 @@ export const toRawType = (value: unknown): string => {
 }
 
 export const isMap = (val: unknown): val is Map<any, any> =>
-  toTypeString(val) === '[object Map]'
+  toTypeString(val) === "[object Map]"
 export const isSet = (val: unknown): val is Set<any> =>
-  toTypeString(val) === '[object Set]'
+  toTypeString(val) === "[object Set]"
 
 export const isDate = (val: unknown): val is Date =>
-  toTypeString(val) === '[object Date]'
+  toTypeString(val) === "[object Date]"
 
 export const isPlainObject = (val: unknown): val is object =>
-  toTypeString(val) === '[object Object]'
+  toTypeString(val) === "[object Object]"
 ```
 
 ## Symbol.hasInstance
@@ -106,7 +106,7 @@ export const isPlainObject = (val: unknown): val is object =>
 ```js
 class PrimitiveString {
   static [Symbol.hasInstance](x) {
-    return typeof x === "string";
+    return typeof x === "string"
   }
 }
 ```
@@ -136,16 +136,16 @@ class PrimitiveString {
 
 3. 四则运算
 
-我们在对各种非 `Number` 类型运用数学运算符(- * /)时，会先将非 `Number` 类型转换为 `Number` 类型，加法运算符不同于其他几个运算符，执行+操作符时：
+我们在对各种非 `Number` 类型运用数学运算符(- \* /)时，会先将非 `Number` 类型转换为 `Number` 类型，加法运算符不同于其他几个运算符，执行+操作符时：
 
-- 当一侧为String类型，被识别为字符串拼接，并会优先将另一侧转换为字符串类型。
-- 当一侧为Number类型，另一侧为原始类型，则将原始类型转换为Number类型。
-- 当一侧为Number类型，另一侧为引用类型，将引用类型和Number类型转换成字符串后拼接。
+- 当一侧为 String 类型，被识别为字符串拼接，并会优先将另一侧转换为字符串类型。
+- 当一侧为 Number 类型，另一侧为原始类型，则将原始类型转换为 Number 类型。
+- 当一侧为 Number 类型，另一侧为引用类型，将引用类型和 Number 类型转换成字符串后拼接。
 
 ```js
-1 + "1"; // '11'
-true + true; // 2
-4 + [1, 2, 3]; // "41,2,3"
+1 + "1" // '11'
+true + true // 2
+4 + [1, 2, 3] // "41,2,3"
 ```
 
 4. 比较运算符
@@ -153,20 +153,20 @@ true + true; // 2
 使用`==`时，若两侧类型相同，则比较结果和`===`相同，否则会发生隐式转换，使用`==`时发生的转换可以分为几种不同的情况，只考虑两侧类型不同：
 
 - `NaN`
-`NaN` 和其他任何类型比较永远返回 `false` (包括和他自己)。
+  `NaN` 和其他任何类型比较永远返回 `false` (包括和他自己)。
 
 - `Boolean`
 
 `Boolean` 和其他任何类型比较，`Boolean` 首先被转换为 `Number` 类型。
 
 ```js
-true == 1  // true 
-true == '2'  // false
-true == ['1']  // true
-true == ['2']  // false
+true == 1 // true
+true == "2" // false
+true == ["1"] // true
+true == ["2"] // false
 ```
 
-这里注意一个可能会弄混的点：`undefined`、`null` 和 `Boolean`  比较，虽然 `undefined`、`null` 和 `false` 都很容易被想象成假值，但是他们比较结果是 `false`，原因是 `false` 首先被转换成 0：
+这里注意一个可能会弄混的点：`undefined`、`null` 和 `Boolean` 比较，虽然 `undefined`、`null` 和 `false` 都很容易被想象成假值，但是他们比较结果是 `false`，原因是 `false` 首先被转换成 0：
 
 ```js
 undefined == false // false
@@ -178,20 +178,20 @@ null == false // false
 `String` 和 `Number` 比较，先将 `String` 转换为 `Number` 类型。
 
 ```js
-123 == '123' // true
-'' == 0 // true
+123 == "123" // true
+"" == 0 // true
 ```
 
 - `null` 和 `undefined`
 
-`null` == `undefined` 比较结果是true，除此之外，`null`、`undefined` 和其他任何结果的比较值都为 `false`。
+`null` == `undefined` 比较结果是 true，除此之外，`null`、`undefined` 和其他任何结果的比较值都为 `false`。
 
 ```js
 null == undefined // true
-null == '' // false
+null == "" // false
 null == 0 // false
 null == false // false
-undefined == '' // false
+undefined == "" // false
 undefined == 0 // false
 undefined == false // false
 ```
@@ -200,7 +200,7 @@ undefined == false // false
 - 如果是字符串，就通过 unicode 字符索引来比较
 
 ```js
-console.log([] == ![]); //true
+console.log([] == ![]) //true
 ```
 
 ## 数据存储
@@ -234,7 +234,7 @@ JavaScript 是在创建变量时自动进行了分配内存，并且在不使用
 引用数据类型存放在**堆**中，闭包变量是存在**堆**内存中的，这也就解释了函数之后之后为什么闭包还能引用到函数内的变量。**引用数据类型在栈中只存储了一个固定长度的地址，这个地址指向堆内存中的值。**现在的 JS 引擎可以通过逃逸分析辨别出哪些变量需要存储在堆上，哪些需要存储在栈上。两者都是存放临时数据的地方。
 
 - 栈是先进后出的，就像一个桶，后进去的先出来，它下面本来有的东西要等其他出来之后才能出来。栈区（stack） 由编译器自动分配释放 ，存放函数的参数值，局部变量的值等。
-- 堆是在程序运行时，而不是在程序编译时，申请某个大小的内存空间。即动态分配内存，对其访问和对一般内存的访问没有区别。对于堆，我们可以随心所欲的进行增加变量和删除变量，不用遵循次序。堆区（heap） 一般由人工分配释放，若人工不释放，程序结束时可能由OS回收。
+- 堆是在程序运行时，而不是在程序编译时，申请某个大小的内存空间。即动态分配内存，对其访问和对一般内存的访问没有区别。对于堆，我们可以随心所欲的进行增加变量和删除变量，不用遵循次序。堆区（heap） 一般由人工分配释放，若人工不释放，程序结束时可能由 OS 回收。
 
 ![数据存储]('../../../assets/storage.jpg')
 
@@ -243,3 +243,5 @@ JavaScript 是在创建变量时自动进行了分配内存，并且在不使用
 [instanceof-MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof)
 
 [Class checking: "instanceof"](https://javascript.info/instanceof)
+
+[How ECMAScript Engines Optimize Your Variables](https://boajs.dev/blog/2025/03/05/local-variables)

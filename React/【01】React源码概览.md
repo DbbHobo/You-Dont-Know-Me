@@ -23,7 +23,7 @@ react-main
 - `React.Children`
 - `Hooks`
 
-这些 API 是全平台通用的，它不包含`ReactDOM`、`ReactNative`等平台特定的代码，在 `NPM` 上作为单独的一个包发布。
+这些 API 是全平台通用的，它不包含`ReactDOM`、`ReactNative`等平台特定的代码，在 `npm` 上作为单独的一个包发布。
 
 ## react-dom
 

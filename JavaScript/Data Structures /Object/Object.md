@@ -10,9 +10,21 @@
 
 ### Object.is(value1, value2)
 
-`Object.is()` 用来比较两个值是否严格相等，与严格比较运算符（`===`）的行为基本一致。=== 运算符（和 == 运算符）将数值 -0 和 +0 视为相等，但是会将 NaN 视为彼此不相等。
+`Object.is()` 用来比较两个值是否严格相等，与严格比较运算符（`===`）的行为基本一致。=== 运算符（和 == 运算符）将数值 `-0` 和 `+0` 视为相等，但是会将 `NaN` 视为彼此不相等。
 
-### 创建Object相关
+```js
+console.log(Object.is(NaN, NaN))
+// true
+console.log(Object.is(+0, -0))
+// false
+
+console.log(NaN === NaN)
+// false
+console.log(+0 === -0)
+// true
+```
+
+### 创建 Object 相关
 
 ### Object.create(proto, propertiesObject)
 
@@ -27,31 +39,50 @@ var person1 = {
   name: "张三",
   age: 38,
   greeting: function () {
-    console.log("Hi! I'm " + this.name + ".");
+    console.log("Hi! I'm " + this.name + ".")
   },
-};
-var person2 = Object.create(person1);
-person2.name; // 张三
-person2.greeting(); // Hi! I'm 张三.
+}
+var person2 = Object.create(person1)
+person2.name // 张三
+person2.greeting() // Hi! I'm 张三.
 ```
 
 上面代码中，对象 person1 是 person2 的原型对象，后者继承了前者的属性和方法。
 
-### Object.assgin()
+### Object.setPrototypeOf(obj, prototype) / Object.getPrototypeOf(obj)
+
+\***\*proto\*\***属性没有写入 ES6 的正文，而是写入了附录，原因是\***\*proto\*\***前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的 API，只是由于浏览器广泛支持，才被加入了 ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的 `Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
+
+`Object.setPrototypeOf()` 方法的作用与**proto**相同，用来设置一个对象的 `prototype` 对象，返回参数对象本身。它是 ES6 正式推荐的设置原型对象的方法。
+
+- The Object.setPrototypeOf() static method sets the prototype (i.e., the internal [[Prototype]] property) of a specified object to another object or null.
+
+`Object.getPrototypeOf()` 方法与 `Object.setPrototypeOf()` 方法配套，用于读取一个对象的原型对象。
+
+- The Object.getPrototypeOf() static method returns the prototype (i.e. the value of the internal [[Prototype]] property) of the specified object.
+
+```js
+// ES6 之前需要抛弃默认的 Bar.prototype
+Bar.ptototype = Object.create(Foo.prototype)
+// ES6 开始可以直接修改现有的 Bar.prototype
+Object.setPrototypeOf(Bar.prototype, Foo.prototype)
+```
+
+### Object.assgin(target,source)
 
 - The Object.assign() static method copies all enumerable own properties from one or more source objects to a target object. It returns the modified target object.
 
 用于将所有可枚举属性的值从一个或多个源对象复制到目标对象。它将返回目标对象。方法只会拷贝**源对象自身的**并且**可枚举的**属性到目标对象。如果目标对象中的属性具有相同的键，则属性将被源对象中的属性覆盖。后面的源对象的属性将类似地覆盖前面的源对象的属性。
 
-`Object.assign`方法用于对象的合并，将源对象（source）的所有可枚举属性，复制到目标对象（target）。`Object.assign(target, source1, source2);`是浅拷贝。
+`Object.assign`方法用于**对象的合并**，将源对象（source）的所有可枚举属性，复制到目标对象（target）。`Object.assign(target, source1, source2);`是**浅拷贝**。
 
 ```js
-const target = { a: 1, b: 2 };
-const source = { b: 4, c: 5 };
-const returnedTarget = Object.assign(target, source);
-console.log(target);
+const target = { a: 1, b: 2 }
+const source = { b: 4, c: 5 }
+const returnedTarget = Object.assign(target, source)
+console.log(target)
 // expected output: Object { a: 1, b: 4, c: 5 }
-console.log(returnedTarget);
+console.log(returnedTarget)
 // expected output: Object { a: 1, b: 4, c: 5 }
 ```
 
@@ -61,7 +92,7 @@ console.log(returnedTarget);
 - The Object.defineProperty() static method defines a new property directly on an object, or modifies an existing property on an object, and returns the object.
 - `Object.defineProperties(obj, props)`
 - The Object.defineProperties() static method defines new or modifies existing properties directly on an object, returning the object.
-  
+
 直接在一个对象上定义一个新属性，或者修改一个对象的现有属性， 并返回这个对象。
 
 **数据属性**：
@@ -88,20 +119,20 @@ ES5 有三个操作会忽略 `enumerable` 为 false 的属性：
 只有`for...in`会返回继承的属性，其他三个方法都会忽略继承的属性，引入“可枚举”（enumerable）这个概念的最初目的，就是让某些属性可以规避掉`for...in`操作，不然所有内部属性和方法都会被遍历到。
 
 ```js
-const object1 = {};
+const object1 = {}
 
-Object.defineProperty(object1, 'property1', {
+Object.defineProperty(object1, "property1", {
   value: 42,
   writable: false,
-});
+})
 
-object1.property1 = 77;
+object1.property1 = 77
 // Throws an error in strict mode
 
-console.log(object1.property1);
+console.log(object1.property1)
 // Expected output: 42
 
-const object2 = {};
+const object2 = {}
 
 Object.defineProperties(object2, {
   property1: {
@@ -109,29 +140,10 @@ Object.defineProperties(object2, {
     writable: true,
   },
   property2: {},
-});
+})
 
-console.log(object2.property1);
+console.log(object2.property1)
 // Expected output: 42
-```
-
-### Object.setPrototypeOf(obj, prototype) / Object.getPrototypeOf(obj)
-
-**__proto__**属性没有写入 ES6 的正文，而是写入了附录，原因是**__proto__**前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的 API，只是由于浏览器广泛支持，才被加入了 ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的 `Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
-
-`Object.setPrototypeOf()` 方法的作用与**proto**相同，用来设置一个对象的 `prototype` 对象，返回参数对象本身。它是 ES6 正式推荐的设置原型对象的方法。
-
-- The Object.setPrototypeOf() static method sets the prototype (i.e., the internal [[Prototype]] property) of a specified object to another object or null.
-
-`Object.getPrototypeOf()` 方法与 `Object.setPrototypeOf()` 方法配套，用于读取一个对象的原型对象。
-
-- The Object.getPrototypeOf() static method returns the prototype (i.e. the value of the internal [[Prototype]] property) of the specified object.
-
-```js
-// ES6 之前需要抛弃默认的 Bar.prototype
-Bar.ptototype = Object.create(Foo.prototype);
-// ES6 开始可以直接修改现有的 Bar.prototype
-Object.setPrototypeOf(Bar.prototype, Foo.prototype);
 ```
 
 ### 属性相关
@@ -147,9 +159,9 @@ const object1 = {
   a: 1,
   b: 2,
   c: 3,
-};
+}
 
-console.log(Object.getOwnPropertyNames(object1));
+console.log(Object.getOwnPropertyNames(object1))
 // Expected output: Array ["a", "b", "c"]
 ```
 
@@ -160,16 +172,16 @@ console.log(Object.getOwnPropertyNames(object1));
 `Object.getOwnPropertySymbols()` 方法返回一个给定对象自身的所有 Symbol 属性的数组。
 
 ```js
-const object1 = {};
-const a = Symbol('a');
-const b = Symbol.for('b');
+const object1 = {}
+const a = Symbol("a")
+const b = Symbol.for("b")
 
-object1[a] = 'localSymbol';
-object1[b] = 'globalSymbol';
+object1[a] = "localSymbol"
+object1[b] = "globalSymbol"
 
-const objectSymbols = Object.getOwnPropertySymbols(object1);
+const objectSymbols = Object.getOwnPropertySymbols(object1)
 
-console.log(objectSymbols.length);
+console.log(objectSymbols.length)
 // Expected output: 2
 ```
 
@@ -184,13 +196,13 @@ ES2017 引入了 `Object.getOwnPropertyDescriptors()` 方法，返回指定对�
 ```js
 const object1 = {
   property1: 42,
-  property2: 'dfkk'
-};
-const descriptor1 = Object.getOwnPropertyDescriptor(object1, 'property1');
-const descriptors = Object.getOwnPropertyDescriptors(object1);
-console.log(descriptor1.configurable);
+  property2: "dfkk",
+}
+const descriptor1 = Object.getOwnPropertyDescriptor(object1, "property1")
+const descriptors = Object.getOwnPropertyDescriptors(object1)
+console.log(descriptor1.configurable)
 // Expected output: true
-console.log(descriptor1.value);
+console.log(descriptor1.value)
 // Expected output: 42
 console.log(descriptors)
 // Expected output: {
@@ -208,8 +220,8 @@ console.log(descriptors)
 //     }
 // }
 
-let arr = [];
-Object.getOwnPropertyDescriptor(arr,'length');
+let arr = []
+Object.getOwnPropertyDescriptor(arr, "length")
 // Expected output: {value: 0, writable: true, enumerable: false, configurable: false}
 ```
 
@@ -231,8 +243,8 @@ Object.getOwnPropertyDescriptor(arr,'length');
 
 - **不能添加新属性**
 - **不能删除已有属性**
-- **不能配置现有属性 相当于configurable=false**
-  
+- **不能配置现有属性 相当于 configurable=false**
+
 `Object.isSealed()`判断一个对象是否被密封。密封对象是指那些不可扩展的，且所有自身属性都不可配置且因此不可删除（但不一定是不可写）的对象。
 
 ### Object.freeze(obj) / Object.isFrozen(obj)
@@ -243,8 +255,8 @@ Object.getOwnPropertyDescriptor(arr,'length');
 
 - **不能添加新属性**
 - **不能删除已有属性**
-- **不能配置现有属性 相当于configurable=false**
-- **不能修改现有属性现有值 相当于writable=false**
+- **不能配置现有属性 相当于 configurable=false**
+- **不能修改现有属性现有值 相当于 writable=false**
 
 `Object.isFrozen()`判断一个对象是否被冻结。一个对象是冻结的是指它不可扩展，所有属性都是不可配置的，且所有数据属性（即没有 getter 或 setter 组件的访问器的属性）都是不可写的。
 
@@ -258,12 +270,12 @@ Object.getOwnPropertyDescriptor(arr,'length');
 
 ```js
 // simple array
-var arr = ["a", "b", "c"];
-console.log(Object.keys(arr)); // console: ['0', '1', '2']
+var arr = ["a", "b", "c"]
+console.log(Object.keys(arr)) // console: ['0', '1', '2']
 
 // array like object
-var obj = { 0: "a", 1: "b", 2: "c" };
-console.log(Object.keys(obj)); // console: ['0', '1', '2']
+var obj = { 0: "a", 1: "b", 2: "c" }
+console.log(Object.keys(obj)) // console: ['0', '1', '2']
 ```
 
 ### Object.values(obj)
@@ -274,13 +286,13 @@ console.log(Object.keys(obj)); // console: ['0', '1', '2']
 
 ```js
 // array like object
-var obj = { 0: "a", 1: "b", 2: "c" };
-console.log(Object.values(obj)); // ['a', 'b', 'c']
+var obj = { 0: "a", 1: "b", 2: "c" }
+console.log(Object.values(obj)) // ['a', 'b', 'c']
 
 // array like object with random key ordering
 // when we use numeric keys, the value returned in a numerical order according to the keys
-var an_obj = { 100: "a", 2: "b", 7: "c" };
-console.log(Object.values(an_obj)); // ['b', 'c', 'a']
+var an_obj = { 100: "a", 2: "b", 7: "c" }
+console.log(Object.values(an_obj)) // ['b', 'c', 'a']
 ```
 
 ### Object.entries(obj)
@@ -291,12 +303,12 @@ console.log(Object.values(an_obj)); // ['b', 'c', 'a']
 
 ```js
 // array like object
-const obj = { 0: "a", 1: "b", 2: "c" };
-console.log(Object.entries(obj)); // [ ['0', 'a'], ['1', 'b'], ['2', 'c'] ]
+const obj = { 0: "a", 1: "b", 2: "c" }
+console.log(Object.entries(obj)) // [ ['0', 'a'], ['1', 'b'], ['2', 'c'] ]
 
 // array like object with random key ordering
-const anObj = { 100: "a", 2: "b", 7: "c" };
-console.log(Object.entries(anObj)); // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
+const anObj = { 100: "a", 2: "b", 7: "c" }
+console.log(Object.entries(anObj)) // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
 ```
 
 ### Object.fromEntries(obj)
@@ -309,9 +321,9 @@ console.log(Object.entries(anObj)); // [ ['2', 'b'], ['7', 'c'], ['100', 'a'] ]
 const map = new Map([
   ["foo", "bar"],
   ["baz", 42],
-]);
-const obj = Object.fromEntries(map);
-console.log(obj); // { foo: "bar", baz: 42 }
+])
+const obj = Object.fromEntries(map)
+console.log(obj) // { foo: "bar", baz: 42 }
 ```
 
 ---
@@ -325,13 +337,13 @@ console.log(obj); // { foo: "bar", baz: 42 }
 会返回一个布尔值，指示对象自身属性中是否具有指定的属性（也就是，是否有指定的键），而且此属性非原型链继承的。
 
 ```js
-const object1 = {};
-object1.property1 = 42;
+const object1 = {}
+object1.property1 = 42
 
-console.log(object1.hasOwnProperty("property1"));
+console.log(object1.hasOwnProperty("property1"))
 // expected output: true
 
-console.log(object1.hasOwnProperty("toString"));
+console.log(object1.hasOwnProperty("toString"))
 // expected output: false
 ```
 
@@ -345,15 +357,14 @@ console.log(object1.hasOwnProperty("toString"));
 function Foo() {}
 function Bar() {}
 
-Bar.prototype = Object.create(Foo.prototype);
+Bar.prototype = Object.create(Foo.prototype)
 
-const bar = new Bar();
+const bar = new Bar()
 
-console.log(Foo.prototype.isPrototypeOf(bar));
+console.log(Foo.prototype.isPrototypeOf(bar))
 // Expected output: true
-console.log(Bar.prototype.isPrototypeOf(bar));
+console.log(Bar.prototype.isPrototypeOf(bar))
 // Expected output: true
-
 ```
 
 ### Object.prototype.propertyIsEnumerable(prop)
@@ -363,18 +374,18 @@ console.log(Bar.prototype.isPrototypeOf(bar));
 判断指定属性是否可枚举，内部属性设置参见 ECMAScript [[Enumerable]] attribute 。
 
 ```js
-const object1 = {};
-const array1 = [];
-object1.property1 = 42;
-array1[0] = 42;
+const object1 = {}
+const array1 = []
+object1.property1 = 42
+array1[0] = 42
 
-console.log(object1.propertyIsEnumerable('property1'));
+console.log(object1.propertyIsEnumerable("property1"))
 // Expected output: true
 
-console.log(array1.propertyIsEnumerable(0));
+console.log(array1.propertyIsEnumerable(0))
 // Expected output: true
 
-console.log(array1.propertyIsEnumerable('length'));
+console.log(array1.propertyIsEnumerable("length"))
 // Expected output: false
 ```
 
@@ -385,14 +396,14 @@ console.log(array1.propertyIsEnumerable('length'));
 直接调用 `toString()` 方法。
 
 ```js
-const date1 = new Date(Date.UTC(2012, 11, 20, 3, 0, 0));
+const date1 = new Date(Date.UTC(2012, 11, 20, 3, 0, 0))
 
-console.log(date1.toLocaleString('ar-EG'));
+console.log(date1.toLocaleString("ar-EG"))
 // Expected output: "٢٠‏/١٢‏/٢٠١٢ ٤:٠٠:٠٠ ص"
 
-const number1 = 123456.789;
+const number1 = 123456.789
 
-console.log(number1.toLocaleString('de-DE'));
+console.log(number1.toLocaleString("de-DE"))
 // Expected output: "123.456,789"
 ```
 
@@ -404,28 +415,28 @@ console.log(number1.toLocaleString('de-DE'));
 
 ```js
 function Dog(name) {
-  this.name = name;
+  this.name = name
 }
 
-const dog1 = new Dog('Gabby');
+const dog1 = new Dog("Gabby")
 
 Dog.prototype.toString = function dogToString() {
-  return `${this.name}`;
-};
+  return `${this.name}`
+}
 
-console.log(dog1.toString());
+console.log(dog1.toString())
 // Expected output: "Gabby"
 
-let obj = { name: 'obj' }; 
-console.log(obj.toString());
+let obj = { name: "obj" }
+console.log(obj.toString())
 // Expected output: [object Object]
 Object.prototype.toString.call(obj)
 // Expected output: '[object Object]'
 
-let arr = [1]; 
-console.log(arr.toString());
+let arr = [1]
+console.log(arr.toString())
 // Expected output: 1
-Object.prototype.toString.call(arr);
+Object.prototype.toString.call(arr)
 // Expected output: '[object Array]'
 ```
 
@@ -437,41 +448,41 @@ Object.prototype.toString.call(arr);
 
 ```js
 function MyNumberType(n) {
-  this.number = n;
+  this.number = n
 }
 
 MyNumberType.prototype.valueOf = function () {
-  return this.number;
-};
+  return this.number
+}
 
-const object1 = new MyNumberType(4);
+const object1 = new MyNumberType(4)
 
-console.log(object1 + 3);
+console.log(object1 + 3)
 // Expected output: 7
 
-let obj = [1]; 
-console.log(obj.valueOf());
+let obj = [1]
+console.log(obj.valueOf())
 // Expected output: [1]
 
-let obj = { name: 'obj' }; 
-console.log(obj.valueOf());
+let obj = { name: "obj" }
+console.log(obj.valueOf())
 // Expected output: {name: 'obj'}
 ```
 
-## Object总结
+## Object 总结
 
 ### 对象属性遍历
 
 1. `for...in`
-    - for...in循环遍历对象自身的和继承的可枚举属性（不含 Symbol 属性）。
+   - for...in 循环遍历对象自身的和继承的可枚举属性（不含 Symbol 属性）。
 2. `Object.keys(obj)`/`Object.values(obj)`/`Object.entries(obj)`
-    - Object.keys返回一个数组，包括对象自身的（不含继承的）所有可枚举属性（不含 Symbol 属性）的键名。
+   - Object.keys 返回一个数组，包括对象自身的（不含继承的）所有可枚举属性（不含 Symbol 属性）的键名。
 3. `Object.getOwnPropertyNames(obj)`
-    - Object.getOwnPropertyNames返回一个数组，包含对象自身的所有属性（不含 Symbol 属性，但是包括不可枚举属性）的键名。
+   - Object.getOwnPropertyNames 返回一个数组，包含对象自身的所有属性（不含 Symbol 属性，但是包括不可枚举属性）的键名。
 4. `Object.getOwnPropertySymbols(obj)`
-    - Object.getOwnPropertySymbols返回一个数组，包含对象自身的所有 Symbol 属性的键名。
+   - Object.getOwnPropertySymbols 返回一个数组，包含对象自身的所有 Symbol 属性的键名。
 5. `Reflect.ownKeys(obj)`
-    - Reflect.ownKeys返回一个数组，包含对象自身的（不含继承的）所有键名，不管键名是 Symbol 或字符串，也不管是否可枚举。
+   - Reflect.ownKeys 返回一个数组，包含对象自身的（不含继承的）所有键名，不管键名是 Symbol 或字符串，也不管是否可枚举。
 
 ## 参考资料
 

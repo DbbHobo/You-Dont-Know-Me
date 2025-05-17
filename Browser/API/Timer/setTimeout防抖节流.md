@@ -15,60 +15,56 @@
 
 调用`setInterval()`方法同样也会返回一个 ID，该 ID 可用于在将来某个时刻取消间歇调用。要取消尚未执行的间歇调用，可以使用`clearInterval()`方法并传入相应的间歇调用 ID。取消间歇调用的重要性要远远高于取消超时调用，因为在不加干涉的情况下，间歇调用将会一直执行到页面卸载。
 
-## 防抖Debounce 和 节流Throttle
+## 防抖 Debounce 和 节流 Throttle
 
 `Debounce` 和 `Throttle` 是两种相似但不同的技术，用于控制函数在某段时间内执行的次数。
 
-一个经过防抖或节流处理的函数在将该函数附加到DOM事件时特别有用。为什么呢？因为这样我们在事件和函数执行之间添加了一层控制。因为我们无法控制DOM事件的触发频率，它可能会变化。
+一个经过防抖或节流处理的函数在将该函数附加到 DOM 事件时特别有用。为什么呢？因为这样我们在事件和函数执行之间添加了一层控制。因为我们无法控制 DOM 事件的触发频率，它可能会变化。
 
 ### 防抖 debounce
 
-在滚动事件中需要做个复杂计算或者实现一个按钮的防二次点击操作。这些需求都可以通过函数防抖动来实现。尤其是第一个需求，如果在频繁的事件回调中做复杂计算，很有可能导致页面卡顿，不如将**多次计算合并为一次计算**，只在一个精确点做操作，也就是在最后一次触发事件后n秒再进行事件调用。
+在滚动事件中需要做个复杂计算或者实现一个按钮的防二次点击操作。这些需求都可以通过函数防抖动来实现。尤其是第一个需求，如果在频繁的事件回调中做复杂计算，很有可能导致页面卡顿，不如将**多次计算合并为一次计算**，只在一个精确点做操作，也就是在最后一次触发事件后 n 秒再进行事件调用。
 
 防抖就是延迟执行一个函数，直到用户在特定时间内停止执行某个特定动作。例如，如果你有一个搜索栏，根据用户输入从后端获取建议，你可以对执行 API 调用的函数进行防抖，以便只有在用户停止输入几秒钟后才运行该函数。通过这种方式，你可以避免进行过多的 API 调用，从而防止服务器过载或返回不相关的结果。
 
 ```js
 // 简易实现-每次触发事件时都取消之前的延时调用方法
 function debounce(fn, delay) {
-  let timer ,result;
+  let timer = null
   return function (...args) {
-    let context = this;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(function () {
-      result = fn.apply(context, args);
-    }, delay);
-
-    return result;
-  };
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  }
 }
 ```
 
 ```js
 // 简易实现-首次触发会执行，后续每次等到停止触发n秒后再触发
 function debounce(func, wait, immediate) {
-    var timeout, result;
+  var timeout, result
 
-    return function () {
-        var context = this;
-        var args = arguments;
+  return function () {
+    var context = this
+    var args = arguments
 
-        if (timeout) clearTimeout(timeout);
-        if (immediate) {
-            // 如果已经执行过，不再执行
-            var callNow = !timeout;
-            timeout = setTimeout(function(){
-                timeout = null;
-            }, wait)
-            if (callNow) result = func.apply(context, args)
-        }
-        else {
-            timeout = setTimeout(function(){
-                result = func.apply(context, args)
-            }, wait);
-        }
-
-        return result;
+    if (timeout) clearTimeout(timeout)
+    if (immediate) {
+      // 如果已经执行过，不再执行
+      var callNow = !timeout
+      timeout = setTimeout(function () {
+        timeout = null
+      }, wait)
+      if (callNow) result = func.apply(context, args)
+    } else {
+      timeout = setTimeout(function () {
+        result = func.apply(context, args)
+      }, wait)
     }
+
+    return result
+  }
 }
 ```
 
@@ -83,8 +79,8 @@ function debounce(func, wait, immediate) {
 
 ```ts
 // lodash实现
-import isObject from './isObject.js';
-import root from './.internal/root.js';
+import isObject from "./isObject.js"
+import root from "./.internal/root.js"
 
 /**
  * Creates a debounced function that delays invoking `func` until after `wait`
@@ -148,189 +144,190 @@ import root from './.internal/root.js';
  * const status = debounced.pending() ? "Pending..." : "Ready"
  */
 function debounce(func, wait, options) {
-    let lastArgs;
-    let lastThis;
-    let maxWait;
-    let result;
-    let timerId;
-    let lastCallTime;//上一次试图触发函数时间
-    let lastInvokeTime = 0;//上一次调用时间
-    let leading = false;
-    let maxing = false;
-    let trailing = true;
+  let lastArgs
+  let lastThis
+  let maxWait
+  let result
+  let timerId
+  let lastCallTime //上一次试图触发函数时间
+  let lastInvokeTime = 0 //上一次调用时间
+  let leading = false
+  let maxing = false
+  let trailing = true
 
-    // 没传wait或者wait为0时用requestAnimationFrame方法代替setTimeout
-    // Bypass `requestAnimationFrame` by explicitly setting `wait=0`.
-    const useRAF = !wait && wait !== 0 && typeof root.requestAnimationFrame === 'function';
+  // 没传wait或者wait为0时用requestAnimationFrame方法代替setTimeout
+  // Bypass `requestAnimationFrame` by explicitly setting `wait=0`.
+  const useRAF =
+    !wait && wait !== 0 && typeof root.requestAnimationFrame === "function"
 
-    if (typeof func !== 'function') {
-        throw new TypeError('Expected a function');
+  if (typeof func !== "function") {
+    throw new TypeError("Expected a function")
+  }
+  wait = +wait || 0
+  if (isObject(options)) {
+    leading = !!options.leading
+    maxing = "maxWait" in options
+    maxWait = maxing ? Math.max(+options.maxWait || 0, wait) : maxWait
+    trailing = "trailing" in options ? !!options.trailing : trailing
+  }
+
+  // 调用用户传入的函数
+  function invokeFunc(time) {
+    const args = lastArgs
+    const thisArg = lastThis
+
+    lastArgs = lastThis = undefined
+    lastInvokeTime = time
+    result = func.apply(thisArg, args)
+    return result
+  }
+
+  // 设置定时器-返回定时器id
+  function startTimer(pendingFunc, milliseconds) {
+    if (useRAF) {
+      root.cancelAnimationFrame(timerId)
+      return root.requestAnimationFrame(pendingFunc)
     }
-    wait = +wait || 0;
-    if (isObject(options)) {
-        leading = !!options.leading;
-        maxing = 'maxWait' in options;
-        maxWait = maxing ? Math.max(+options.maxWait || 0, wait) : maxWait;
-        trailing = 'trailing' in options ? !!options.trailing : trailing;
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    return setTimeout(pendingFunc, milliseconds)
+  }
+
+  // 清除定时器
+  function cancelTimer(id) {
+    if (useRAF) {
+      root.cancelAnimationFrame(id)
+      return
     }
+    clearTimeout(id)
+  }
 
-    // 调用用户传入的函数
-    function invokeFunc(time) {
-        const args = lastArgs;
-        const thisArg = lastThis;
+  // 是否在超时起始时调用
+  function leadingEdge(time) {
+    // Reset any `maxWait` timer.
+    lastInvokeTime = time
+    // Start the timer for the trailing edge.
+    timerId = startTimer(timerExpired, wait)
+    // Invoke the leading edge.
+    return leading ? invokeFunc(time) : result
+  }
 
-        lastArgs = lastThis = undefined;
-        lastInvokeTime = time;
-        result = func.apply(thisArg, args);
-        return result;
+  function remainingWait(time) {
+    const timeSinceLastCall = time - lastCallTime
+    const timeSinceLastInvoke = time - lastInvokeTime
+    const timeWaiting = wait - timeSinceLastCall
+
+    return maxing
+      ? Math.min(timeWaiting, maxWait - timeSinceLastInvoke)
+      : timeWaiting
+  }
+
+  // 是否需要调用用户传入的函数
+  function shouldInvoke(time) {
+    const timeSinceLastCall = time - lastCallTime
+    const timeSinceLastInvoke = time - lastInvokeTime
+
+    // Either this is the first call, activity has stopped and we're at the
+    // trailing edge, the system time has gone backwards and we're treating
+    // it as the trailing edge, or we've hit the `maxWait` limit.
+    // 首次调用or上一次调用时间间隔超过wait时间or上次实施时间间隔大于最大等待时间等情况皆返回true
+    return (
+      lastCallTime === undefined ||
+      timeSinceLastCall >= wait ||
+      timeSinceLastCall < 0 ||
+      (maxing && timeSinceLastInvoke >= maxWait)
+    )
+  }
+
+  // 检验时间是否到期
+  function timerExpired() {
+    const time = Date.now()
+    if (shouldInvoke(time)) {
+      return trailingEdge(time)
     }
+    // Restart the timer.
+    timerId = startTimer(timerExpired, remainingWait(time))
+    return undefined
+  }
 
-    // 设置定时器-返回定时器id
-    function startTimer(pendingFunc, milliseconds) {
-        if (useRAF) {
-            root.cancelAnimationFrame(timerId);
-            return root.requestAnimationFrame(pendingFunc);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval
-        return setTimeout(pendingFunc, milliseconds);
+  // 是否在超时结束时调用
+  function trailingEdge(time) {
+    timerId = undefined
+
+    // Only invoke if we have `lastArgs` which means `func` has been
+    // debounced at least once.
+    if (trailing && lastArgs) {
+      return invokeFunc(time)
     }
+    lastArgs = lastThis = undefined
+    return result
+  }
 
-    // 清除定时器
-    function cancelTimer(id) {
-        if (useRAF) {
-            root.cancelAnimationFrame(id);
-            return;
-        }
-        clearTimeout(id);
+  function cancel() {
+    if (timerId !== undefined) {
+      cancelTimer(timerId)
     }
+    lastInvokeTime = 0
+    lastArgs = lastCallTime = lastThis = timerId = undefined
+  }
 
-    // 是否在超时起始时调用
-    function leadingEdge(time) {
-        // Reset any `maxWait` timer.
-        lastInvokeTime = time;
-        // Start the timer for the trailing edge.
-        timerId = startTimer(timerExpired, wait);
-        // Invoke the leading edge.
-        return leading ? invokeFunc(time) : result;
+  function flush() {
+    return timerId === undefined ? result : trailingEdge(Date.now())
+  }
+
+  function pending() {
+    return timerId !== undefined
+  }
+
+  function debounced(...args) {
+    const time = Date.now()
+    const isInvoking = shouldInvoke(time)
+
+    lastArgs = args
+    lastThis = this
+    lastCallTime = time
+
+    if (isInvoking) {
+      if (timerId === undefined) {
+        return leadingEdge(lastCallTime)
+      }
+      if (maxing) {
+        // Handle invocations in a tight loop.
+        timerId = startTimer(timerExpired, wait)
+        return invokeFunc(lastCallTime)
+      }
     }
-
-    function remainingWait(time) {
-        const timeSinceLastCall = time - lastCallTime;
-        const timeSinceLastInvoke = time - lastInvokeTime;
-        const timeWaiting = wait - timeSinceLastCall;
-
-        return maxing ? Math.min(timeWaiting, maxWait - timeSinceLastInvoke) : timeWaiting;
+    if (timerId === undefined) {
+      timerId = startTimer(timerExpired, wait)
     }
-
-    // 是否需要调用用户传入的函数
-    function shouldInvoke(time) {
-        const timeSinceLastCall = time - lastCallTime;
-        const timeSinceLastInvoke = time - lastInvokeTime;
-
-        // Either this is the first call, activity has stopped and we're at the
-        // trailing edge, the system time has gone backwards and we're treating
-        // it as the trailing edge, or we've hit the `maxWait` limit.
-        // 首次调用or上一次调用时间间隔超过wait时间or上次实施时间间隔大于最大等待时间等情况皆返回true
-        return (
-            lastCallTime === undefined ||
-            timeSinceLastCall >= wait ||
-            timeSinceLastCall < 0 ||
-            (maxing && timeSinceLastInvoke >= maxWait)
-        );
-    }
-
-    // 检验时间是否到期
-    function timerExpired() {
-        const time = Date.now();
-        if (shouldInvoke(time)) {
-            return trailingEdge(time);
-        }
-        // Restart the timer.
-        timerId = startTimer(timerExpired, remainingWait(time));
-        return undefined;
-    }
-
-    // 是否在超时结束时调用
-    function trailingEdge(time) {
-        timerId = undefined;
-
-        // Only invoke if we have `lastArgs` which means `func` has been
-        // debounced at least once.
-        if (trailing && lastArgs) {
-            return invokeFunc(time);
-        }
-        lastArgs = lastThis = undefined;
-        return result;
-    }
-
-    function cancel() {
-        if (timerId !== undefined) {
-            cancelTimer(timerId);
-        }
-        lastInvokeTime = 0;
-        lastArgs = lastCallTime = lastThis = timerId = undefined;
-    }
-
-    function flush() {
-        return timerId === undefined ? result : trailingEdge(Date.now());
-    }
-
-    function pending() {
-        return timerId !== undefined;
-    }
-
-    function debounced(...args) {
-        const time = Date.now();
-        const isInvoking = shouldInvoke(time);
-
-        lastArgs = args;
-        lastThis = this;
-        lastCallTime = time;
-
-        if (isInvoking) {
-            if (timerId === undefined) {
-                return leadingEdge(lastCallTime);
-            }
-            if (maxing) {
-                // Handle invocations in a tight loop.
-                timerId = startTimer(timerExpired, wait);
-                return invokeFunc(lastCallTime);
-            }
-        }
-        if (timerId === undefined) {
-            timerId = startTimer(timerExpired, wait);
-        }
-        return result;
-    }
-    // 除了返回防抖后的函数以外还提供了cancel（）、flush函数
-    debounced.cancel = cancel;
-    debounced.flush = flush;
-    debounced.pending = pending;
-    return debounced;
+    return result
+  }
+  // 除了返回防抖后的函数以外还提供了cancel（）、flush函数
+  debounced.cancel = cancel
+  debounced.flush = flush
+  debounced.pending = pending
+  return debounced
 }
 
-export default debounce;
+export default debounce
 ```
 
 ### 节流 throttle
 
 防抖动和节流本质是不一样的。防抖动是将多次执行变为最后一次执行，而节流是将**多次执行变成每隔一段时间执行**。
 
-节流限制函数在指定时间间隔内只能执行一次。例如，如果你有一个调整页面布局的resize事件需要处理，你可以对更新布局的函数进行节流，使其每100毫秒只运行一次。这样，你可以避免代码过于频繁地运行，从而导致用户界面不流畅或过高CPU使用率。
+节流限制函数在指定时间间隔内只能执行一次。例如，如果你有一个调整页面布局的 resize 事件需要处理，你可以对更新布局的函数进行节流，使其每 100 毫秒只运行一次。这样，你可以避免代码过于频繁地运行，从而导致用户界面不流畅或过高 CPU 使用率。
 
 ```js
 // 简易实现-每次触发事件时都判断当前是否有等待执行的延时函数
 function throttle(fn, interval) {
-  let flag = true;
-  return function (...args) {
-    let context = this;
-    if (!flag) return;
-    flag = false;
-    setTimeout(() => {
-      fn.apply(context, args);
-      flag = true;
-    }, interval);
-  };
+    let timer = null
+    return function (...args) {
+    if (!timer) {
+        timer = setTimeout(() => {
+            fn.apply(this, args)
+            timer = null
+        }, interval)
+    }
 }
 ```
 
@@ -344,8 +341,8 @@ function throttle(fn, interval) {
 
 ```js
 // lodash实现
-import debounce from './debounce.js';
-import isObject from './isObject.js';
+import debounce from "./debounce.js"
+import isObject from "./isObject.js"
 
 /**
  * Creates a throttled function that only invokes `func` at most once per
@@ -396,24 +393,24 @@ import isObject from './isObject.js';
  * jQuery(window).on('popstate', throttled.cancel)
  */
 function throttle(func, wait, options) {
-    let leading = true;
-    let trailing = true;
+  let leading = true
+  let trailing = true
 
-    if (typeof func !== 'function') {
-        throw new TypeError('Expected a function');
-    }
-    if (isObject(options)) {
-        leading = 'leading' in options ? !!options.leading : leading;
-        trailing = 'trailing' in options ? !!options.trailing : trailing;
-    }
-    return debounce(func, wait, {
-        leading,
-        trailing,
-        maxWait: wait,
-    });
+  if (typeof func !== "function") {
+    throw new TypeError("Expected a function")
+  }
+  if (isObject(options)) {
+    leading = "leading" in options ? !!options.leading : leading
+    trailing = "trailing" in options ? !!options.trailing : trailing
+  }
+  return debounce(func, wait, {
+    leading,
+    trailing,
+    maxWait: wait,
+  })
 }
 
-export default throttle;
+export default throttle
 ```
 
 ### 使用场景
@@ -421,12 +418,12 @@ export default throttle;
 防抖方法使用场景：
 
 - 按钮点击多次
-- input输入keydown
+- input 输入 keydown
 
 节流方法使用场景：
 
-- window滚动scroll
-- window尺寸resize
+- window 滚动 scroll
+- window 尺寸 resize
 
 ## requestAnimationFrame
 
@@ -434,13 +431,13 @@ export default throttle;
 
 `requestAnimationFrame()`方法同样也会返回一个 ID，和`setTimeout()`、`setInterval()`一样可以用于在将来某个时刻取消间歇调用`cancelAnimationFrame(handlerId)`。
 
-可以把`window.requestAnimationFrame()`方法看作一个节流函数`_.throttle(dosomething, 16)`，并且这个方法是高度精确的，因为它是一个原生API。
+可以把`window.requestAnimationFrame()`方法看作一个节流函数`_.throttle(dosomething, 16)`，并且这个方法是高度精确的，因为它是一个原生 API。
 
 ## 总结
 
 - `debounce`（防抖）：将突发事件（例如按键输入）分组为一个单一事件的过程。
-- `throttle`（节流）：确保每隔n毫秒执行一次操作的过程，比如每200毫秒检查一次滚动位置以触发CSS动画。
-- `requestAnimationFrame`（请求动画帧）：是一个节流的替代方法。当函数重新计算并渲染屏幕上的元素时，希望保证平滑的变化或动画时使用。注意：不支持IE9。
+- `throttle`（节流）：确保每隔 n 毫秒执行一次操作的过程，比如每 200 毫秒检查一次滚动位置以触发 CSS 动画。
+- `requestAnimationFrame`（请求动画帧）：是一个节流的替代方法。当函数重新计算并渲染屏幕上的元素时，希望保证平滑的变化或动画时使用。注意：不支持 IE9。
 
 ## 参考资料
 

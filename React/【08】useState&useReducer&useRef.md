@@ -105,7 +105,7 @@ useState<S>(
 
 创建一个对应的 `hook` 并定义 `memoizedState` 、 `baseState` 、 `queue` 等属性，返回`[hook.memoizedState, dispatch]`， `dispatch` 就是返回给用户更新状态的方法：
 
-1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储或者说串联到对应`fiber`的`memoizedState`属性上；
+1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储或者说串联到对应`fiber`的`memoizedState`属性 `hook list` 上；
 2. 初始值如果用户传的是函数就执行获取，然后将初始值`initialState`存储到`hook`实例的`memoizedState`和`baseState`属性上；
 3. 构造一个`UpdateQueue`实例挂载在`hook`的`queue`属性上；
 4. 构造`dispatch`方法挂载在`hook.queue.dispatch`上，实质是调用的`React`提供的`dispatchSetState`方法，这个方法里除了计算最新的`state`值与旧值比较还会根据`state`值是否改变，如果改变了会构造`update`任务并调用`scheduleUpdateOnFiber`安排`performConcurrentWorkOnRoot`进`TaskQueue`任务队列；
@@ -123,7 +123,7 @@ function mountState<S>(
     // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
-  // 【hook的memoizedState设为initialState】
+  // 【hook的memoizedState/baseState设为initialState】
   hook.memoizedState = hook.baseState = initialState;
   // 【生成一个queue并挂到hook上】
   // 【hook上更新队列用于保存未来的状态更新。在设置状态时，状态值不会立即更新，这是因为不同的状态更新可能具有不同的优先级，所以不需要立即处理。因此，我们需要将更新存储起来，然后稍后根据具体优先级处理它们。】
@@ -177,14 +177,13 @@ const dispatch: Dispatch<BasicStateAction<S>> = (queue.dispatch =
     (dispatchSetState.bind(null, currentlyRenderingFiber, queue): any));
 ```
 
-`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`update`任务加入当前`hook`的`queue`的`pending` 队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化去调度更新。
+`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`update`任务加入当前`hook`的`queue`的`pending` 队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化去调度更新。主要工作就是构造`update`任务并调度 `rerender`，并根据情况是否提前计算新值。
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
-2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
-3. 非`render`过程中产生的状态变化会提前计算新值赋给`eagerState`，提前算好后续直接从这个属性获取新增，新旧值如果相同就会跳过`scheduleUpdateOnFiber`也就不会引起`re-render`，如果是连续多次状态变化则仅计算第一次；
-4. (`action`为值)此处去提前计算新值的前提是`fiber`节点`lane`为`NoLanes`且`alternate === null || alternate.lanes === NoLanes`，表明没有更新事件，如果有更新事件就会跳过，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次（// The priority hasn't changed. We can reuse the existing task. Exit.），并且以最后一个`update`任务为准，这也是为什么连续`setState`几次值只变动一次且值为最后一个值；
-5. (`action`为函数)，同样地，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次，但是`action`为函数时，在`hook.queue.pending`中由于`action`并不相同所以会将每一个`action`添加到队列中，所以在后续`updateState`方法中依次依赖上一次的结果计算每一次的值，所以连续`setState`几次值会得到几次值的最终计算结果；
-6. 每次`dispatchSetState`构造的`update`任务优先级不一定相同，所以`hook`还会有一个`baseQueue`存储着优先级较低的还未执行的`update`队列，直到下一轮`render`过程可能会和其他`update`任务串联起来再去执行；
+2. 非`render`过程中产生的会提前计算新值，根据新旧值是否相同会提前跳出这一轮更新或者进行接下来的步骤；
+3. 非`render`过程中产生的接下来进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
+4. 非`render`过程中产生的状态变化会提前计算新值赋给`update.eagerState`，提前算好后续直接从这个属性获取新增，新旧值如果相同就会跳过`scheduleUpdateOnFiber`也就不会引起`re-render`，如果是连续多次状态变化则仅计算第一次；
+5. 每次`dispatchSetState`构造的`update`任务优先级不一定相同，所以`hook`还会有一个`baseQueue`存储着优先级较低的还未执行的`update`队列，直到下一轮`render`过程可能会和其他`update`任务串联起来再去执行；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -198,7 +197,7 @@ function dispatchSetState<S, A>(
   const lane = requestUpdateLane(fiber);
 
   // 【创建一个update任务】
-  // 【action是值的话已经计算好】
+  // 【action是值的话就是确定值】
   // 【action是函数的话还未计算】
   const update: Update<S, A> = {
     lane,
@@ -215,7 +214,7 @@ function dispatchSetState<S, A>(
   } else {
     // 【非render过程中】
     const alternate = fiber.alternate;
-    // 【!!!!fiber.lanes有值表示已有更新事件，就会跳过此步!!!!】
+    // 【!!!!-----fiber.lanes有值表示已有更新事件，就会跳过此步-----!!!!】
     if (
       fiber.lanes === NoLanes &&
       (alternate === null || alternate.lanes === NoLanes)
@@ -232,7 +231,7 @@ function dispatchSetState<S, A>(
         try {
           // 【旧值】
           const currentState: S = (queue.lastRenderedState: any);
-          // 【新值】
+          // 【提前计算的新值】
           const eagerState = lastRenderedReducer(currentState, action);
           // Stash the eagerly computed state, and the reducer used to compute
           // it, on the update object. If the reducer hasn't changed by the
@@ -384,9 +383,11 @@ function beginWork(
 1. 调用`updateWorkInProgressHook`方法更新`hook`实例，其实就是找到当前正在构造的`fiber`对应的`current fiber`上的`hook`状态去复用，调用了`dispatchSetState`之后`current fiber`上的`hook.queue.pending`会更新；
 2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务，将其和`current hook`的`baseQueue`串起来形成一个单向循环链表，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务；
 3. 如果有多次`setState`调用，`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务里会有多个`update`任务；
-4. 然后开始处理串起来后的两个`update`队列`baseQueue`，`update`任务链表（`UpdateQueue`）会遍历每一个`update`任务，根据`update`任务的`lane`优先级决定本轮是否要跳过，优先级低的会留在`baseQueue`等待下一轮处理，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务，循环终止条件是`update`为`null`或者`update`回到`first`；
-5. 更新当前`hook`的`memoizedState`、`baseState`、`baseQueue`、`queue.lastRenderedState`到最新状态；
-6. 最后返回`[hook.memoizedState, dispatch]`；
+4. 开始处理串起来后的两个`update`队列`baseQueue`，`update`任务链表会遍历每一个`update`任务，根据`update`任务的`lane`优先级决定本轮是否要跳过，优先级低的会留在`baseQueue`等待下一轮处理，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务，循环终止条件是`update`为`null`或者`update`回到`first`；
+5. (`update.action`为**值**)此处去提前计算新值的前提是`fiber`节点`lane`为`NoLanes`且`alternate === null || alternate.lanes === NoLanes`，表明没当前节点上没有其他更新事件会去提前计算新值，如果有更新事件就会跳过，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次（// The priority hasn't changed. We can reuse the existing task. Exit.）。而后到 rerender 过程中执行 `updateReducer` 会遍历 `hook.queue.pending+hook.baseQueue` 上的每一个 `update` 获取最新值，有 `eagerState` 的时候就获取 `eagerState`，没有的时候就执行 `action`，如果 `action` 是值则直接赋值，这也是为什么连续执行`setState(count + 1)`几次只会得到一个`+1`的效果；
+6. (`update.action`为**函数**)，同样地，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次，但是`action`为函数时，在`hook.queue.pending`中由于每一个`update`的`action`函数并不相同，所以在后续`updateReducer`方法中遍历 `update` 时就会依次依赖上一次的结果计算每一次的值，所以连续`setAge((prevAge) => prevAge + 1)`几次值会得到几次值累加的最终计算结果；
+7. 更新当前`hook`的`memoizedState`、`baseState`、`baseQueue`、`queue.lastRenderedState`到最新状态；
+8. 最后返回`[hook.memoizedState, dispatch]`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -455,6 +456,7 @@ function updateReducer<S, I, A>(
     let newBaseQueueFirst = null;
     let newBaseQueueLast: Update<S, A> | null = null;
     let update = first;
+    // 【遍历这个update循环链表判断条件： while (update !== null && update !== first)】
     do {
       // An extra OffscreenLane bit is added to updates that were made to
       // a hidden tree, so that we can distinguish them from updates that were
@@ -643,13 +645,13 @@ function updateWorkInProgressHook(): Hook {
 ![react](./assets/useState/useState6.png)
 
 ```ts
-// 第一个setState因为fiber.lanes为0所以提前计算eagerState为101，然后将rerender任务入队，第二个setState因为fiber.lanes此时已经为1，所以直接将rerender任务入队，但是又由于两次rerender任务的优先级完全相同`existingCallbackPriority === newCallbackPriority`，所以第二次任务被直接忽略，同理第三次setState也一样。最终仅有一个update任务添加在hook.queue.pending里，并且其值是提前算好的eagerState。
+// 第一个setState因为fiber.lanes为0所以提前计算eagerState为101，然后创建update任务并将rerender任务入队，第二个setState因为fiber.lanes此时已经为1，所以rerender任务无需重复入队，这是因为两次rerender任务的优先级完全相同`existingCallbackPriority === newCallbackPriority`，所以第二次任务被直接忽略，同理第三次setState也一样。后续在updateReducer处理过程中，遍历三个update任务，由于三个action都是相同值，所以直接赋值，于是结果就是最后一个1+300=301
 function handleClick() {
   setState(age + 100) // setState(1 + 100)
   setState(age + 200) // setState(1 + 200)
   setState(age + 300) // setState(1 + 300)
 }
-// 三次调用setState都会最终添加一个update任务在hook.queue.pending里（中间用interleaved过渡在enqueueConcurrentHookUpdate方法处理），然后在updateReducer方法中遍历三个任务并执行，每次执行的入参都是上一次执行的结果
+// 三次调用setState都会添加一个update任务在hook.queue.pending里（中间用interleaved过渡在enqueueConcurrentHookUpdate方法处理），然后在updateReducer方法中遍历三个update并执行action为函数，每次执行的入参都是上一次执行的结果，于是最终结果是1+100+200+300=601
 function handleClick() {
   setState((a) => a + 100) // setState(1 => 101)
   setState((a) => a + 200) // setState(101 => 301)
@@ -843,10 +845,10 @@ const dispatch: Dispatch<A> = (queue.dispatch = (dispatchReducerAction.bind(
   ): any));
 ```
 
-`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务，然后也分为 render 过程中产生或者非 render 过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值`eagerState`
+`dispatchReducerAction`和`dispatchSetState`很类似，首先也会构造一个`update`任务并调度 `rerender`，然后也分为 `render` 过程中产生或者非 `render` 过程中产生的情况分别处理，不同点在于`dispatchReducerAction`不会提前计算最新状态值`eagerState`。
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
-2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
+2. 非`render`过程中产生的进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排`rerender`任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】

@@ -293,7 +293,7 @@ export type Hook = {
   next: Hook | null //链接的下一个hook
 }
 export type Effect = {
-  tag: HookFlags //HookHasEffect | HookFlags，hook的标识，后续commit阶段决定了是否要执行回调
+  tag: HookFlags //HookHasEffect | HookPassive，hook的标识，后续commit阶段决定了是否要执行回调
   create: () => (() => void) | void //回调函数
   destroy: (() => void) | void //销毁函数，可以由用户的回调函数返回
   deps: Array<mixed> | void | null //依赖值
@@ -302,8 +302,8 @@ export type Effect = {
 ```
 
 1. 首先构造一个空`Hook`对象并且作为全局唯一的 `workInProgressHook`，如果已有`hook`就用`next`链接，用例中已有一个`useState`对应的`Hook`，所以用`next`链接到其后；
-2. 给当前`fiber`的`flags`添加`PassiveEffect` | `PassiveStaticEffect`标志；
-3. 然后调用`pushEffect`方法构造一个`effect`实例对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`effect`对象插入进去，`updateQueue`始终都是一个单向的循环链表，同时存入`Hook`对象的`memoizedState`属性；
+2. 给当前`fiber`的`flags`添加 `PassiveEffect` | `PassiveStaticEffect` 标志表明有副作用回调；
+3. 然后调用`pushEffect`方法构造一个`effect`实例对象，检查当前`fiber`的`updateQueue`根据是否为空把这个`effect`实例插入进去，`updateQueue`始终都是一个单向的循环链表，同时存入`Hook`对象的`memoizedState`属性，`effect`实例的`tag`打上 `HookHasEffect` | `HookPassive` 标记；
 
 ```ts
 let currentlyRenderingFiber: Fiber = (null: any);
@@ -424,8 +424,8 @@ function pushEffect(
 
 1. 调用`updateWorkInProgressHook`方法更新当前`hook`对象；
 2. 给当前`fiber`的`flags`添加`PassiveEffect`标志；
-3. 对比新旧`deps`是否相同，决定了是否要给`effect`实例的`tag`打上`HookHasEffect` | `HookPassive`标记，`HookHasEffect` | `HookPassive`标记是决定是否需要执行`effect`内容的重要标识；
-4. 调用`pushEffect`方法，构造`Effect`对象，加入`workInProgress fiber`的`updateQueue`，并且更新当前 `hook` 的 `memorizedState`；
+3. 对比新旧`deps`是否相同，决定了是否要给`effect`实例的`tag`打上 `HookHasEffect` | `HookPassive` 标记，`HookHasEffect` | `HookPassive`标记是决定是否需要执行`effect`内容的重要标识；
+4. 调用`pushEffect`方法，构造`effect`实例，加入`workInProgress fiber`的`updateQueue`，并且更新当前`hook`的`memorizedState`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -1230,6 +1230,10 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
 
 这个方法最终执行的核心是`commitHookEffectListUnmount()`和`commitHookEffectListMount()`，先调用`commitHookEffectListUnmount`方法遍历执行`effect.destroy()`再调用`commitHookEffectListMount`方法遍历执行`effect.create()`，`effect.destroy()`是在`commitHookEffectListMount`中设置的，是执行`effect.create()`的返回值。
 
+执行 `effect.destroy()` 的过程是这样的，从 tag 为 3 的 `HostRoot` 根节点开始向下寻找 `flags` 为 `Passive` 的 `fiber` 然后遍历 `fiber` 上的 `updateQueue` 装载了 effect list 寻找有 `HookHasEffect` 标记的，如果有`effect.destroy()`就会执行相应的回调。其中需要强调的是过程中会先执行子组件的副作用回调再祖先组件的副作用回调。
+
+执行 `effect.create()` 过程是这样的，从 tag 为 3 的 `HostRoot` 根节点开始向下寻找 `flags` 为 `Passive` 的 `fiber`，过程中检测每个 `fiber` 节点的 `subtreeFlags` 直到确定有 `Passive` 副作用所在层再通过 `sibling` 寻找到真正需要执行的节点， 然后遍历 `fiber` 上的 `updateQueue` 装载了 effect list 寻找有 `HookHasEffect` 标记的，就会执行相应的`effect.create()`回调。其中需要强调的是过程中会先执行子组件的副作用回调再祖先组件的副作用回调。
+
 **进入`commitHookEffectListMount`的前提是`fiberflags`带有`Passive`标识，然后每次执行`effect`回调之前还会进行判断`effect.tag`是否标识`HookPassive | HookHasEffect`，标识了才会去执行。**
 
 - 回调函数`effect.create()`
@@ -1323,6 +1327,64 @@ function commitPassiveMountOnFiber(
       break;
     }
     // 【省略代码...】
+  }
+}
+
+function recursivelyTraversePassiveMountEffects(
+  root: FiberRoot,
+  parentFiber: Fiber,
+  committedLanes: Lanes,
+  committedTransitions: Array<Transition> | null,
+  endTime: number, // Profiling-only. The start time of the next Fiber or root completion.
+) {
+  const isViewTransitionEligible =
+    enableViewTransition &&
+    includesOnlyViewTransitionEligibleLanes(committedLanes);
+  // TODO: We could optimize this by marking these with the Passive subtree flag in the render phase.
+  const subtreeMask = isViewTransitionEligible
+    ? PassiveTransitionMask
+    : PassiveMask;
+    // 【从HostRoot节点往下寻找】
+  if (
+    parentFiber.subtreeFlags & subtreeMask ||
+    // If this subtree rendered with profiling this commit, we need to visit it to log it.
+    (enableProfilerTimer &&
+      enableComponentPerformanceTrack &&
+      parentFiber.actualDuration !== 0 &&
+      (parentFiber.alternate === null ||
+        parentFiber.alternate.child !== parentFiber.child))
+  ) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      if (enableProfilerTimer && enableComponentPerformanceTrack) {
+        const nextSibling = child.sibling;
+        commitPassiveMountOnFiber(
+          root,
+          child,
+          committedLanes,
+          committedTransitions,
+          nextSibling !== null
+            ? ((nextSibling.actualStartTime: any): number)
+            : endTime,
+        );
+        child = nextSibling;
+      } else {
+        commitPassiveMountOnFiber(
+          root,
+          child,
+          committedLanes,
+          committedTransitions,
+          0,
+        );
+        child = child.sibling;
+      }
+    }
+  } else if (isViewTransitionEligible) {
+    // We are inside an updated subtree. Any mutations that affected the
+    // parent HostInstance's layout or set of children (such as reorders)
+    // might have also affected the positioning or size of the inner
+    // ViewTransitions. Therefore we need to restore those too.
+    restoreNestedViewTransitions(parentFiber);
   }
 }
 
@@ -1447,6 +1509,37 @@ function commitPassiveUnmountOnFiber(finishedWork: Fiber): void {
   }
 }
 
+function recursivelyTraversePassiveUnmountEffects(parentFiber: Fiber): void {
+  // Deletions effects can be scheduled on any fiber type. They need to happen
+  // before the children effects have fired.
+  const deletions = parentFiber.deletions;
+
+  if ((parentFiber.flags & ChildDeletion) !== NoFlags) {
+    if (deletions !== null) {
+      for (let i = 0; i < deletions.length; i++) {
+        const childToDelete = deletions[i];
+        // TODO: Convert this to use recursion
+        nextEffect = childToDelete;
+        commitPassiveUnmountEffectsInsideOfDeletedTree_begin(
+          childToDelete,
+          parentFiber,
+        );
+      }
+    }
+    detachAlternateSiblings(parentFiber);
+  }
+
+  // TODO: Split PassiveMask into separate masks for mount and unmount?
+  // 【从HostRoot节点开始往下寻找】
+  if (parentFiber.subtreeFlags & PassiveMask) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      commitPassiveUnmountOnFiber(child);
+      child = child.sibling;
+    }
+  }
+}
+
 function commitHookPassiveUnmountEffects(
   finishedWork: Fiber,
   nearestMountedAncestor: null | Fiber,
@@ -1548,8 +1641,9 @@ function mountEffectImpl(
 ): void {
   const hook = mountWorkInProgressHook()
   const nextDeps = deps === undefined ? null : deps
-  // 【打Update标记】
+  // 【fiber打UpdateEffect | LayoutStaticEffect标记】
   currentlyRenderingFiber.flags |= fiberFlags
+  // 【effect打HookHasEffect | HookLayout标记】
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -1614,7 +1708,7 @@ function updateEffectImpl(
 
 ### `commitHookEffectListMount()`/`commitHookEffectListUnmount()`
 
-那么`layoutEffect`副作用回调何时调用呢？此处分为两个情况，销毁函数`effect.destroy()`发生在`commit`的第二阶段`commitMutationEffects`， 回调函数`effect.create()`发生在`commit`的第三阶段`commitLayoutEffects`。
+那么`layoutEffect`副作用回调何时调用呢？此处分为两个分支，销毁函数`effect.destroy()`发生在`commit`的第二阶段`commitMutationEffects`， 回调函数`effect.create()`发生在`commit`的第三阶段`commitLayoutEffects`。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -2027,12 +2121,12 @@ function commitHookEffectListMount(flags: HookFlags, finishedWork: Fiber) {
 
 ## 总结
 
-1. `useEffect`的注册可能会调用`mountEffect`或者`updateEffect`；
-2. `mountEffect`会创建一个`hook`实例，和之前的`hook`用`next`相连，然后将其存储到对应`fiber`的`memoizedState`属性上，给对应`fiber`添加`Passive`标志，最后创建`effect`对象存储到`hook`的`memoizedState`上以及`fiber`的`updateQueue`属性上，`fiber`的`updateQueue`属性上的`effect`用`next`链接并收尾相连是一个单向的链表；
-3. `updateEffect`会更新当前`hook`实例，这个更新过程会找上一轮的`hook`状态来决定是否进行复用，接着就是对比第二项参数也就是依赖的`deps`前后是否相同，没变化会直接返回，有变化就会给对应`fiber`打`Passive`标记，最后调用`pushEffect`方法，构造`effect`对象，加入`workInProgress fiber`的`updateQueue`，并且更新当前`hook`的`memorizedState`，如果`deps`无变化那`effect`实例的`tag`不再有`HookHasEffect`标识，后续也就不会重新执行回调函数；
+1. `useEffect`的注册会调用`mountEffect`或者`updateEffect`；
+2. `mountEffect`会创建一个`hook`实例，和之前的`hook`用`next`相连，然后将其存储到对应`fiber`的`memoizedState`属性上，给对应`fiber`添加`PassiveEffect | PassiveStaticEffect`标志，最后创建`effect`对象并标识`HookHasEffect | HookPassive`，然后存储到`hook`的`memoizedState`上以及`fiber`的`updateQueue`属性上，`fiber`的`updateQueue`属性上的`effect`用`next`链接并收尾相连是一个单向的链表；
+3. `updateEffect`会更新当前`hook`实例，这个更新过程会找上一轮的`hook`状态来决定是否进行复用，接着就是对比第二项参数也就是依赖的`deps`前后是否相同，没变化会直接返回，有变化就会给对应`fiber`打`Passive`标记，最后调用`pushEffect`方法，重新构造`effect`对象并标识`HookHasEffect | HookPassive`，加入`workInProgress fiber`的`updateQueue`，并且更新当前`hook`的`memorizedState`，如果`deps`无变化那`effect`实例的`tag`不再有`HookHasEffect`标识，后续也就不会重新执行回调函数；
 4. `useEffect`回调函数的执行真正的调用其实取决于`flushPassiveEffects`方法，而在`Concurrency`模式下，任务都通过`scheduleCallback`加入任务队列根据优先级在合适的时机调用，首次挂载时`scheduleCallback`会先把 DOM 挂载任务加入任务队列并执行，然后挂载任务在`commit`阶段会将`flushPassiveEffects`任务加入队列，在完成挂载任务后就会去执行`flushPassiveEffects`任务，从而把`fiber`树上标志`Passive`的节点的`updateQueue`全部执行掉。更新阶段的话在更新任务的`commit`阶段会直接调用`flushPassiveEffects`。
 5. `flushPassiveEffects`的核心是`commitPassiveUnmountEffects()`和`commitPassiveMountEffects()`，先遍历执行`effect.destroy()`再遍历执行`effect.create()`，`HookHasEffect`标识决定了是否需要执行`effect.create`回调，`HookHasEffect`是由`deps`是否变化决定的。
-6. `useEffect`和`useLayoutEffect`都使用`mountEffectImpl`/`updateEffectImpl`，但是入参`hookFlag`并不相同分别是`HookPassive`/`HookLayout`，两者都会创建对应的`effect`实例，但是`effect`实例的`tag`并不相同。两者回调函数作用时机也不同`useEffect`是发生在`commit`三阶段之后，`useLayoutEffect`是发生在`commit`第三阶段。
+6. `useEffect`和`useLayoutEffect`都使用`mountEffectImpl`/`updateEffectImpl`，但是入参`hookFlag`并不相同分别是`HookPassive`/`HookLayout`，两者都会创建对应的`effect`实例，但是`effect`实例的`tag`并不相同。两者回调函数作用时机也不同`useEffect`是发生在`commit`三阶段之后(异步调用)，`useLayoutEffect`是发生在`commit`第三阶段(同步调用)。
 7. `useEffect`和`useLayoutEffect`两者的销毁函数作用时机也不同，`useEffect`和的`effect`实例的`destroy`调用在`performConcurrentWorkOnRoot`执行完执行`TaskQueue`的下一个任务也就是`flushPassiveEffects()`方法中。`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useEffect`的`effect`实例的`destroy`调用。`useLayoutEffect`的`effect`实例的`destroy`调用在`commitMutationEffects`(`commit`的第二阶段)阶段，这也是完成 DOM 挂载的阶段，`commitHookEffectListUnmount()`会遍历对应`fiber`上的`updateQueue`，进行`useLayoutEffect`的`effect`实例的`destroy`调用。
 
 ![react](./assets/useEffect/useEffect.png)

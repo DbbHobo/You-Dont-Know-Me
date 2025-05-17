@@ -2,11 +2,11 @@
 
 ## vue-router 的使用
 
-### 路由注册和调用
+### 路由插件的注册和调用
 
-路由器实例是通过调用 `createRouter()` 函数创建的:
+全局唯一的路由器实例 `router` 是通过调用 `createRouter()` 函数创建的:
 
-这里的 `routes` 选项定义了一组路由，把 `URL` 路径映射到组件。其中，由 `component` 参数指定的组件就是先前在 `App.vue` 中被 `<RouterView>` 渲染的组件。这些路由组件通常被称为视图，但本质上它们只是普通的 `Vue` 组件。
+这里的 `routes` 选项定义了一组路由，把 `URL` 路径映射到具体的组件。其中，由 `component` 参数指定的组件就是先前在 `App.vue` 中被 `<RouterView>` 渲染的组件。这些路由组件通常被称为视图，但本质上它们只是普通的 `Vue` 组件。
 
 ```js
 import { createWebHashHistory, createRouter } from "vue-router"
@@ -77,7 +77,7 @@ const app: App = (context.app = {
       warn(`app.config cannot be replaced. Modify individual options instead.`)
     }
   },
-  // 【使用插件的入口，会调用插件的install方法，所有使用的插件保存在installedPlugins中】
+  // 【使用插件的入口，会调用插件的install方法并注入当前app实例，所有使用的插件保存在installedPlugins中】
   use(plugin: Plugin, ...options: any[]) {
     if (installedPlugins.has(plugin)) {
       __DEV__ && warn(`Plugin has already been applied to target app.`)
@@ -134,11 +134,117 @@ const app: App = (context.app = {
 })
 ```
 
-路由逻辑中有两个重要的对象 `router` 实例、`route` 实例，前者提供了路由相关的许多方法，后者是对当前正在访问的路由的描述。
+可以看到 `install` 方法做了如下操作：
+
+1. 注册全局组件 `RouterLink` 和 `RouterView`；
+2. 注册全局属性 `$router` 和 `$route`，对应的是全局的 `router` 实例对象和当前路由 `route` 实例对象；
+3. 依赖注入 `routerKey`、`routeLocationKey`、`routerViewLocationKey`；
+4. 应用卸载之前对路由卸载的处理；
+
+```ts
+// 【packages/router/src/router.ts】
+export function createRouter(options: RouterOptions): Router {
+  //【...省略】
+  const router: Router = {
+    currentRoute,
+    listening: true,
+
+    addRoute,
+    removeRoute,
+    clearRoutes: matcher.clearRoutes,
+    hasRoute,
+    getRoutes,
+    resolve,
+    options,
+
+    push,
+    replace,
+    go,
+    back: () => go(-1),
+    forward: () => go(1),
+
+    beforeEach: beforeGuards.add,
+    beforeResolve: beforeResolveGuards.add,
+    afterEach: afterGuards.add,
+
+    onError: errorListeners.add,
+    isReady,
+
+    install(app: App) {
+      const router = this
+      // 【全局注册RouterLink、RouterView组件】
+      app.component("RouterLink", RouterLink)
+      app.component("RouterView", RouterView)
+      // 【为app实例添加$router和$route属性，$route要先解包】
+      app.config.globalProperties.$router = router
+      Object.defineProperty(app.config.globalProperties, "$route", {
+        enumerable: true,
+        get: () => unref(currentRoute),
+      })
+
+      // this initial navigation is only necessary on client, on server it doesn't
+      // make sense because it will create an extra unnecessary navigation and could
+      // lead to problems
+      if (
+        isBrowser &&
+        // used for the initial navigation client side to avoid pushing
+        // multiple times when the router is used in multiple apps
+        !started &&
+        currentRoute.value === START_LOCATION_NORMALIZED
+      ) {
+        // see above
+        started = true
+        // 【初始化跳到初始路由】
+        push(routerHistory.location).catch((err) => {
+          if (__DEV__) warn("Unexpected error when starting the router:", err)
+        })
+      }
+
+      const reactiveRoute = {} as RouteLocationNormalizedLoaded
+      for (const key in START_LOCATION_NORMALIZED) {
+        Object.defineProperty(reactiveRoute, key, {
+          get: () => currentRoute.value[key as keyof RouteLocationNormalized],
+          enumerable: true,
+        })
+      }
+      // 【依赖注入routerKey、routeLocationKey、routerViewLocationKey】
+      app.provide(routerKey, router)
+      app.provide(routeLocationKey, shallowReactive(reactiveRoute))
+      app.provide(routerViewLocationKey, currentRoute)
+
+      // 【app实例卸载之前将vue-router组件也卸载并且销毁相关数据】
+      const unmountApp = app.unmount
+      installedApps.add(app)
+      app.unmount = function () {
+        installedApps.delete(app)
+        // the router is not attached to an app anymore
+        if (installedApps.size < 1) {
+          // invalidate the current navigation
+          pendingLocation = START_LOCATION_NORMALIZED
+          removeHistoryListener && removeHistoryListener()
+          removeHistoryListener = null
+          currentRoute.value = START_LOCATION_NORMALIZED
+          started = false
+          ready = false
+        }
+        unmountApp()
+      }
+
+      // TODO: this probably needs to be updated so it can be used by vue-termui
+      if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && isBrowser) {
+        addDevtools(app, router, matcher)
+      }
+    },
+  }
+  return router
+}
+```
+
+此外，路由逻辑中有两个重要的对象 `router` 实例、`route` 实例，前者提供了路由相关的许多方法，后者是对当前正在访问的路由的描述。
 
 ### 获取路由实例
 
-可以用 `this` 访问当前组件并访问继承的`$router`：
+可以用 `this` 访问当前组件并访问继承来的`$router`：
 
 ```js
 export default {
@@ -175,6 +281,9 @@ const search = computed({
 
 ```ts
 // 【packages/router/src/useApi.ts】
+import { inject } from "vue"
+import { routerKey, routeLocationKey } from "./injectionSymbols"
+
 /**
  * Returns the router instance. Equivalent to using `$router` inside
  * templates.
@@ -196,22 +305,25 @@ export function useRoute<Name extends keyof RouteMap = keyof RouteMap>(
 
 ### 常用路由方法
 
-- `router.push()` 跳转到新路由（添加历史记录）
-- `router.replace()` 替换当前路由（不添加历史记录）
-- `router.go(n)` 在 history 记录中前进或后退 n 步
-- `router.back()` 返回上一个历史记录
-- `router.forward()` 前进到下一个历史记录
-- `router.currentRoute` 获取当前路由对象
-- `router.addRoute()` 动态添加路由
-- `router.removeRoute()` 删除动态路由
-- `router.isReady()` 等待路由初始化完成
-- `router.beforeEach()` 全局前置守卫（导航守卫）
-- `router.afterEach()` 全局后置守卫（如埋点、修改标题）
+- `router`
 
-- `route.path` 当前路径（如 "/user/123"）
-- `route.params` 动态参数
-- `route.query` URL 查询参数
-- `route.name` 路由名称
+  - `router.push()` 跳转到新路由（添加历史记录）
+  - `router.replace()` 替换当前路由（不添加历史记录）
+  - `router.go(n)` 在 history 记录中前进或后退 n 步
+  - `router.back()` 返回上一个历史记录
+  - `router.forward()` 前进到下一个历史记录
+  - `router.currentRoute` 获取当前路由对象
+  - `router.addRoute()` 动态添加路由
+  - `router.removeRoute()` 删除动态路由
+  - `router.isReady()` 等待路由初始化完成
+  - `router.beforeEach()` 全局前置守卫（导航守卫）
+  - `router.afterEach()` 全局后置守卫（如埋点、修改标题）
+
+- `route`
+  - `route.path` 当前路径（如 "/user/123"）
+  - `route.params` 动态参数
+  - `route.query` URL 查询参数
+  - `route.name` 路由名称
 
 ## router 实例
 
@@ -596,111 +708,11 @@ export function createRouter(options: RouterOptions): Router {
 }
 ```
 
-`router` 的 `install` 方法做了如下操作：
+接下来分为三块去看 `router` 实例的 API，分别是：
 
-1. 注册全局组件 `RouterLink` 和 `RouterView`；
-2. 注册全局属性 `$router` 和 `$route`，对应的是全局的 `router` 实例对象和当前路由 `route` 实例对象；
-3. 依赖注入 `routerKey`、`routeLocationKey`、`routerViewLocationKey`；
-4. 应用卸载之前对路由卸载的处理；
-
-```ts
-// 【packages/router/src/router.ts】
-export function createRouter(options: RouterOptions): Router {
-  //【...省略】
-  const router: Router = {
-    currentRoute,
-    listening: true,
-
-    addRoute,
-    removeRoute,
-    clearRoutes: matcher.clearRoutes,
-    hasRoute,
-    getRoutes,
-    resolve,
-    options,
-
-    push,
-    replace,
-    go,
-    back: () => go(-1),
-    forward: () => go(1),
-
-    beforeEach: beforeGuards.add,
-    beforeResolve: beforeResolveGuards.add,
-    afterEach: afterGuards.add,
-
-    onError: errorListeners.add,
-    isReady,
-
-    install(app: App) {
-      const router = this
-      // 【全局注册RouterLink、RouterView组件】
-      app.component("RouterLink", RouterLink)
-      app.component("RouterView", RouterView)
-      // 【为app实例添加$router和$route属性，$route要先解包】
-      app.config.globalProperties.$router = router
-      Object.defineProperty(app.config.globalProperties, "$route", {
-        enumerable: true,
-        get: () => unref(currentRoute),
-      })
-
-      // this initial navigation is only necessary on client, on server it doesn't
-      // make sense because it will create an extra unnecessary navigation and could
-      // lead to problems
-      if (
-        isBrowser &&
-        // used for the initial navigation client side to avoid pushing
-        // multiple times when the router is used in multiple apps
-        !started &&
-        currentRoute.value === START_LOCATION_NORMALIZED
-      ) {
-        // see above
-        started = true
-        // 【初始化跳到初始路由】
-        push(routerHistory.location).catch((err) => {
-          if (__DEV__) warn("Unexpected error when starting the router:", err)
-        })
-      }
-
-      const reactiveRoute = {} as RouteLocationNormalizedLoaded
-      for (const key in START_LOCATION_NORMALIZED) {
-        Object.defineProperty(reactiveRoute, key, {
-          get: () => currentRoute.value[key as keyof RouteLocationNormalized],
-          enumerable: true,
-        })
-      }
-      // 【依赖注入routerKey、routeLocationKey、routerViewLocationKey】
-      app.provide(routerKey, router)
-      app.provide(routeLocationKey, shallowReactive(reactiveRoute))
-      app.provide(routerViewLocationKey, currentRoute)
-
-      // 【app实例卸载之前将vue-router组件也卸载并且销毁相关数据】
-      const unmountApp = app.unmount
-      installedApps.add(app)
-      app.unmount = function () {
-        installedApps.delete(app)
-        // the router is not attached to an app anymore
-        if (installedApps.size < 1) {
-          // invalidate the current navigation
-          pendingLocation = START_LOCATION_NORMALIZED
-          removeHistoryListener && removeHistoryListener()
-          removeHistoryListener = null
-          currentRoute.value = START_LOCATION_NORMALIZED
-          started = false
-          ready = false
-        }
-        unmountApp()
-      }
-
-      // TODO: this probably needs to be updated so it can be used by vue-termui
-      if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && isBrowser) {
-        addDevtools(app, router, matcher)
-      }
-    },
-  }
-  return router
-}
-```
+1. 跳转相关的方法：`router.go() & router.back() & router.forward() & router.push() & router.replace()`
+2. 全局路由守卫：`router.beforeEach() & router.afterEach() & router.beforeResolve()`
+3. 路由匹配：`router.addRoute() & router.removeRoute() & router.clearRoutes() & router.hasRoute() & router.getRoutes()`
 
 ### router.go() & router.back() & router.forward() & router.push() & router.replace()
 
@@ -708,205 +720,213 @@ export function createRouter(options: RouterOptions): Router {
 
 ```ts
 // 【packages/router/src/router.ts】
-const router: Router = {
-  //【...省略】
+export function createRouter(options: RouterOptions): Router {
+  const matcher = createRouterMatcher(options.routes, options)
+  const parseQuery = options.parseQuery || originalParseQuery
+  const stringifyQuery = options.stringifyQuery || originalStringifyQuery
+  // 【options.history是由createWebHistory(import.meta.env.BASE_URL)创建的对象】
+  const routerHistory = options.history
 
-  currentRoute,
-  push,
-  replace,
-  go,
-  // 【back实质就是go(-1)，回到上一页】
-  back: () => go(-1),
-  // 【forward实质就是go(1)，去下一页】
-  forward: () => go(1),
+  const router: Router = {
+    //【...省略】
 
-  //【...省略】
-}
+    currentRoute,
+    push,
+    replace,
+    go,
+    // 【back实质就是go(-1)，回到上一页】
+    back: () => go(-1),
+    // 【forward实质就是go(1)，去下一页】
+    forward: () => go(1),
 
-// 【调用routerHistory对象的go方法】
-const go = (delta: number) => routerHistory.go(delta)
-
-// 【调用pushWithRedirect方法】
-function push(to: RouteLocationRaw) {
-  return pushWithRedirect(to)
-}
-// 【跳转地址可以是字符串也可以是一个对象，replace: true表明是replace】
-function replace(to: RouteLocationRaw) {
-  return push(assign(locationAsObject(to), { replace: true }))
-}
-
-function pushWithRedirect(
-  to: RouteLocationRaw | RouteLocation,
-  redirectedFrom?: RouteLocation
-): Promise<NavigationFailure | void | undefined> {
-  const targetLocation: RouteLocation = (pendingLocation = resolve(to))
-  const from = currentRoute.value
-  const data: HistoryState | undefined = (to as RouteLocationOptions).state
-  const force: boolean | undefined = (to as RouteLocationOptions).force
-  // to could be a string where `replace` is a function
-  const replace = (to as RouteLocationOptions).replace === true
-
-  const shouldRedirect = handleRedirectRecord(targetLocation)
-
-  if (shouldRedirect)
-    return pushWithRedirect(
-      assign(locationAsObject(shouldRedirect), {
-        state:
-          typeof shouldRedirect === "object"
-            ? assign({}, data, shouldRedirect.state)
-            : data,
-        force,
-        replace,
-      }),
-      // keep original redirectedFrom if it exists
-      redirectedFrom || targetLocation
-    )
-
-  // if it was a redirect we already called `pushWithRedirect` above
-  const toLocation = targetLocation as RouteLocationNormalized
-
-  toLocation.redirectedFrom = redirectedFrom
-  let failure: NavigationFailure | void | undefined
-
-  if (!force && isSameRouteLocation(stringifyQuery, from, targetLocation)) {
-    failure = createRouterError<NavigationFailure>(
-      ErrorTypes.NAVIGATION_DUPLICATED,
-      { to: toLocation, from }
-    )
-    // trigger scroll to allow scrolling to the same anchor
-    handleScroll(
-      from,
-      from,
-      // this is a push, the only way for it to be triggered from a
-      // history.listen is with a redirect, which makes it become a push
-      true,
-      // This cannot be the first navigation because the initial location
-      // cannot be manually navigated to
-      false
-    )
+    //【...省略】
   }
 
-  return (failure ? Promise.resolve(failure) : navigate(toLocation, from))
-    .catch((error: NavigationFailure | NavigationRedirectError) =>
-      isNavigationFailure(error)
-        ? // navigation redirects still mark the router as ready
-          isNavigationFailure(error, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
-          ? error
-          : markAsReady(error) // also returns the error
-        : // reject any unknown error
-          triggerError(error, toLocation, from)
-    )
-    .then((failure: NavigationFailure | NavigationRedirectError | void) => {
-      if (failure) {
-        if (
-          isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
-        ) {
+  // 【调用routerHistory对象的go方法】
+  const go = (delta: number) => routerHistory.go(delta)
+
+  // 【调用pushWithRedirect方法】
+  function push(to: RouteLocationRaw) {
+    return pushWithRedirect(to)
+  }
+  // 【跳转地址可以是字符串也可以是一个对象，replace: true表明是replace】
+  function replace(to: RouteLocationRaw) {
+    return push(assign(locationAsObject(to), { replace: true }))
+  }
+
+  function pushWithRedirect(
+    to: RouteLocationRaw | RouteLocation,
+    redirectedFrom?: RouteLocation
+  ): Promise<NavigationFailure | void | undefined> {
+    const targetLocation: RouteLocation = (pendingLocation = resolve(to))
+    const from = currentRoute.value
+    const data: HistoryState | undefined = (to as RouteLocationOptions).state
+    const force: boolean | undefined = (to as RouteLocationOptions).force
+    // to could be a string where `replace` is a function
+    const replace = (to as RouteLocationOptions).replace === true
+
+    const shouldRedirect = handleRedirectRecord(targetLocation)
+
+    if (shouldRedirect)
+      return pushWithRedirect(
+        assign(locationAsObject(shouldRedirect), {
+          state:
+            typeof shouldRedirect === "object"
+              ? assign({}, data, shouldRedirect.state)
+              : data,
+          force,
+          replace,
+        }),
+        // keep original redirectedFrom if it exists
+        redirectedFrom || targetLocation
+      )
+
+    // if it was a redirect we already called `pushWithRedirect` above
+    const toLocation = targetLocation as RouteLocationNormalized
+
+    toLocation.redirectedFrom = redirectedFrom
+    let failure: NavigationFailure | void | undefined
+
+    if (!force && isSameRouteLocation(stringifyQuery, from, targetLocation)) {
+      failure = createRouterError<NavigationFailure>(
+        ErrorTypes.NAVIGATION_DUPLICATED,
+        { to: toLocation, from }
+      )
+      // trigger scroll to allow scrolling to the same anchor
+      handleScroll(
+        from,
+        from,
+        // this is a push, the only way for it to be triggered from a
+        // history.listen is with a redirect, which makes it become a push
+        true,
+        // This cannot be the first navigation because the initial location
+        // cannot be manually navigated to
+        false
+      )
+    }
+
+    return (failure ? Promise.resolve(failure) : navigate(toLocation, from))
+      .catch((error: NavigationFailure | NavigationRedirectError) =>
+        isNavigationFailure(error)
+          ? // navigation redirects still mark the router as ready
+            isNavigationFailure(error, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
+            ? error
+            : markAsReady(error) // also returns the error
+          : // reject any unknown error
+            triggerError(error, toLocation, from)
+      )
+      .then((failure: NavigationFailure | NavigationRedirectError | void) => {
+        if (failure) {
           if (
-            __DEV__ &&
-            // we are redirecting to the same location we were already at
-            isSameRouteLocation(
-              stringifyQuery,
-              resolve(failure.to),
-              toLocation
-            ) &&
-            // and we have done it a couple of times
-            redirectedFrom &&
-            // @ts-expect-error: added only in dev
-            (redirectedFrom._count = redirectedFrom._count
-              ? // @ts-expect-error
-                redirectedFrom._count + 1
-              : 1) > 30
+            isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
           ) {
-            warn(
-              `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`
-            )
-            return Promise.reject(
-              new Error("Infinite redirect in navigation guard")
+            if (
+              __DEV__ &&
+              // we are redirecting to the same location we were already at
+              isSameRouteLocation(
+                stringifyQuery,
+                resolve(failure.to),
+                toLocation
+              ) &&
+              // and we have done it a couple of times
+              redirectedFrom &&
+              // @ts-expect-error: added only in dev
+              (redirectedFrom._count = redirectedFrom._count
+                ? // @ts-expect-error
+                  redirectedFrom._count + 1
+                : 1) > 30
+            ) {
+              warn(
+                `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`
+              )
+              return Promise.reject(
+                new Error("Infinite redirect in navigation guard")
+              )
+            }
+
+            return pushWithRedirect(
+              // keep options
+              assign(
+                {
+                  // preserve an existing replacement but allow the redirect to override it
+                  replace,
+                },
+                locationAsObject(failure.to),
+                {
+                  state:
+                    typeof failure.to === "object"
+                      ? assign({}, data, failure.to.state)
+                      : data,
+                  force,
+                }
+              ),
+              // preserve the original redirectedFrom if any
+              redirectedFrom || toLocation
             )
           }
-
-          return pushWithRedirect(
-            // keep options
-            assign(
-              {
-                // preserve an existing replacement but allow the redirect to override it
-                replace,
-              },
-              locationAsObject(failure.to),
-              {
-                state:
-                  typeof failure.to === "object"
-                    ? assign({}, data, failure.to.state)
-                    : data,
-                force,
-              }
-            ),
-            // preserve the original redirectedFrom if any
-            redirectedFrom || toLocation
+        } else {
+          // if we fail we don't finalize the navigation
+          failure = finalizeNavigation(
+            toLocation as RouteLocationNormalizedLoaded,
+            from,
+            true,
+            replace,
+            data
           )
         }
-      } else {
-        // if we fail we don't finalize the navigation
-        failure = finalizeNavigation(
+        triggerAfterEach(
           toLocation as RouteLocationNormalizedLoaded,
           from,
-          true,
-          replace,
-          data
+          failure
         )
-      }
-      triggerAfterEach(
-        toLocation as RouteLocationNormalizedLoaded,
-        from,
-        failure
-      )
-      return failure
-    })
-}
-
-/**
- * - Cleans up any navigation guards
- * - Changes the url if necessary
- * - Calls the scrollBehavior
- */
-function finalizeNavigation(
-  toLocation: RouteLocationNormalizedLoaded,
-  from: RouteLocationNormalizedLoaded,
-  isPush: boolean,
-  replace?: boolean,
-  data?: HistoryState
-): NavigationFailure | void {
-  // a more recent navigation took place
-  const error = checkCanceledNavigation(toLocation, from)
-  if (error) return error
-
-  // only consider as push if it's not the first navigation
-  const isFirstNavigation = from === START_LOCATION_NORMALIZED
-  const state: Partial<HistoryState> | null = !isBrowser ? {} : history.state
-
-  // change URL only if the user did a push/replace and if it's not the initial navigation because
-  // it's just reflecting the url
-  if (isPush) {
-    // on the initial navigation, we want to reuse the scroll position from
-    // history state if it exists
-    if (replace || isFirstNavigation)
-      routerHistory.replace(
-        toLocation.fullPath,
-        assign(
-          {
-            scroll: isFirstNavigation && state && state.scroll,
-          },
-          data
-        )
-      )
-    else routerHistory.push(toLocation.fullPath, data)
+        return failure
+      })
   }
 
-  // accept current navigation
-  currentRoute.value = toLocation
-  handleScroll(toLocation, from, isPush, isFirstNavigation)
+  /**
+   * - Cleans up any navigation guards
+   * - Changes the url if necessary
+   * - Calls the scrollBehavior
+   */
+  function finalizeNavigation(
+    toLocation: RouteLocationNormalizedLoaded,
+    from: RouteLocationNormalizedLoaded,
+    isPush: boolean,
+    replace?: boolean,
+    data?: HistoryState
+  ): NavigationFailure | void {
+    // a more recent navigation took place
+    const error = checkCanceledNavigation(toLocation, from)
+    if (error) return error
 
-  markAsReady()
+    // only consider as push if it's not the first navigation
+    const isFirstNavigation = from === START_LOCATION_NORMALIZED
+    const state: Partial<HistoryState> | null = !isBrowser ? {} : history.state
+
+    // change URL only if the user did a push/replace and if it's not the initial navigation because
+    // it's just reflecting the url
+    if (isPush) {
+      // on the initial navigation, we want to reuse the scroll position from
+      // history state if it exists
+      if (replace || isFirstNavigation)
+        routerHistory.replace(
+          toLocation.fullPath,
+          assign(
+            {
+              scroll: isFirstNavigation && state && state.scroll,
+            },
+            data
+          )
+        )
+      else routerHistory.push(toLocation.fullPath, data)
+    }
+
+    // accept current navigation
+    currentRoute.value = toLocation
+    handleScroll(toLocation, from, isPush, isFirstNavigation)
+
+    markAsReady()
+  }
 }
 ```
 
@@ -959,9 +979,9 @@ export function useCallbacks<T>() {
 
 路由守卫相关的回调触发时机本质是在路由进行切换的时候，可以看到在 `pushWithRedirect` 的逻辑中有序调用了各个路由守卫的回调如下：
 
-`pushWithRedirect` => `navigate` => `beforeGuards.list()`
+`go`/`push`/`repalce` => `pushWithRedirect` => `navigate` => `beforeGuards.list()`
 
-`pushWithRedirect` => `navigate` => `beforeResolve.list()`
+`go`/`push`/`repalce` => `pushWithRedirect` => `navigate` => `beforeResolve.list()`
 
 ```ts
 // 【packages/router/src/router.ts】
@@ -1087,7 +1107,7 @@ function navigate(
 }
 ```
 
-`pushWithRedirect` => `triggerAfterEach` => `afterGuards.list()`
+`go`/`push`/`repalce` => `pushWithRedirect` => `triggerAfterEach` => `afterGuards.list()`
 
 ```ts
 // 【packages/router/src/router.ts】
@@ -1103,14 +1123,6 @@ function triggerAfterEach(
     .forEach((guard) => runWithContext(() => guard(to, from, failure)))
 }
 ```
-
-假设从路由 A 跳转到路由 B，且两者使用不同组件：
-
-1. 全局 `beforeEach` →
-2. 组件 A 的 `beforeRouteLeave` →
-3. 全局 `beforeResolve` →
-4. 全局 `afterEach` →
-5. 组件 B 的 `beforeRouteEnter`（在导航确认后触发，可访问组件实例）
 
 ### router.addRoute() & router.removeRoute() & router.clearRoutes() & router.hasRoute() & router.getRoutes()
 
@@ -1480,53 +1492,58 @@ export function createRouterMatcher(
 }
 ```
 
-`router.addRoute` 本质调用了 `matcher.addRoute`
-`router.removeRoute` 本质调用了 `matcher.removeRoute`
-`router.getRoutes` 本质调用了 `matcher.getRoutes()`
-`router.hasRoute` 本质调用了 `matcher.getRecordMatcher()`
-`router.clearRoutes` 本质调用了 `matcher.clearRoutes()`
+- `router.addRoute` 本质调用了 `matcher.addRoute`
+- `router.removeRoute` 本质调用了 `matcher.removeRoute`
+- `router.getRoutes` 本质调用了 `matcher.getRoutes()`
+- `router.hasRoute` 本质调用了 `matcher.getRecordMatcher()`
+- `router.clearRoutes` 本质调用了 `matcher.clearRoutes()`
 
 ```ts
 // 【packages/router/src/router.ts】
-function addRoute(
-  parentOrRoute: NonNullable<RouteRecordNameGeneric> | RouteRecordRaw,
-  route?: RouteRecordRaw
-) {
-  let parent: Parameters<(typeof matcher)["addRoute"]>[1] | undefined
-  let record: RouteRecordRaw
-  if (isRouteName(parentOrRoute)) {
-    parent = matcher.getRecordMatcher(parentOrRoute)
-    if (__DEV__ && !parent) {
-      warn(
-        `Parent route "${String(
-          parentOrRoute
-        )}" not found when adding child route`,
-        route
-      )
+export function createRouter(options: RouterOptions): Router {
+  const matcher = createRouterMatcher(options.routes, options)
+  //【...省略】
+
+  function addRoute(
+    parentOrRoute: NonNullable<RouteRecordNameGeneric> | RouteRecordRaw,
+    route?: RouteRecordRaw
+  ) {
+    let parent: Parameters<(typeof matcher)["addRoute"]>[1] | undefined
+    let record: RouteRecordRaw
+    if (isRouteName(parentOrRoute)) {
+      parent = matcher.getRecordMatcher(parentOrRoute)
+      if (__DEV__ && !parent) {
+        warn(
+          `Parent route "${String(
+            parentOrRoute
+          )}" not found when adding child route`,
+          route
+        )
+      }
+      record = route!
+    } else {
+      record = parentOrRoute
     }
-    record = route!
-  } else {
-    record = parentOrRoute
+
+    return matcher.addRoute(record, parent)
   }
 
-  return matcher.addRoute(record, parent)
-}
-
-function removeRoute(name: NonNullable<RouteRecordNameGeneric>) {
-  const recordMatcher = matcher.getRecordMatcher(name)
-  if (recordMatcher) {
-    matcher.removeRoute(recordMatcher)
-  } else if (__DEV__) {
-    warn(`Cannot remove non-existent route "${String(name)}"`)
+  function removeRoute(name: NonNullable<RouteRecordNameGeneric>) {
+    const recordMatcher = matcher.getRecordMatcher(name)
+    if (recordMatcher) {
+      matcher.removeRoute(recordMatcher)
+    } else if (__DEV__) {
+      warn(`Cannot remove non-existent route "${String(name)}"`)
+    }
   }
-}
 
-function getRoutes() {
-  return matcher.getRoutes().map((routeMatcher) => routeMatcher.record)
-}
+  function getRoutes() {
+    return matcher.getRoutes().map((routeMatcher) => routeMatcher.record)
+  }
 
-function hasRoute(name: NonNullable<RouteRecordNameGeneric>): boolean {
-  return !!matcher.getRecordMatcher(name)
+  function hasRoute(name: NonNullable<RouteRecordNameGeneric>): boolean {
+    return !!matcher.getRecordMatcher(name)
+  }
 }
 ```
 
@@ -1642,7 +1659,7 @@ export const RouterLinkImpl = /*#__PURE__*/ defineComponent({
 })
 ```
 
-`useLink` 方法用于创建一个 `link` 对象，其中可以看到 `link.navigate` 实质上最终调用的是全局 `router` 实例的 `replace` 或者 `push` 方法
+`useLink` 方法用于创建一个 `link` 对象， `link` 对象除了包含 `route` 对象，还可以看到 `link.navigate` 实质上最终调用的是全局 `router` 实例的 `replace` 或者 `push` 方法
 
 ```ts
 // 【packages/router/src/RouterLink.ts】
@@ -1971,7 +1988,7 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
 
 ## History
 
-`createWebHistory` 方法创建了一个 `routerHistory` 对象，用于后续操作，其中有两个重要的方法 `useHistoryStateNavigation` 和 `useHistoryListeners`：
+`createWebHistory` 方法创建了一个 `routerHistory` 对象，用于 `router` 对象的前进后退等方法中，其中有两个重要的方法 `useHistoryStateNavigation` 和 `useHistoryListeners`：
 
 ```ts
 // 【packages/router/src/history/html5.ts】
@@ -2313,8 +2330,109 @@ export function createWebHashHistory(base?: string): RouterHistory {
 }
 ````
 
+## 路由守卫
+
+- 全局守卫
+
+  - `beforeEach` 全局权限校验、埋点统计
+  - `beforeResolve` 最终路由确认前的全局逻辑
+  - `afterEach` 页面访问日志记录
+
+```js
+const router = createRouter({...})
+
+// (1) 全局前置守卫 - 最先执行
+router.beforeEach((to, from, next) => {
+  // 必须调用 next()
+})
+
+// (2) 全局解析守卫 - 在导航被确认前调用
+router.beforeResolve((to, from) => {
+  // 适用于需要等待异步操作的场景
+})
+
+// (3) 全局后置守卫 - 没有 next 参数
+router.afterEach((to, from) => {
+  // 页面访问统计示例
+  sendToAnalytics(to.fullPath)
+})
+```
+
+- 路由独享的守卫
+  - `beforeEnter` 特定路由的独立权限校验
+
+```js
+// 路由配置中直接定义
+const routes = [
+  {
+    path: "/admin",
+    component: AdminPage,
+    beforeEnter: (to, from, next) => {
+      // 专属于该路由的权限校验
+      checkAdminPermission() ? next() : next("/403")
+    },
+  },
+]
+```
+
+- 组件守卫
+  - `beforeRouteEnter` 进入组件前的数据预加载
+  - `beforeRouteUpdate` 路由参数变化时的组件更新
+  - `beforeRouteLeave` 离开页面前的未保存提示
+
+```vue
+<script>
+export default {
+  beforeRouteEnter(to, from) {
+    // 在渲染该组件的对应路由被验证前调用
+    // 不能获取组件实例 `this` ！
+    // 因为当守卫执行时，组件实例还没被创建！
+  },
+  beforeRouteUpdate(to, from) {
+    // 在当前路由改变，但是该组件被复用时调用
+    // 举例来说，对于一个带有动态参数的路径 `/users/:id`，在 `/users/1` 和 `/users/2` 之间跳转的时候，
+    // 由于会渲染同样的 `UserDetails` 组件，因此组件实例会被复用。而这个钩子就会在这个情况下被调用。
+    // 因为在这种情况发生的时候，组件已经挂载好了，导航守卫可以访问组件实例 `this`
+  },
+  beforeRouteLeave(to, from) {
+    // 在导航离开渲染该组件的对应路由时调用
+    // 与 `beforeRouteUpdate` 一样，它可以访问组件实例 `this`
+  },
+}
+</script>
+```
+
+完整的导航解析流程
+
+1. 导航被触发；
+2. 在失活的组件里调用 `beforeRouteLeave` 守卫；
+3. 调用全局的 `beforeEach` 守卫；
+4. 在重用的组件里调用 `beforeRouteUpdate` 守卫(2.2+)；
+5. 在路由配置里调用 `beforeEnter`；
+6. 解析异步路由组件；
+7. 在被激活的组件里调用 `beforeRouteEnter`；
+8. 调用全局的 `beforeResolve` 守卫(2.5+)；
+9. 导航被确认；
+10. 调用全局的 `afterEach` 钩子；
+11. 触发 DOM 更新；
+12. 调用 `beforeRouteEnter` 守卫中传给 next 的回调函数，创建好的组件实例会作为回调函数的参数传入；
+
+```ts
+// 全局 → 路由 → 组件 三级校验
+router.beforeEach(全局身份校验)
+route.beforeEnter(路由级权限校验)
+component.beforeRouteEnter(组件级数据权限校验)
+
+// 组合使用多个守卫
+router.beforeEach(检查登录状态)
+router.beforeResolve(确认支付状态)
+component.beforeRouteLeave(检查订单锁定状态)
+```
+
 ## 参考资料
 
 [Vue Router 入门](https://router.vuejs.org/zh/guide/)
 
 [History](https://developer.mozilla.org/en-US/docs/Web/API/History)
+
+[导航守卫](https://router.vuejs.org/zh/guide/advanced/navigation-guards)
