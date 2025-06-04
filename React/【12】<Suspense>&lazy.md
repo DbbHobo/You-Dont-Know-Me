@@ -126,7 +126,7 @@ function beginWork(
 
 1. 首先确定`showFallback`表示是否显示`fallback`，取决于`didSuspend`这个变量，最终取决于`fiber`是否标识有`DidCapture`这个 flag；
 2. 根据`current`是否存在，走首次渲染的情况或者更新的情况；
-3. 如果是首次渲染，根据`showFallback`是否显示`fallback`，是的话调用`mountSuspenseFallbackChildren`/`mountSuspenseOffscreenState`将`fallback fiber`和`offScreen fiber`都构造了，否则调用`mountSuspensePrimaryChildren`仅构造`offScreen fiber`即可；
+3. 如果是首次渲染，根据`showFallback`是否显示`fallback`，是的话调用`mountSuspenseFallbackChildren`/`mountSuspenseOffscreenState`将`fallback fiber`和`offScreen fiber`都构造了，否则调用`mountSuspensePrimaryChildren`仅构造`primary fiber`即可；
 4. 如果是更新阶段，根据`showFallback`是否显示`fallback`，是的话调用`updateSuspenseFallbackChildren`，否则调用`updateSuspensePrimaryChildren`；
 
 ```ts
@@ -373,7 +373,7 @@ function updateSuspenseComponent(
 
 ### 构造`fallback fiber`和`primaryChild fiber`(render 阶段)
 
-判断首次渲染还是更新根据`current`是否存在，判断到底显示`fallback`还是`primaryChild`主要是`workInProgress.flags & DidCapture`以及`shouldRemainOnFallback`方法如下：
+判断首次渲染还是更新根据`current`是否存在，判断到底显示`fallback`还是`primaryChild`主要是判断`workInProgress.flags & DidCapture`以及`shouldRemainOnFallback`方法如下：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】

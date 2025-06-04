@@ -155,7 +155,7 @@ Call createContext outside of any components to create a context.The context obj
 - `SomeContext.Provider` lets you provide the context value to components.
 - `SomeContext.Consumer` is an alternative and rarely used way to read the context value.
 
-调用`React.createContext`就会进入`createContext`方法，这个方法构造了一个`context`对象，里面有两个重要的属性`Provider`和`Consumer`：
+调用`React.createContext`就会进入`createContext`方法，这个方法构造了一个`context`对象，里面有两个重要的属性`Provider`和`Consumer`，这个`context`对象后续会挂载到`Consumer`的`fiber.dependencies`上：
 
 ```ts
 // 【packages/react/src/ReactContext.js】
@@ -291,7 +291,7 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
 
 #### Provider 的`beginWork`
 
-在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`ThemeContext.Provider`的类型是`ContextProvider`，所以就会进入`updateContextProvider`方法：
+在`render`阶段的`beginWork`过程中，针对每个节点会根据类型进入不同的方法，本例中`ThemeContext.Provider`对应的 `ReactElement` 的类型是`ContextProvider`，所以就会进入`updateContextProvider`方法：
 
 1. 首先调用`pushProvider()`方法更新值，并将新值和`fiber`入栈`valueStack`、`fiberStack`；
 2. 如果新旧值（`pendingProps.value`和`memoizedProps.value`）没有变化，提前退出，如果有变化调用`propagateContextChange()`方法去给消费的子组件`fiber`以及子组件`fiber.dependencies`打上`lanes`标记后续强制更新，并且调用`scheduleContextWorkOnParentPath`像冒泡一样将祖先节点的`childLanes`都打上标记；
@@ -384,6 +384,7 @@ function updateContextProvider(
   } else {
     if (oldProps !== null) {
       const oldValue = oldProps.value;
+      // 【用Object.is比较新旧值是否相同】
       if (is(oldValue, newValue)) {
         // No change. Bailout early if children are the same.
         if (
@@ -400,7 +401,7 @@ function updateContextProvider(
       } else {
         // The context value changed. Search for matching consumers and schedule
         // them to update.
-        // 【Provider告知Context数据更新，逐一标志Consumer组件】
+        // 【Provider告知Context数据更新，逐一给Consumer组件打标记】
         propagateContextChange(workInProgress, context, renderLanes);
       }
     }
@@ -475,6 +476,7 @@ function propagateContextChanges<T>(
             // could add back a dirty flag as an optimization to avoid double
             // checking, but until we have selectors it's not really worth
             // the trouble.
+            // 【在Consumer上进行lanes标识】
             consumer.lanes = mergeLanes(consumer.lanes, renderLanes);
             const alternate = consumer.alternate;
             if (alternate !== null) {
@@ -654,7 +656,7 @@ function push<T>(cursor: StackCursor<T>, value: T, fiber: Fiber): void {
 
 在`provider`的`completeWork`工作之前，其实会先处理子节点的`beginWork`，因此，子节点`consumer`在`beginWork`阶段就消费了`context`内容，要么通过`useContext hook`要么通过`JSX`语法。
 
-在`render`阶段的`completeWork`过程中，针对每个节点会根据类型同样进入不同的方法，本例中`ThemeContext.Provider`的类型是`ContextProvider`，所以就会进入`ContextProvider`分支去调用`popProvider()`：
+在`render`阶段的`completeWork`过程中，针对每个节点会根据类型同样进入不同的方法，本例中`ThemeContext.Provider`对应的 `ReactElement` 的类型是`ContextProvider`，所以就会进入`ContextProvider`分支去调用`popProvider()`：
 
 ```ts
 // 【completeWork】
@@ -716,15 +718,16 @@ export function popProvider(
       context._currentRenderer2 = currentRenderer2
     }
   }
-
+  // 【调用pop方法清理栈顶】
   pop(valueCursor, providerFiber)
 }
 ```
 
 `popProvider`用到的辅助函数`pop`如下：
 
-1. `valueStack`栈顶设为 null；
-2. `fiberStack`栈顶设为 null；
+1. `cursor.current`设置为栈顶值；
+2. `valueStack`栈顶设为 null；
+3. `fiberStack`栈顶设为 null；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberStack.js】
@@ -916,7 +919,7 @@ function updateFunctionComponent(
 }
 ```
 
-`readcontext`方法并不复杂，只是读取`context._currentValue`里的值，处理节点对应`dependencies`也是用 next 的串联关系（一个`consumer`可以使用多个`context`内容），最后返回`context`最新值：
+`readcontext`方法并不复杂，只是读取`context._currentValue`里的值，处理节点对应`dependencies`也是用 `next` 的串联关系（一个`consumer`可以使用多个`context`内容），最后返回`context`最新值：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberNewContext.js】
@@ -944,6 +947,7 @@ function readContextForConsumer<T>(
   consumer: Fiber | null,
   context: ReactContext<T>,
 ): T {
+  // 【获取最新值】
   const value = isPrimaryRenderer
     ? context._currentValue
     : context._currentValue2;
@@ -951,6 +955,7 @@ function readContextForConsumer<T>(
   if (lastFullyObservedContext === context) {
     // Nothing to do. We already observe everything in this context.
   } else {
+    // 【更新context对象】
     const contextItem = {
       context: ((context: any): ReactContext<mixed>),
       memoizedValue: value,
@@ -980,7 +985,7 @@ function readContextForConsumer<T>(
       }
     } else {
       // Append a new context item.
-      // 【Context list】
+      // 【串联Context list】
       lastContextDependency = lastContextDependency.next = contextItem;
     }
   }
@@ -1445,6 +1450,6 @@ function propagateContextChanges<T>(
 2. `beginWork`阶段首先遇到`REACT_PROVIDER_TYPE`类型的`Provider`组件，调用`updateContextProvider`=>`pushProvider()`，将数据和当前 `fiber` 入栈；
 3. `beginWork`阶段接着深入子节点遇到`REACT_CONTEXT_TYPE`类型的`Consumer`组件或者调用了`useContext`的`Consumer`组件，前者进入`updateContextConsumer`方法继而进入`readContext`方法，后者直接调用`readContext`方法，方法会读取`context._currentValue`里的值并且更新`fiber`对应的`dependencies list`，也就是我们说的`Consumer`组件消费`Provider`组件提供的数据；
 4. 子组件消费完之后回到`Provider`组件的`completeWork`阶段，继而调用`popProvider`出栈，这一操作是为了保证所有的`Consumer`组件永远消费的是离自己最近的`Provider`组件提供的数据；
-5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧`context`数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`Consumer`组件的祖先节点`childLanes`属性用于后续更新这些组件；
+5. 在更新`Provider`组件提供的数据后同样进入`updateContextProvider`，然后如果新旧`context`数据有变化就会用`propagateContextChange`方法遍历子节点去给所有消费该数据的`Consumer`组件标记`lanes`和`Consumer`组件的祖先节点`childLanes`属性用于后续更新的判断；
 
 ![react](./assets/useContext/useContext.png)

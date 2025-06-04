@@ -1,7 +1,5 @@
 # React 中的 rerender 优化
 
-<!-- TODO -->
-
 测试用例如下，每次`color`的改变都会引起`ExpensiveTree`子组件的`rerender`：
 
 ```js
@@ -17,6 +15,7 @@ function ExpensiveTree() {
 }
 export default function App() {
   let [color, setColor] = useState("red")
+
   return (
     <div>
       <input value={color} onChange={(e) => setColor(e.target.value)} />
@@ -27,7 +26,9 @@ export default function App() {
 }
 ```
 
-## memo
+## React 减少 rerender
+
+### memo
 
 ```js
 import { useState, memo } from "react"
@@ -54,14 +55,9 @@ export default function App() {
 }
 ```
 
-## 提取组件
+### 提取组件
 
-在用例中和 `color` 有关的其实只有，所以可以将这部分内容单独提取为一个`Form`组件：
-
-```html
-<input value={color} onChange={(e) => setColor(e.target.value)} />
-<p style="{{" color }}>Hello, world!</p>
-```
+在用例中和 `color` 有关的其实只有 `input` 和 `p` 元素，所以可以将这部分内容单独提取为一个`Form`组件：
 
 ```js
 import { useState, memo } from "react"
@@ -97,7 +93,7 @@ export default function App() {
 }
 ```
 
-## 将子组件当做 props 传入
+### 将子组件当做 props 传入
 
 ```js
 export default function App() {
@@ -112,7 +108,7 @@ export default function App() {
 }
 ```
 
-如果用例中的 color 用在外层组件上，那之前的方法就不成立的，这个时候考虑把无关的`ExpensiveTree`子组件当做 `props` 传入：
+如果用例中的 `color` 用在外层组件上，那之前的方法就不成立的，这个时候考虑把无关的 `ExpensiveTree` 子组件当做 `props` 传入：
 
 ```js
 import { useState } from "react"
@@ -147,14 +143,14 @@ export default function App() {
 }
 ```
 
-## 源码角度分析
+### 源码角度分析
 
 根据前文我们知道在`beginWork`阶段有个`bailoutOnAlreadyFinishedWork`方法，就是用于在`props`等没有变化时提前复用之前的节点从而避免`rerender`。
 
 那我们就来看一下走`bailoutOnAlreadyFinishedWork`这个分支的前提条件：
 
 1. `current!==null` 旧节点存在；
-2. `oldProps === newProps` && `hasContextChanged() == false` && `workInProgress.type === current.type`新旧节点的类型`type`和`props`没有改变且上下文没有更新;
+2. `oldProps === newProps` && `hasContextChanged() == false` && `workInProgress.type === current.type` 新旧节点的类型`type`和`props`没有改变且上下文没有更新;
 3. `checkScheduledUpdateOrContext()` 未检测到当前节点上有 `Update` 任务；
 4. `(workInProgress.flags & DidCapture) === NoFlags`当前节点没有捕获错误；
 
@@ -273,7 +269,72 @@ function bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes) {
 
 所以在前面的案例中，后面两种优化方式都是将与变化的部分隔离开，因此优化前 `ExpensiveTree` 组件对应的`oldProps`和`newProps`虽然都是一个空对象，但是并不是同一个对象，所以无法进入`bailoutOnAlreadyFinishedWork`分支，而优化之后，要么`ExpensiveTree`组件和`Form`组件隔离开，要么`ExpensiveTree`组件被`Fragment`组件包裹，使得`Fragment`组件没有变化所以进入`bailoutOnAlreadyFinishedWork`分支从而不需要`rerender`。
 
-至于 `memo` 这个 API 是如何做到减少 `rerender` 的可以参考后文`《useMemo&useCallback》`。
+至于 `memo` 这个 API 是如何做到减少 `rerender` 的可以参考前文 `《useMemo&useCallback》`。
+
+## React 中的闭包内存泄露
+
+React 存在一个隐蔽的闭包问题，举例如下：
+
+`handleClickA`/`handleClickB`/`handleClickBoth` 三个函数都对 App 内的数据形成引用进而形成了闭包，其中`handleClickA`/`handleClickB`使用了 `useCallback` 进行优化减少 `rerender`，将函数缓存在了 `fiber` 上，一旦多次调用会出现一个问题，那就是 `bigData` 这个数据较大，即使`handleClickA`/`handleClickB`未直接对其引用，但是由于闭包的特殊性能访问 App 这个 `scope` 作用域，在多次调用之后会形成多个对 App 这个 `scope` 作用域的引用，而这个作用域中有一个非常大的数据 `bigData`，就可能会导致内存爆炸。
+
+```js
+class BigObject {
+  data = new Uint8Array(1024 * 1024 * 10)
+}
+
+function App() {
+  const [countA, setCountA] = useState(0)
+  const [countB, setCountB] = useState(0)
+  const bigData = new BigObject() // 10MB of data
+
+  const handleClickA = useCallback(() => {
+    setCountA(countA + 1)
+  }, [countA])
+
+  const handleClickB = useCallback(() => {
+    setCountB(countB + 1)
+  }, [countB])
+
+  // This only exists to demonstrate the problem
+  const handleClickBoth = () => {
+    handleClickA()
+    handleClickB()
+    console.log(bigData.data.length)
+  }
+
+  return (
+    <div>
+      <button onClick={handleClickA}>Increment A</button>
+      <button onClick={handleClickB}>Increment B</button>
+      <button onClick={handleClickBoth}>Increment Both</button>
+      <p>
+        A: {countA}, B: {countB}
+      </p>
+    </div>
+  )
+}
+```
+
+![closure](./assets/bigobject-leak-useCallback.png)
+
+### 保持闭包作用域最小化
+
+JavaScript 难以直观展示闭包捕获的所有变量。控制变量捕获数量的最佳方式是缩小闭包的函数作用域，具体做法包括：
+
+- 编写小型组件：这会减少创建新闭包时作用域中的变量数量
+- 使用自定义 Hook：此时回调函数只能捕获 Hook 函数的局部作用域（通常仅包含函数参数）
+
+### 避免捕获其他闭包（尤其是被记忆的闭包）
+
+虽然这看似显而易见，但 React 中很容易掉入这个陷阱。当编写相互调用的小型函数时，一旦使用第一个 `useCallback`，组件作用域内所有被调用函数都会产生连锁记忆化反应。
+
+### 避免不必要的记忆
+
+`useCallback` 和 `useMemo` 是防止无效渲染的优秀工具，但需付出代价。建议仅在发现渲染导致性能问题时使用。
+
+### 对大的对象使用 useRef
+
+这需要手动管理对象的生命周期并正确清理。虽非最优方案，但优于内存泄漏问题。
 
 ## 参考资料
 
@@ -282,3 +343,9 @@ function bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes) {
 [Before You memo()](https://overreacted.io/before-you-memo/)
 
 [How React Compiler Performs on Real Code](https://www.developerway.com/posts/how-react-compiler-performs-on-real-code)
+
+[Sneaky React Memory Leaks: How `useCallback` and closures can bite you](https://www.schiener.io/2024-03-03/react-closures)
+
+[How I Have Mastered Closures in React 🚀](https://medium.com/@techsuneel99/how-i-have-mastered-closures-in-react-a6b121095a92)
+
+[Fantastic closures and how to find them in React](https://www.developerway.com/posts/fantastic-closures)

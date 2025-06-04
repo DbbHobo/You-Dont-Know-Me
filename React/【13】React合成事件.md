@@ -37,7 +37,7 @@ document.addEventListener("click", function (event) {
 
 `React` 的事件机制中依赖合成事件这个核心概念。合成事件在符合 W3C 规范定义的前提下，抹平浏览器之间的差异化表现。并且简化事件逻辑，对关联事件进行合成。如每当表单类型组件的值发生改变时，都会触发 `onChange` 事件，而 `onChange` 事件由 `change`、`click`、`input`、`keydown`、`keyup` 等原生事件组成。合成事件与原生事件不是一一映射的关系。比如 `onMouseEnter` 合成事件映射原生 `mouseout`、`mouseover` 事件。
 
-React 实现了一个 `SyntheticEvent` 类，如果需要访问原生事件对象，可以使用 `nativeEvent` 属性。在事件发生时，相关信息会存储在 `SyntheticEvent` 的实例对象中，对象包含 `currentTarget`、`detail`、`target`、`preventDefault()`、`stopPropagation()` 等属性和方法。`DOM` 节点可以通过 `addEventListener` 和 `removeEventListener` 来添加或移除事件监听函数。
+React 实现了一个 `SyntheticEvent` 类，如果需要访问原生事件对象，可以访问 `nativeEvent` 属性。在事件发生时，相关信息会存储在 `SyntheticEvent` 的实例对象中，对象包含 `currentTarget`、`detail`、`target`、`preventDefault()`、`stopPropagation()` 等属性和方法。`DOM` 节点可以通过 `addEventListener` 和 `removeEventListener` 来添加或移除事件监听函数。
 
 ## 合成事件的注册
 
@@ -65,6 +65,7 @@ export function createRoot(
 
   // 【省略代码...】
 
+  // 【创建根节点】
   const root = createContainer(
     container,
     ConcurrentRoot,
@@ -100,6 +101,7 @@ export function createRoot(
 export function listenToAllSupportedEvents(rootContainerElement: EventTarget) {
   if (!(rootContainerElement: any)[listeningMarker]) {
     (rootContainerElement: any)[listeningMarker] = true;
+    // 【目前监听allNativeEvents共81个】
     allNativeEvents.forEach(domEventName => {
       // We handle selectionchange separately because it
       // doesn't bubble and needs to be on the document.
@@ -153,7 +155,10 @@ function addTrappedEventListener(
   isCapturePhaseListener: boolean,
   isDeferredListenerForLegacyFBSupport?: boolean,
 ) {
-  // 【创建不同优先级的事件回调dispatchEvent】
+  // 【listener是创建的不同优先级的事件回调dispatchEvent】
+  // 【targetContainer：目标容器container】
+  // 【domEventName：DOM事件名称】
+  // 【eventSystemFlags：事件系统Flag】
   let listener = createEventListenerWrapperWithPriority(
     targetContainer,
     domEventName,
@@ -212,8 +217,8 @@ function addTrappedEventListener(
     };
   }
   // TODO: There are too many combinations here. Consolidate them.
-  // 【捕获阶段事件】
   if (isCapturePhaseListener) {
+    // 【捕获阶段事件 capture:true】
     if (isPassiveListener !== undefined) {
       // 【passive为true，表示 listener 永远不会调用 preventDefault()】
       unsubscribeListener = addEventCaptureListenerWithPassiveFlag(
@@ -230,7 +235,7 @@ function addTrappedEventListener(
       );
     }
   } else {
-  // 【冒泡阶段事件】
+  // 【冒泡阶段事件 capture:false】
     if (isPassiveListener !== undefined) {
       // 【passive为true，表示 listener 永远不会调用 preventDefault()】
       unsubscribeListener = addEventBubbleListenerWithPassiveFlag(
@@ -250,7 +255,7 @@ function addTrappedEventListener(
 }
 
 // 【packages/react-dom-bindings/src/events/EventListener.js】
-// 【捕获阶段触发事件】
+// 【捕获阶段触发事件 capture:true】
 export function addEventCaptureListener(
   target: EventTarget,
   eventType: string,
@@ -273,7 +278,7 @@ export function addEventCaptureListenerWithPassiveFlag(
   return listener;
 }
 
-// 【冒泡阶段触发事件】
+// 【冒泡阶段触发事件 capture:false】
 export function addEventBubbleListener(
   target: EventTarget,
   eventType: string,
@@ -318,11 +323,11 @@ DOM 添加事件监听`addEventListener`的一些参数细节如下：
 //   signal: controller.signal
 // }
 // capture 可选
-// 一个布尔值，表示 listener 会在该类型的事件捕获阶段传播到该 EventTarget 时触发。
+// 一个布尔值，表示 listener 会在该类型的事件捕获阶段传播到该 EventTarget 时触发。默认值false，标识冒泡阶段触发。
 // once 可选
 // 一个布尔值，表示 listener 在添加之后最多只调用一次。如果为 true，listener 会在其被调用之后自动移除。
 // passive 可选
-// 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。
+// 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。浏览器在监听 touchstart 或 touchmove 事件时，默认会等待事件监听器执行完毕，再决定是否执行默认滚动行为。如果监听器耗时较长，会导致滚动卡顿。当设置为 true 时，表示事件监听器不会调用 event.preventDefault()。浏览器可以立即执行事件的默认行为（如滚动），无需等待监听器执行完毕。
 // signal 可选
 // AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
 
@@ -604,11 +609,11 @@ export function dispatchEvent(
 
 触发一个原生事件时，大致的执行流程如下：
 
-1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，获取到原生事件对象 `nativeEvent`；
+1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，回调方法中可以获取到原生事件对象 `nativeEvent`；
 2. `findInstanceBlockingEvent` 方法根据该原生事件对象 `nativeEvent` 查找到事件触发所在的 `DOM` 节点和其对应的 `fiber` 节点；
 3. 触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
-4. `extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
-5. 最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
+4. `dispatchEventsForPlugins`：`extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
+5. `dispatchEventsForPlugins`：最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
 
 `dispatchEvent` => `findInstanceBlockingEvent` + `dispatchEventForPluginEventSystem` => `dispatchEventsForPlugins` => `extractEvents` + `processDispatchQueue`
 
@@ -886,7 +891,7 @@ function dispatchEventsForPlugins(
   const nativeEventTarget = getEventTarget(nativeEvent);
   // 【存储事件回调的数组】
   const dispatchQueue: DispatchQueue = [];
-  // 【进入合成事件的构造过程并加入dispatchQueue】
+  // 【-----第一步：进入合成事件的构造过程并加入dispatchQueue-----】
   extractEvents(
     dispatchQueue,
     domEventName,
@@ -896,7 +901,7 @@ function dispatchEventsForPlugins(
     eventSystemFlags,
     targetContainer,
   );
-  // 【处理dispatchQueue里的合成事件】
+  // 【-----第二步：处理加入了dispatchQueue里的所有回调合成事件-----】
   processDispatchQueue(dispatchQueue, eventSystemFlags);
 }
 ```
@@ -949,6 +954,7 @@ function extractEvents(
   // should probably be inlined somewhere and have its logic
   // be core the to event system. This would potentially allow
   // us to ship builds of React without the polyfilled plugins below.
+  // 【进入extractEvents进行提取事件回调到dispatchQueue的过程】
   SimpleEventPlugin.extractEvents(
     dispatchQueue,
     domEventName,
@@ -1035,7 +1041,7 @@ function extractEvents(
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
 ): void {
-  // 【原生事件的名字映射到React中的名字，例如click映射到onClick】
+  // 【原生事件的名字映射到React中的事件名字，例如click映射到onClick】
   const reactName = topLevelEventsToReactNames.get(domEventName);
   if (reactName === undefined) {
     return;
@@ -1146,12 +1152,12 @@ function extractEvents(
       break;
   }
 
+  // 【是否捕获阶段的事件】
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
   if (
     enableCreateEventHandleAPI &&
     eventSystemFlags & IS_EVENT_HANDLE_NON_MANAGED_NODE
   ) {
-    // 【从当前fiber开始往上寻找节点上所有注册了的事件回调加入listeners数组】
     const listeners = accumulateEventHandleNonManagedNodeListeners(
       // TODO: this cast may not make sense for events like
       // "focus" where React listens to e.g. "focusin".
@@ -1184,6 +1190,7 @@ function extractEvents(
       // This is a breaking change that can wait until React 18.
       (domEventName === 'scroll' || domEventName === 'scrollend');
 
+    // 【从当前fiber开始往上寻找节点上所有注册了的本次事件的回调并加入listeners数组】
     const listeners = accumulateSinglePhaseListeners(
       targetInst,
       reactName,
@@ -1318,6 +1325,7 @@ export function accumulateSinglePhaseListeners(
         listeners = [];
       }
     }
+    // 【从下往上寻找】
     instance = instance.return;
   }
   return listeners;
@@ -1329,10 +1337,10 @@ export function accumulateSinglePhaseListeners(
 ![react](./assets/SyntheticEvent/SyntheticEvent11.png)
 ![react](./assets/SyntheticEvent/SyntheticEvent12.png)
 
-`processDispatchQueue`最终会遍历`dispatchQueue`里的每一个`event`及其所有的`listener`事件回调并执行，根据是否捕获阶段或冒泡阶段来倒序或顺序执行：
+`processDispatchQueue`最终会遍历`dispatchQueue`里的每一个`event`及其所有的`listener`事件回调并执行，根据是否捕获阶段或冒泡阶段来倒序或顺序执行（进入`dispatchQueue`的顺序是下层节点往上层节点依次加入）：
 
-- `capture`：从上至下调用 fiber 树中绑定的回调函数， 所以倒序遍历`dispatchQueue`
-- `bubble`：从下至上调用 fiber 树中绑定的回调函数， 所以顺序遍历`dispatchQueue`
+- `capture`捕获阶段调用：从上至下调用 fiber 树中绑定的回调函数， 所以倒序遍历`dispatchQueue`
+- `bubble`冒泡阶段调用：从下至上调用 fiber 树中绑定的回调函数， 所以顺序遍历`dispatchQueue`
 
 ```ts
 // 【packages/react-dom-bindings/src/events/DOMPluginEventSystem.js】
@@ -1355,6 +1363,7 @@ function processDispatchQueueItemsInOrder(
 ): void {
   let previousInstance
   if (inCapturePhase) {
+    // 【捕获阶段-从后往前执行】
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
       const { instance, currentTarget, listener } = dispatchListeners[i]
       if (instance !== previousInstance && event.isPropagationStopped()) {
@@ -1374,6 +1383,7 @@ function processDispatchQueueItemsInOrder(
       previousInstance = instance
     }
   } else {
+    // 【冒泡阶段-从前往后执行】
     for (let i = 0; i < dispatchListeners.length; i++) {
       const { instance, currentTarget, listener } = dispatchListeners[i]
       if (instance !== previousInstance && event.isPropagationStopped()) {
@@ -1402,7 +1412,7 @@ function executeDispatch(
 ): void {
   event.currentTarget = currentTarget
   try {
-    // 【最终执行回调】
+    // 【最终执行注册的回调函数】
     listener(event)
   } catch (error) {
     reportGlobalError(error)
@@ -1447,7 +1457,8 @@ HTML 元素类的总体继承关系如下：
 // once 可选
 // 一个布尔值，表示 listener 在添加之后最多只调用一次。如果为 true，listener 会在其被调用之后自动移除。
 // passive 可选
-// 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。查看使用 passive 改善滚屏性能以了解更多。
+// 一个布尔值，设置为 true 时，表示 listener 永远不会调用 preventDefault()。如果 listener 仍然调用了这个函数，客户端将会忽略它并抛出一个控制台警告。浏览器在监听 touchstart 或 touchmove 事件时，默认会等待事件监听器执行完毕，再决定是否执行默认滚动行为。如果监听器耗时较长，会导致滚动卡顿。当设置为 true 时，表示事件监听器不会调用 event.preventDefault()。浏览器可以立即执行事件的默认行为（如滚动），无需等待监听器执行完毕。
+
 // signal 可选
 // AbortSignal，该 AbortSignal 的 abort() 方法被调用时，监听器会被移除。
 addEventListener(type, listener)
@@ -1517,7 +1528,7 @@ reset.addEventListener("click", () => document.location.reload())
 
 合成事件的注册主要是在 root 根容器上调用`addEventListener`添加事件监听，目前的`React`版本中包含 81 个原生事件，监听的事件回调根据事件的优先级分为 3 类`dispatch`事件，但是最终都会调用`dispatchEvent`，`dispatchEvent`是`React`对用户回调函数的包装。
 
-合成事件触发之后就会进入回调函数`dispatchEvent`，然后进入事件插件派发系统，找到所有注册了的事件回调并有序调用。
+事件触发之后就会进入回调函数`dispatchEvent`，然后进入事件插件派发系统，找到所有注册了的事件回调并有序调用。
 
 ![react](./assets/SyntheticEvent/SyntheticEvent.png)
 

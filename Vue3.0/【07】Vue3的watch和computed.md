@@ -21,7 +21,7 @@ plusOne.value++ // 错误
 - 关键词`<getter>`、`<ComputedRefImpl>`
 
 1. 获取`computed()`参数中的`getter`/`setter`
-2. 实例化一个`ComputedRefImp`l 对象
+2. 实例化一个 `ComputedRefImpl` 对象
 
 ```ts
 // 【packages/runtime-core/src/apiComputed.ts】
@@ -112,7 +112,7 @@ export class ComputedRefImpl<T> {
     //【依赖收集】
     const self = toRaw(this)
     trackRefValue(self)
-    //【非ssr的情况下_cacheable始终为true，此时，若_dirty为true的情况，调用computed effect的run()方法，继而回调getter。】
+    //【非ssr的情况下_cacheable始终为true，此时，若_dirty为true的情况，调用computed effect的run()方法，继而回调getter】
     if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
@@ -148,7 +148,7 @@ export class ComputedRefImpl<T> {
 
 构造`ComputedRefImpl`实例的入参`trigger`函数实际调用了`triggerRefValue`方法，和`ref`走的是一个派发更新的方法。然后在进入`triggerRefValue`方法时，`_dirtyLevel`可能是 2 或 3。而入参`fn`回调函数则是调用`getter`也就是用户传入的`getter`函数。
 
-比如计算属性依赖一个 ref 值，ref 值改变引起派发更新，就会引起这个计算属性的 trigger 函数调用，从而进入这个计算属性的派发更新过程。ref 引起计算属性改变(dirtyLevel 为 4)，计算属性引起它对应的后续改变(比如视图改变，dirtyLevel 为 3)。如果 ref 和影响到的计算属性都会引起同一个视图的改变，一旦`dirtyLevel`非 0，不会再安排`scheduler`入队，所以不会有重复性的任务入队。
+比如计算属性依赖一个 `ref` 值，`ref` 值改变引起派发更新，就会引起这个计算属性的 `trigger` 函数调用，从而进入这个计算属性的派发更新过程。`ref` 引起计算属性改变(`dirtyLevel` 为 4)，计算属性引起它对应的后续改变(比如视图改变，`dirtyLevel` 为 3)。如果 ref 和影响到的计算属性都会引起同一个视图的改变，一旦`dirtyLevel`非 0，不会再安排`scheduler`入队，所以不会有重复性的任务入队。
 
 ```ts
 // 【packages/reactivity/src/computed.ts】
@@ -496,14 +496,14 @@ function doWatch(
         }
       })
   } else if (isFunction(source)) {
-    // 【source是getter函数】
+    // 【source是函数】
     if (cb) {
       // getter with cb
       //【有cb回调，执行source方法】
       getter = () =>
         callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
-      //【未传cb回调，执行source方法】
+      //【未传cb回调，说明是watchEffect，执行source方法】
       // no cb -> simple effect
       getter = () => {
         //【如果还没挂载则返回，此时还取不到响应式数据】
@@ -581,7 +581,7 @@ function doWatch(
     if (!effect.active) {
       return
     }
-    // 有回调函数
+    // 【有回调函数-watch】
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -617,7 +617,7 @@ function doWatch(
         oldValue = newValue
       }
     } else {
-      //【没有cb回调函数，直接执行对应副作用的run()方法】
+      //【没有cb回调函数，直接执行对应副作用的run()方法-watchEffect】
       // watchEffect
       effect.run()
     }
@@ -640,7 +640,7 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  // 【实例化一个watch effect,run方法里会回调getter，scheduler方法根据用户配置插入不同时机的任务队列】
+  // 【实例化一个watch effect，effect.run方法里会回调getter，scheduler方法根据用户配置插入不同时机的任务队列】
   const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {
@@ -651,7 +651,7 @@ function doWatch(
   //【首次执行】
   // initial run
   if (cb) {
-    //【有回调函数】
+    //【有回调函数-watch】
     if (immediate) {
       //【immediate为true，watch创建时立即执行回调】
       job()
@@ -665,6 +665,7 @@ function doWatch(
       instance && instance.suspense
     )
   } else {
+    //【无回调函数-watchEffect】
     effect.run()
   }
 

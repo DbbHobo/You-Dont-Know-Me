@@ -610,8 +610,8 @@ const setupRenderEffect: SetupRenderEffectFn = (
 
 前文中讲到在 `componentUpdateFn` 方法中无论是首次挂载组件还是更新组件，两个最关键的步骤：
 
-1. `renderComponentRoot`根据组件实例`instance`生成最新的`VNode`(`subTree`/`nextTree`)；
-2. `patch`对比新旧`VNode`然后进行`diff`流程去更新`DOM`，遇到子组件再继续进入子组件的`patch`方法；
+1. `renderComponentRoot`：提取组件实例`instance`上的`render`方法生成最新的`VNode`(`subTree`/`nextTree`)；
+2. `patch`：对比新旧`VNode`然后进行`diff`流程去更新`DOM`，遇到子组件再继续进入子组件的`patch`方法；
 
 ```ts
 // 【packages/runtime-core/src/renderer.ts】
