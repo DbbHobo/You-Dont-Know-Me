@@ -7,14 +7,15 @@ JavaScript 允许在函数体内部，引用当前环境的其他变量。
 ```js
 let f = function () {
   console.log(x)
+  console.log(this.x)
 }
 ```
 
-上面代码中，函数体里面使用了变量 x。该变量由运行环境提供。
+上面代码中，函数体里面使用了变量 x，该变量由运行环境提供，函数体里面的 `this.x` 就是指当前运行环境的 x。
 
-现在问题就来了，由于函数可以在不同的运行环境执行，所以需要有一种机制，能够在函数体内部获得当前的运行环境（context）。所以，this 就出现了，它的设计目的就是**在函数体内部，指代函数当前的运行环境**。
+现在问题就来了，由于函数可以在不同的运行环境执行，所以需要有一种机制，能够在函数体内部获得当前的运行环境（`context`）。所以，`this` 就出现了，它的设计目的就是**在函数体内部，指代函数当前的运行环境**。
 
-上面代码中，函数体里面的 `this.x` 就是指当前运行环境的 x。
+决定 `this` 值的关键并非代码书写方式，而是**函数的调用方式**——这意味着函数内部的 `this` 在每次调用时都可能不同。要真正理解这一点，我们必须从 JavaScript 执行函数的视角（而非开发者在键盘前编写函数的视角）来思考。
 
 ## 理解 this 指向
 
@@ -143,7 +144,72 @@ var obj = {
 
 ### 箭头函数
 
-箭头函数不使用 this 的四种标准规则，而是根据外层(函数或者全局)作用域来决 定 this。箭头函数的绑定无法被修改。`new` 也不行！
+箭头函数不使用 `this` 的四种标准规则，而是根据外层(函数或者全局)作用域来决定 `this`。箭头函数的绑定无法被修改。`new` 也不行！箭头函数没有自己的 `this`，它会捕获定义时所在外层（非箭头）函数或全局作用域的 `this` 值，并固定不变。
+
+```js
+function Outer() {
+  this.name = "outer"
+
+  return {
+    name: "inner",
+    normalFunc: function () {
+      console.log(this.name)
+    },
+    arrowFunc: () => {
+      console.log(this.name)
+    },
+  }
+}
+
+const obj = Outer()
+obj.normalFunc() // 'inner' normalFunc 的 this 是谁调用它就是谁，这里是 obj，所以是 inner。
+obj.arrowFunc() // 'outer'  arrowFunc 的 this 在 Outer 中定义时就绑定为 Outer 中的 this，即 outer。
+
+class Timer {
+  constructor() {
+    this.seconds = 0
+  }
+  start() {
+    setInterval(() => {
+      this.seconds++
+      console.log(this.seconds) // this 是 Timer 实例
+    }, 1000)
+  }
+}
+```
+
+### 事件回调函数
+
+在事件处理器的回调函数内部（非箭头函数），`this` 引用的是与该处理器关联的元素。
+
+```js
+document.querySelector("button").addEventListener("click", function (event) {
+  console.log(this)
+  // result: <button class="btn">
+})
+
+// 此例是改变实践回调函数this指向的例子
+const button = document.querySelector("button")
+
+const theObject = {
+  theValue: true,
+}
+
+function handleClick() {
+  console.log(this)
+}
+
+button.addEventListener("click", handleClick.bind(theObject))
+// result: Object { theValue: true }
+
+// 事件回调函数如果是箭头函数
+let button = document.querySelector("button")
+
+button.addEventListener("click", (event) => {
+  console.log(this)
+})
+// result: Window { … }
+```
 
 ### 基本的判断流程
 
@@ -314,3 +380,7 @@ bindFn()
 [深度解析 bind 原理、使用场景及模拟实现](https://github.com/yygmind/blog/issues/23)
 
 [You Don't Know JS Yet](https://github.com/getify/You-Dont-Know-JS)
+
+[JavaScript, when is this?](https://piccalil.li/blog/javascript-when-is-this/)
+
+[JavaScript, what is this?](https://piccalil.li/blog/javascript-what-is-this/)

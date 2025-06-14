@@ -1,17 +1,19 @@
 # RegExp
 
-有两种方法可以创建一个 RegExp 对象：一种是字面量，另一种是构造函数。
+有两种方法可以创建一个 `RegExp` 对象：一种是字面量，另一种是构造函数。
 
 - 字面量：由斜杠 (`/`) 包围而不是引号包围。
 - 构造函数的字符串参数：由引号而不是斜杠包围。
 
 ```js
-/ab+c/i; //字面量形式
-new RegExp("ab+c", "i"); // 首个参数为字符串模式的构造函数
-new RegExp(/ab+c/, "i"); // 首个参数为常规字面量的构造函数
+let pattern1 = /ab+c/i //字面量形式
+let pattern2 = new RegExp("ab+c", "i") // 首个参数为字符串模式的构造函数
+let pattern3 = new RegExp(/ab+c/, "i") // 首个参数为常规字面量的构造函数
 ```
 
 ## RegExp 实例属性、方法
+
+除以下方法之外，`RegExp` 还可以和 `String.prototype.search()` & `String.prototype.match()` & `String.prototype.split()` & `String.prototype.replace()` 配合使用。
 
 ### RegExp.prototype.lastIndex
 
@@ -27,9 +29,9 @@ new RegExp(/ab+c/, "i"); // 首个参数为常规字面量的构造函数
 `source` 属性返回一个值为当前正则表达式对象的模式文本的字符串，该字符串不会包含正则字面量两边的斜杠以及任何的标志字符。
 
 ```js
-var regex = /fooBar/ig;
+var regex = /fooBar/gi
 
-console.log(regex.source); // "fooBar"，不包含 /.../ 和 "ig"。
+console.log(regex.source) // "fooBar"，不包含 /.../ 和 "ig"。
 ```
 
 ### RegExp.prototype.exec()
@@ -37,8 +39,8 @@ console.log(regex.source); // "fooBar"，不包含 /.../ 和 "ig"。
 `exec()` 方法在一个指定字符串中执行一个搜索匹配。返回一个结果数组或 null。在设置了 global 或 sticky 标志位的情况下（如 /foo/g 或 /foo/y），JavaScript RegExp 对象是有状态的。它们会将上次成功匹配后的位置记录在 lastIndex 属性中。使用此特性，`exec()` 可用来对单个字符串中的**多次匹配结果**进行逐条的遍历（包括捕获到的匹配），而相比之下， `String.prototype.match()` 只会返回匹配到的结果。
 
 ```js
-const re = /quick\s(?<color>brown).+?(jumps)/igd;
-const result = re.exec('The Quick Brown Fox Jumps Over The Lazy Dog');
+const re = /quick\s(?<color>brown).+?(jumps)/dgi
+const result = re.exec("The Quick Brown Fox Jumps Over The Lazy Dog")
 // 属性              	值
 // [0]	     "Quick Brown Fox Jumps"
 // [1]	             "Brown"
@@ -57,26 +59,25 @@ const result = re.exec('The Quick Brown Fox Jumps Over The Lazy Dog');
 当你想要知道一个正则表达式是否与指定的字符串匹配时，就可以使用 `test()`（类似于 `String.prototype.search()` 方法），差别在于 `test` 返回一个布尔值，而 `search` 返回索引（如果找到）或者 -1（如果没找到）；若想知道更多信息（然而执行比较慢），可使用 `exec()` 方法（类似于 `String.prototype.match()` 方法）。和 `exec()` (或者组合使用),一样，在相同的全局正则表达式实例上多次调用`test`将会越过之前的匹配。
 
 ```js
-const str = 'table football';
+const str = "table football"
 
-const regex = new RegExp('foo*');
-const globalRegex = new RegExp('foo*', 'g');
+const regex = new RegExp("foo*")
+const globalRegex = new RegExp("foo*", "g")
 
-console.log(regex.test(str));
+console.log(regex.test(str))
 // Expected output: true
 
-console.log(globalRegex.lastIndex);
+console.log(globalRegex.lastIndex)
 // Expected output: 0
 
-console.log(globalRegex.test(str));
+console.log(globalRegex.test(str))
 // Expected output: true
 
-console.log(globalRegex.lastIndex);
+console.log(globalRegex.lastIndex)
 // Expected output: 9
 
-console.log(globalRegex.test(str));
+console.log(globalRegex.test(str))
 // Expected output: false
-
 ```
 
 ### RegExp.prototype.toString()
@@ -84,11 +85,11 @@ console.log(globalRegex.test(str));
 `toString()` 返回一个表示该正则表达式的字符串。
 
 ```js
-myExp = new RegExp("a+b+c");
-alert(myExp.toString());       // 显示 "/a+b+c/"
+myExp = new RegExp("a+b+c")
+alert(myExp.toString()) // 显示 "/a+b+c/"
 
-foo = new RegExp("bar", "g");
-alert(foo.toString());         // 显示 "/bar/g"
+foo = new RegExp("bar", "g")
+alert(foo.toString()) // 显示 "/bar/g"
 ```
 
 ---
@@ -152,14 +153,14 @@ alert(foo.toString());         // 显示 "/bar/g"
 
 ```js
 // 比如提取出年、月、日，可以这么做：
-let regex = /(\d{4})-(\d{2})-(\d{2})/;
-let str = "2020-08-02";
-console.log(str.match(regex));
+let regex = /(\d{4})-(\d{2})-(\d{2})/
+let str = "2020-08-02"
+console.log(str.match(regex))
 // => ["2020-08-02", "2020", "08", "02", index: 0, input: "2020-08-02"]
 
 // 把 yyyy-mm-dd 格式，替换成 mm/dd/yyyy
-let reg6 = /(\d{4})-(\d{2})-(\d{2})/;
-console.log("2020-08-02".replace(reg6, "$2/$3/$1"));
+let reg6 = /(\d{4})-(\d{2})-(\d{2})/
+console.log("2020-08-02".replace(reg6, "$2/$3/$1"))
 // => "08/02/2020"
 ```
 
@@ -170,17 +171,17 @@ console.log("2020-08-02".replace(reg6, "$2/$3/$1"));
   4. 分组后面有量词的话，分组最终捕获到的数据是最后一次的匹配。
 
 ```js
-let reg7 = /\d{4}(-|\/|\.)\d{2}\1\d{2}/;
-let string5 = "2017-06-12";
-let string2 = "2017/06/12";
-let string3 = "2017.06.12";
-let string4 = "2016-06/12";
-console.group("反向引用");
-console.log(reg7.test(string5)); // true
-console.log(reg7.test(string2)); // true
-console.log(reg7.test(string3)); // true
-console.log(reg7.test(string4)); // false
-console.groupEnd();
+let reg7 = /\d{4}(-|\/|\.)\d{2}\1\d{2}/
+let string5 = "2017-06-12"
+let string2 = "2017/06/12"
+let string3 = "2017.06.12"
+let string4 = "2016-06/12"
+console.group("反向引用")
+console.log(reg7.test(string5)) // true
+console.log(reg7.test(string2)) // true
+console.log(reg7.test(string3)) // true
+console.log(reg7.test(string4)) // false
+console.groupEnd()
 ```
 
 - 非捕获括号
@@ -210,6 +211,52 @@ console.groupEnd();
 
 `test` 整体匹配时需要使用 `^` 和 `$`。
 
+## 实践
+
+### 表单验证
+
+```js
+function validateEmail(email) {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailPattern.test(email)
+}
+console.log(validateEmail("user@example.com")) // true
+console.log(validateEmail("invalid_email")) // false
+```
+
+### 搜索与替换
+
+```js
+const paragraph = "The quick brown fox jumps over the lazy dog"
+const newParagraph = paragraph.replace(/quick/g, "slow")
+console.log(newParagraph) // 输出 'The slow brown fox jumps over the lazy dog'
+```
+
+### 数据解析
+
+```js
+const text =
+  "Check out this site: https://www.example.com and also this one: https://www.another-example.com"
+const urls = text.match(/https?:\/\/\S+/g)
+console.log(urls) // 输出 ['https://www.example.com', 'https://www.another-example.com']
+```
+
+### 字符串操作
+
+```js
+const string = "Th1s !s 4n ex@mpl3."
+const newString = string.replace(/[^a-zA-Z0-9]/g, "")
+console.log(newString) // 输出 'Th1s4nexmpl3'
+```
+
+### URL 路由
+
+```js
+const url = "/users/123"
+const id = url.match(/\/users\/(\d+)/)[1]
+console.log(id) // 输出 '123'
+```
+
 ## 总结
 
 一些容易混淆的表达式总结 `(?:pattern)`、`(?=pattern)`、`(?!pattern)`、`(?<=pattern)`和`(?<!pattern)`
@@ -217,12 +264,12 @@ console.groupEnd();
 如果一个正则表达式在字符串里面有多个匹配，现在一般使用`g`修饰符或`y`修饰符，在循环里面逐一取出。
 
 ```js
-var regex = /t(e)(st(\d?))/g;
-var string = 'test1test2test3';
-var matches = [];
-var match;
-while (match = regex.exec(string)) {
-  matches.push(match);
+let regex = /t(e)(st(\d?))/g
+let string = "test1test2test3"
+let matches = []
+let match
+while ((match = regex.exec(string))) {
+  matches.push(match)
 }
 // [
 //   ["test1", "e", "st1", "1", index: 0, input: "test1test2test3"],
@@ -234,3 +281,5 @@ while (match = regex.exec(string)) {
 ## 参考资料
 
 [JavaScript 正则表达式迷你书]
+
+[The ultimate JavaScript regex guide](https://www.honeybadger.io/blog/javascript-regular-expressions/)

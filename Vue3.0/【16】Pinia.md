@@ -89,15 +89,25 @@ export function createPinia(): Pinia {
 }
 ```
 
-首先通常我们会去调用 `defineStore` 创建一个 `store` 对象，上面包含 `state` 和一系列方法：
+![pinia](./assets/pinia/pinia1.png)
+![pinia](./assets/pinia/pinia2.png)
+
+首先通常我们会去调用 `defineStore` 创建一个 `store` 对象，上面包含 `state` 和一系列方法。要让 `pinia` 正确识别 `state`，你必须在 `setup` 中返回 `state` 的所有属性，最终 `defineStore` 返回 `useStore` 函数，供组件调用：
+
+- `ref()` 就是 `state`
+- `computed()` 就是 `getters`
+- `function()` 就是 `actions`
 
 ```ts
 import { ref, computed } from "vue"
 import { defineStore } from "pinia"
 
 export const useCounterStore = defineStore("counter", () => {
+  // state
   const count = ref(0)
+  // getters
   const doubleCount = computed(() => count.value * 2)
+  // actions
   function increment() {
     count.value++
   }
@@ -105,12 +115,6 @@ export const useCounterStore = defineStore("counter", () => {
   return { count, doubleCount, increment }
 })
 ```
-
-要让 `pinia` 正确识别 `state`，你必须在 `setup` 中返回 `state` 的所有属性：
-
-- `ref()` 就是 `state`
-- `computed()` 就是 `getters`
-- `function()` 就是 `actions`
 
 `Pinia` 对象的数据结构如下：
 
@@ -293,11 +297,15 @@ export function defineStore(
 }
 ```
 
+![pinia](./assets/pinia/pinia3.png)
+
 然后用户在组件中调用 `useStore` 函数使用 `store` 时就会进入 `createSetupStore` 创建（或寻找） `store` 对象的逻辑如下：
 
-1. 先由 `reactive` 创建一个基础的 `store` 对象，包含了 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法；
-2. 执行 `setup` 函数得到 `setupStore` 对象包含了 `setup` 函数返回的所有内容，并且遍历返回内容，针对 `store`、`getter`、`action` 分别进行处理；
+1. 先由 `reactive` 创建一个基础的 `store` 对象然后和 `partialSore` 合并，包含了 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法；
+2. 执行 `setup` 函数得到 `setupStore` 对象包含了 `setup` 函数返回的所有内容，并且遍历返回内容，针对 `state`、`getters`、`actions` 分别进行处理；
 3. 将基础 `store` 对象和 `setupStore` 对象结合形成完整的 `store` 对象，最后为其加入 `$state` 属性并返回这个完整的 `store` 对象；
+
+`partialSore` + `setupStore` + `$state` = 完整的 `store` 对象
 
 ```ts
 // 【packages/pinia/src/store.ts】
@@ -544,7 +552,13 @@ function createSetupStore<
 }
 ```
 
-总结来说，完整的 `store` 对象是一个 `reactive` 响应式对象，包含了 `state`、`getter`、`action` 以及 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法。
+总结来说，最后返回的完整 `store` 对象是一个 `reactive` 响应式对象，包含了 `$state`、`getters`、`actions` 以及 `$id`、`$patch`、`$dispose`、`$reset`、`$subscribe` 等属性和方法。
+
+![pinia](./assets/pinia/pinia4.png)
+![pinia](./assets/pinia/pinia5.png)
+![pinia](./assets/pinia/pinia6.png)
+![pinia](./assets/pinia/pinia7.png)
+![pinia](./assets/pinia/pinia8.png)
 
 ### state
 
@@ -633,6 +647,80 @@ export default {
       console.log("New Count:", counterStore.count)
     },
   },
+}
+```
+
+### store.$patch
+
+```ts
+// 【packages/pinia/src/store.ts】
+function createSetupStore<
+  Id extends string,
+  SS extends Record<any, unknown>,
+  S extends StateTree,
+  G extends Record<string, _Method>,
+  A extends _ActionsTree
+>(
+  $id: Id,
+  setup: (helpers: SetupStoreHelpers) => SS,
+  options:
+    | DefineSetupStoreOptions<Id, S, G, A>
+    | DefineStoreOptions<Id, S, G, A> = {},
+  pinia: Pinia,
+  hot?: boolean,
+  isOptionsStore?: boolean
+): Store<Id, S, G, A> {
+  //【...省略】
+
+  function $patch(
+    partialStateOrMutator:
+      | _DeepPartial<UnwrapRef<S>>
+      | ((state: UnwrapRef<S>) => void)
+  ): void {
+    let subscriptionMutation: SubscriptionCallbackMutation<S>
+    isListening = isSyncListening = false
+    // reset the debugger events since patches are sync
+    /* istanbul ignore else */
+    if (__DEV__) {
+      debuggerEvents = []
+    }
+    // 【直接改造pinia.state.value，这是一个reactive响应式对象】
+    // 【以函数的形式打补丁】
+    if (typeof partialStateOrMutator === "function") {
+      partialStateOrMutator(pinia.state.value[$id] as UnwrapRef<S>)
+      subscriptionMutation = {
+        type: MutationType.patchFunction, // 【区分打补丁方式，subscribe中可能会用到】
+        storeId: $id,
+        events: debuggerEvents as DebuggerEvent[],
+      }
+    } else {
+      // 【直接以对象打补丁】
+      mergeReactiveObjects(pinia.state.value[$id], partialStateOrMutator)
+      subscriptionMutation = {
+        type: MutationType.patchObject, // 【区分打补丁方式，subscribe中可能会用到】
+        payload: partialStateOrMutator,
+        storeId: $id,
+        events: debuggerEvents as DebuggerEvent[],
+      }
+    }
+    const myListenerId = (activeListener = Symbol())
+    nextTick().then(() => {
+      if (activeListener === myListenerId) {
+        isListening = true
+      }
+    })
+    isSyncListening = true
+    // because we paused the watcher, we need to manually call the subscriptions
+    triggerSubscriptions(
+      subscriptions,
+      subscriptionMutation,
+      pinia.state.value[$id] as UnwrapRef<S>
+    )
+  }
+
+  //【...省略】
+
+  return store
 }
 ```
 

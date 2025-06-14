@@ -8,9 +8,9 @@ JavaScript 对象转换成基本类型值是一个称为“类型转换”或“
 
 使用特定的强制类型转换函数：JavaScript 提供了一些函数，如`parseInt()`、`parseFloat()`和`String()`，可以将对象显式转换为基本类型值。
 
-## 基本类型值转布尔值
+## 基本类型值转布尔值[Boolean()]
 
-在 `JavaScript` 中，只有以下几种值可以被转换成 `false`，其他都会被转换成 `true`。
+在 `JavaScript` 中，只有以下几种值可以被 `Boolean()` 转换成 `false`，其他都会被转换成 `true`。
 
 ```js
 console.log(Boolean()) // false
@@ -23,7 +23,7 @@ console.log(Boolean(NaN)) // false
 console.log(Boolean("")) // false
 ```
 
-## 基本类型转数字
+## 基本类型转数字[Number()]
 
 根据规范，如果 `Number` 函数不传参数，返回 `+0`，如果有参数，调用 `ToNumber(value)`。注意这个 `ToNumber` 表示的是一个底层规范实现上的方法，并没有直接暴露出来。
 
@@ -54,7 +54,7 @@ console.log(Number("100a")) // NaN
 
 如果通过 `Number` 转换函数传入一个字符串，它会试图将其转换成一个整数或浮点数，而且会忽略所有前导的 0，如果有一个字符不是数字，结果都会返回 `NaN`。
 
-## 基本类型转字符串
+## 基本类型转字符串[String()]
 
 如果 `String` 函数不传参数，返回空字符串，如果有参数，调用 `ToString(value)`。同样的 `ToString` 表示的是一个底层规范实现上的方法，并没有直接暴露出来。
 
@@ -114,7 +114,7 @@ console.log(String(1)) // 1
 - `Object.prototype.valueOf`：将 this 值转换成对象。
 
 ```js
-let date = new Date(2023, 4, 22);
+let date = new Date(2023, 4, 22)
 console.log(date.valueOf()) // 1684684800000
 ```
 
@@ -129,18 +129,22 @@ console.log(date.valueOf()) // 1684684800000
 - `RegExp.prototype.toString`：返回一个表示该正则表达式的字符串。
 
 ```js
-console.log(({}).toString()) // [object Object]
+console.log({}.toString()) // [object Object]
 console.log(Object.prototype.toString.call([])) // [object Array]
-console.log(Object.prototype.toString.call(function(){})) // [object Function]
+console.log(Object.prototype.toString.call(function () {})) // [object Function]
 console.log(Object.prototype.toString.call(new Date())) // [object Date]
 console.log(Object.prototype.toString.call(/\d+/g)) // [object RegExp]
 
 console.log([].toString()) // ""
 console.log([0].toString()) // 0
 console.log([1, 2, 3].toString()) // 1,2,3
-console.log((function(){var a = 1;}).toString()) // function (){var a = 1;}
-console.log((/\d+/g).toString()) // /\d+/g
-console.log((new Date(2010, 0, 1)).toString()) // Fri Jan 01 2010 00:00:00 GMT+0800 (CST)
+console.log(
+  function () {
+    var a = 1
+  }.toString()
+) // function (){var a = 1;}
+console.log(/\d+/g.toString()) // /\d+/g
+console.log(new Date(2010, 0, 1).toString()) // Fri Jan 01 2010 00:00:00 GMT+0800 (CST)
 ```
 
 ## 四则运算符
@@ -164,13 +168,13 @@ console.log((new Date(2010, 0, 1)).toString()) // Fri Jan 01 2010 00:00:00 GMT+0
 `Boolean` 和其他任何类型比较，`Boolean` 首先被转换为 `Number` 类型。
 
 ```js
-true == 1  // true 
-true == '2'  // false
-true == ['1']  // true
-true == ['2']  // false
+true == 1 // true
+true == "2" // false
+true == ["1"] // true
+true == ["2"] // false
 ```
 
-这里注意一个可能会弄混的点：`undefined`、`null` 和 `Boolean`  比较，虽然 `undefined`、`null` 和 `false` 都很容易被想象成假值，但是他们比较结果是 `false`，原因是 `false` 首先被转换成 0：
+这里注意一个可能会弄混的点：`undefined`、`null` 和 `Boolean` 比较，虽然 `undefined`、`null` 和 `false` 都很容易被想象成假值，但是他们比较结果是 `false`，原因是 `false` 首先被转换成 0：
 
 ```js
 undefined == false // false
@@ -183,8 +187,8 @@ undefined == null // true
 `String` 和 `Number` 比较，先将 `String` 转换为 `Number` 类型。
 
 ```js
-123 == '123' // true
-'' == 0 // true
+123 == "123" // true
+"" == 0 // true
 ```
 
 - `null` 和 `undefined`
@@ -193,10 +197,10 @@ undefined == null // true
 
 ```js
 null == undefined // true
-null == '' // false
+null == "" // false
 null == 0 // false
 null == false // false
-undefined == '' // false
+undefined == "" // false
 undefined == 0 // false
 undefined == false // false
 ```
@@ -207,76 +211,86 @@ undefined == false // false
 一些特殊情况：
 
 ```js
-"0" == null; // false
-"0" == undefined; // false
-"0" == false; // true -- 注意
-"0" == NaN; // false
-"0" == 0; // true
-"0" == ""; // false
-false == null; // false
-false == undefined; // false
-false == NaN; // false
-false == 0; // true -- 注意
-false == ""; // true -- 注意
-false == []; // true -- 注意
-false == {}; // false
-"" == null; // false
-"" == undefined; // false
-"" == NaN; // false
-"" == 0; // true -- 注意
-"" == []; // true -- 注意
-"" == {}; // false
-0 == null; // false
-0 == undefined; // false
-0 == NaN; // false
-0 == []; // true -- 注意
-0 == {}; // false
-[] == ![]; //true
-false == []; //true
+"0" == null // false
+"0" == undefined // false
+"0" == false // true -- 注意
+"0" == NaN // false
+"0" == 0 // true
+"0" == "" // false
+false == null // false
+false == undefined // false
+false == NaN // false
+false == 0 // true -- 注意
+false == "" // true -- 注意
+false == [] // true -- 注意
+false == {} // false
+"" == null // false
+"" == undefined // false
+"" == NaN // false
+"" == 0 // true -- 注意
+"" == [] // true -- 注意
+"" == {} // false
+0 == null // false
+0 == undefined // false
+0 == NaN // false
+0 == [] // true -- 注意
+0 == {} // false
+;[] == ![] //true
+false == [] //true
 ```
 
-## 类型判断
+## JSON.stringify(value)
+
+1. 检查 `toJSON` 方法（最高优先级），如果 `value` 是对象且定义了 `toJSON` 方法，优先调用该方法，并使用其返回值继续序列化；
+2. 基础类型直接转换
+   - `null` → `"null"`
+   - `number` / `boolean` → 直接转为字符串（如 `1` → `"1"`，`true` → `"true"`）
+   - `string` → 添加双引号并转义特殊字符（如 `"a"` → `"\"a\""`）
+   - `undefined` / `function` / `symbol` → 在对象属性中会被忽略，在数组中会被转换为 `null`
+3. 对象/数组的递归处理，对于对象或数组，递归处理每个属性值；
+
+## 数据类型判断
 
 ### typeof
 
 ```js
-typeof 42                // "number"
-typeof "hello"           // "string"
-typeof true              // "boolean"
+typeof 42 // "number"
+typeof "hello" // "string"
+typeof true // "boolean"
 typeof { name: "Alice" } // "object"
-typeof Symbol()          // "symbol"
-typeof 10n               // "bigint"
+typeof Symbol() // "symbol"
+typeof 10n // "bigint"
 // 比较特殊的几种typeof判断
-typeof function() {} // "function"
-typeof NaN           // "number" (NaN is a special case of number)
-typeof [1, 2, 3]     // "object" (arrays are technically objects in JavaScript)
-typeof null          // "object" (this is a known quirk in JavaScript)
-typeof undefined     // "undefined"
+typeof function () {} // "function"
+typeof NaN // "number" (NaN is a special case of number)
+typeof [1, 2, 3] // "object" (arrays are technically objects in JavaScript)
+typeof null // "object" (this is a known quirk in JavaScript)
+typeof undefined // "undefined"
 ```
 
 ### Object.prototype.toString
 
 ```js
 // 以下是11种：
-let number = 1;          // [object Number]
-let string = 'string';      // [object String]
-let boolean = true;      // [object Boolean]
-let und = undefined;     // [object Undefined]
-let nu = null;          // [object Null]
-let obj = {foo: 1}         // [object Object]
-let array = [1, 2, 3];   // [object Array]
-let date = new Date();   // [object Date]
-let error = new Error(); // [object Error]
-let reg = /a/g;          // [object RegExp]
-let fn = function doSth(){}; // [object Function]
+let number = 1 // [object Number]
+let string = "string" // [object String]
+let boolean = true // [object Boolean]
+let und = undefined // [object Undefined]
+let nu = null // [object Null]
+let obj = { foo: 1 } // [object Object]
+let array = [1, 2, 3] // [object Array]
+let date = new Date() // [object Date]
+let error = new Error() // [object Error]
+let reg = /a/g // [object RegExp]
+let fn = function doSth() {} // [object Function]
 
 function checkType(sth) {
   console.log(Object.prototype.toString.call(sth))
 }
 
-console.log(Object.prototype.toString.call(Math)); // [object Math]
-console.log(Object.prototype.toString.call(JSON)); // [object JSON]
-console.log(Object.prototype.toString.call(arguments)); // [object Arguments]
+console.log(Object.prototype.toString.call(Math)) // [object Math]
+console.log(Object.prototype.toString.call(JSON)) // [object JSON]
+console.log(Object.prototype.toString.call(arguments)) // [object Arguments]
 ```
 
 `Vue`源码中的类型判断就是通过`Object.prototype.toString`方法：
@@ -292,24 +306,24 @@ export const toRawType = (value: unknown): string => {
   return toTypeString(value).slice(8, -1)
 }
 export const isPlainObject = (val: unknown): val is object =>
-  toTypeString(val) === '[object Object]'
+  toTypeString(val) === "[object Object]"
 
 export const isArray: typeof Array.isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
-  toTypeString(val) === '[object Map]'
+  toTypeString(val) === "[object Map]"
 export const isSet = (val: unknown): val is Set<any> =>
-  toTypeString(val) === '[object Set]'
+  toTypeString(val) === "[object Set]"
 
 export const isDate = (val: unknown): val is Date =>
-  toTypeString(val) === '[object Date]'
+  toTypeString(val) === "[object Date]"
 export const isRegExp = (val: unknown): val is RegExp =>
-  toTypeString(val) === '[object RegExp]'
+  toTypeString(val) === "[object RegExp]"
 export const isFunction = (val: unknown): val is Function =>
-  typeof val === 'function'
-export const isString = (val: unknown): val is string => typeof val === 'string'
-export const isSymbol = (val: unknown): val is symbol => typeof val === 'symbol'
+  typeof val === "function"
+export const isString = (val: unknown): val is string => typeof val === "string"
+export const isSymbol = (val: unknown): val is symbol => typeof val === "symbol"
 export const isObject = (val: unknown): val is Record<any, any> =>
-  val !== null && typeof val === 'object'
+  val !== null && typeof val === "object"
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
   return (
@@ -322,32 +336,51 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
 
 ## 总结
 
-四则运算符隐式转换准则：
+### 基本类型数据转换
+
+- `Boolean(value)`
+- `String(value)`
+- `Number(value)`
+
+### 对象类型数据转换
+
+- `value[Symbol.toPrimitive]()`
+- `value.valueOf()`
+- `value.toString()`
+
+### 四则运算符隐式转换准则
 
 - 当一侧为 `String` 类型，被识别为字符串拼接，并会优先将另一侧转换为字符串类型（`ToString`）。
 - 当一侧为 `Number` 类型，另一侧为基本类型，则将基本类型转换为 `Number` 类型（`ToNumber`）。
 - 当一侧为 `Number` 类型，另一侧为引用类型，将引用类型和 `Number` 类型转换成字符串后拼接（`ToString`）。
 
-`==`比较隐式转换准则：
+### `==` 比较隐式转换准则
 
 1. 字符串和数字之间的相等比较
-(1) 如果 Type(x) 是数字， Type(y) 是字符串，则返回 x == ToNumber(y) 的结果。
-(2) 如果 Type(x) 是字符串， Type(y) 是数字，则返回 ToNumber(x) == y 的结果。
+   (1) 如果 Type(x) 是数字， Type(y) 是字符串，则返回 x == ToNumber(y) 的结果。
+   (2) 如果 Type(x) 是字符串， Type(y) 是数字，则返回 ToNumber(x) == y 的结果。
 
 2. 其他类型和布尔类型之间的相等比较
-(1) 如果 Type(x) 是布尔类型，则返回 ToNumber(x) == y 的结果；
-(2) 如果 Type(y) 是布尔类型，则返回 x == ToNumber(y) 的结果。
+   (1) 如果 Type(x) 是布尔类型，则返回 ToNumber(x) == y 的结果；
+   (2) 如果 Type(y) 是布尔类型，则返回 x == ToNumber(y) 的结果。
 
 3. null 和 undefined 之间的相等比较
-(1) 如果 x 为 null， y 为 undefined，则结果为 true。
-(2) 如果 x 为 undefined， y 为 null，则结果为 true。
+   (1) 如果 x 为 null， y 为 undefined，则结果为 true。
+   (2) 如果 x 为 undefined， y 为 null，则结果为 true。
 
 4. 对象和非对象之间的相等比较
-(1) 如果 Type(x) 是字符串或数字， Type(y) 是对象，则返回 x == ToPrimitive(y) 的结果；
-(2) 如果 Type(x) 是对象， Type(y) 是字符串或数字，则返回 ToPromitive(x) == y 的结果。
+   (1) 如果 Type(x) 是字符串或数字， Type(y) 是对象，则返回 x == ToPrimitive(y) 的结果；
+   (2) 如果 Type(x) 是对象， Type(y) 是字符串或数字，则返回 ToPromitive(x) == y 的结果。
 
 • 如果两边的值中有 true 或者 false，千万不要使用 ==。
 • 如果两边的值中有 []、 "" 或者 0，尽量不要使用 ==。
+
+### 将值转换为字符串的常见方法
+
+- `String(value)`
+- `value.toString()`
+- `'' + value`
+- `${value}`
 
 ## 参考资料
 
@@ -355,6 +388,8 @@ export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
 
 [Re-implementing JavaScript's == in JavaScript](https://evanhahn.com/re-implementing-javascript-double-equals-in-javascript/)
 
-[JavaScript专题之类型判断(上)](https://juejin.cn/post/6844903485348020237)
+[JavaScript 专题之类型判断(上)](https://juejin.cn/post/6844903485348020237)
 
-[JavaScript专题之类型判断(下)](https://juejin.cn/post/6844903486317035534)
+[JavaScript 专题之类型判断(下)](https://juejin.cn/post/6844903486317035534)
+
+[Converting values to strings in JavaScript has pitfalls](https://2ality.com/2025/04/stringification-javascript.html)

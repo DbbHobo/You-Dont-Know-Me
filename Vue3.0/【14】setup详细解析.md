@@ -4,17 +4,80 @@
 
 `setup()` 钩子是在组件中使用组合式 API 的入口，通常只在以下情况下使用：
 
-- 需要在非单文件组件中使用组合式 API 时。
-- 需要在基于选项式 API 的组件中集成基于组合式 API 的代码时。
+- 需要在非单文件组件中使用组合式 API 时
+- 需要在基于选项式 API 的组件中集成基于组合式 API 的代码时
 
 `<script setup>` 是在**单文件组件 (SFC)**中使用组合式 API 的编译时语法糖。当同时使用 SFC 与组合式 API 时该语法是默认推荐。相比于普通的 `<script>` 语法，它具有更多优势：
 
-- 更少的样板内容，更简洁的代码。
-- 能够使用纯 TypeScript 声明 props 和自定义事件。
-- 更好的运行时性能 (其模板会被编译成同一作用域内的渲染函数，避免了渲染上下文代理对象)。
-- 更好的 IDE 类型推导性能 (减少了语言服务器从代码中抽取类型的工作)。
+- 更少的样板内容，更简洁的代码
+- 能够使用纯 TypeScript 声明 props 和自定义事件
+- 更好的运行时性能 (其模板会被编译成同一作用域内的渲染函数，避免了渲染上下文代理对象)
+- 更好的 IDE 类型推导性能 (减少了语言服务器从代码中抽取类型的工作)
 
 ## 具体使用
+
+- 要启用该语法，需要在 `<script>` 代码块上添加 setup attribute
+
+```vue
+<script setup>
+console.log("hello script setup")
+</script>
+```
+
+- 当使用 `<script setup>` 的时候，任何在 `<script setup>` 声明的顶层的绑定 (包括变量，函数声明，以及 import 导入的内容) 都能在模板中直接使用
+
+```vue
+<script setup>
+// 导入的函数
+import { capitalize } from "./helpers"
+// 组件
+import MyComponent from "./MyComponent.vue"
+// 动态组件
+import Foo from "./Foo.vue"
+import Bar from "./Bar.vue"
+// 命名空间组件
+import * as Form from "./form-components"
+
+// 变量
+const msg = "Hello!"
+
+// 函数
+function log() {
+  console.log(msg)
+}
+</script>
+
+<template>
+  <button @click="log">{{ msg }}</button>
+
+  <!-- 导入的函数 -->
+  <div>{{ capitalize("hello") }}</div>
+
+  <!-- 组件 -->
+  <MyComponent />
+
+  <!-- 动态组件 -->
+  <component :is="Foo" />
+  <component :is="someCondition ? Foo : Bar" />
+
+  <!-- 命名空间组件 -->
+  <Form.Input>
+    <Form.Label>label</Form.Label>
+  </Form.Input>
+</template>
+```
+
+- 为了在声明 `props` 和 `emits` 选项时获得完整的类型推导支持，我们可以使用 `defineProps` 和 `defineEmits` API，它们将自动地在 `<script setup>` 中可用
+
+```vue
+<script setup>
+const props = defineProps({
+  foo: String,
+})
+
+const emit = defineEmits(["change", "delete"])
+</script>
+```
 
 ## 源码入口
 
@@ -610,7 +673,97 @@ function getContext(): SetupContext {
 
 ### provide/inject 依赖注入
 
+- `provide`：提供一个值，可以被后代组件注入。
+- `inject`：注入一个由**祖先组件**或**整个应用** (通过 `app.provide()`) 提供的值。
+
+本质就是把数据挂载在当前组件实例 `currentInstance` 上或者整个应用实例 `app` 上，使用时注入，注入从祖先组件逐步往上寻找。
+
 ```ts
+export function createAppAPI<HostElement>(
+  render: RootRenderFunction<HostElement>,
+  hydrate?: RootHydrateFunction
+): CreateAppFunction<HostElement> {
+  return function createApp(rootComponent, rootProps = null) {
+    // 【...省略】
+
+    const context = createAppContext()
+    const installedPlugins = new WeakSet()
+    const pluginCleanupFns: Array<() => any> = []
+    let isMounted = false
+
+    const app: App = (context.app = {
+      _uid: uid++,
+      _component: rootComponent as ConcreteComponent,
+      _props: rootProps,
+      _container: null,
+      _context: context,
+      _instance: null,
+
+      version,
+
+      get config() {
+        return context.config
+      },
+
+      set config(v) {
+        // 【...省略】
+      },
+
+      use(plugin: Plugin, ...options: any[]) {
+        // 【...省略】
+      },
+
+      mixin(mixin: ComponentOptions) {
+        // 【...省略】
+      },
+
+      component(name: string, component?: Component): any {
+        // 【...省略】
+      },
+
+      directive(name: string, directive?: Directive) {
+        // 【...省略】
+      },
+
+      mount(
+        rootContainer: HostElement,
+        isHydrate?: boolean,
+        namespace?: boolean | ElementNamespace
+      ): any {
+        // 【...省略】
+      },
+
+      onUnmount(cleanupFn: () => void) {
+        // 【...省略】
+      },
+
+      unmount() {
+        // 【...省略】
+      },
+      // 【App实例上注入】
+      provide(key, value) {
+        if (__DEV__ && (key as string | symbol) in context.provides) {
+          warn(
+            `App already provides property with key "${String(key)}". ` +
+              `It will be overwritten with the new value.`
+          )
+        }
+
+        context.provides[key as string | symbol] = value
+
+        return app
+      },
+
+      runWithContext(fn) {
+        // 【...省略】
+      },
+    })
+
+    // 【...省略】
+
+    return app
+  }
+}
 // 【packages/runtime-core/src/apiInject.ts】
 export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
