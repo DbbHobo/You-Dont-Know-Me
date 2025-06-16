@@ -453,6 +453,40 @@ console.log(beasts.indexOf("giraffe"))
 // Expected output: -1
 ```
 
+### Array.prototype.at(index)
+
+at() 方法接收一个整数值并返回该索引对应的元素，允许正数和负数。负整数从数组中的最后一个元素开始倒数。返回数组中与给定索引匹配的元素。如果 index < -array.length 或 index >= array.length，则总是返回 undefined，而不会尝试访问相应的属性。
+
+```js
+const array1 = [5, 12, 8, 130, 44]
+
+let index = 2
+
+console.log(`An index of ${index} returns ${array1.at(index)}`)
+// Expected output: "An index of 2 returns 8"
+
+index = -2
+
+console.log(`An index of ${index} returns ${array1.at(index)}`)
+// Expected output: "An index of -2 returns 130"
+```
+
+用作获取数组最后一项的方法，替代 `array.length-1` 的方法：
+
+```js
+const fruits = ["apple", "banana", "cherry"]
+
+console.log(fruits.at(-1)) // "cherry"
+console.log(fruits[fruits.length - 1]) // "cherry"
+```
+
+获取“栈”顶元素：
+
+```js
+const historyStack = ["/home", "/about", "/contact"]
+const current = historyStack.at(-1) // "/contact"
+```
+
 ### Array.prototype.flat(depth)
 
 `flat(depth)` 方法会按照一个可指定的深度递归遍历数组，并将所有元素与遍历到的子数组中的元素合并为一个新数组返回。`flat(depth)` 方法会移除数组中的空项。

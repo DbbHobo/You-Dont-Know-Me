@@ -248,15 +248,14 @@ HTML 网页中，浏览器通过`<script>`标签加载 JavaScript 脚本。`<scr
 
 ![defer&async](../assets/defer&async.png)
 
-```js
+```html
 <!-- 页面内嵌的脚本 -->
 <script type="application/javascript">
   // module code
 </script>
 
 <!-- 外部脚本 -->
-<script type="application/javascript" src="path/to/myModule.js">
-</script>
+<script type="application/javascript" src="path/to/myModule.js"></script>
 
 <script src="path/to/myModule.js" defer></script>
 <script src="path/to/myModule.js" async></script>
