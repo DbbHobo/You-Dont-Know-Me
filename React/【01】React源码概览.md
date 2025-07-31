@@ -452,3 +452,5 @@ yarn link react react-dom
 [How to Contribute](https://legacy.reactjs.org/docs/how-to-contribute.html)
 
 [overreacted by Dan Abramov](https://overreacted.io/)
+
+[The State of React and the Community in 2025](https://blog.isquaredsoftware.com/2025/06/react-community-2025/)

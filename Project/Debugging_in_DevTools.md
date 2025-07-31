@@ -1,0 +1,40 @@
+# Debugging in DevTools
+
+## Network
+
+## Performance
+
+### 整体指标模块
+
+![DevTools](./assets/DevTools_Performance1.png)
+![DevTools](./assets/DevTools_Performance2.png)
+
+### 火焰图模块
+
+火焰图总览
+
+![DevTools](./assets/DevTools_Performance3.png)
+
+函数入口添加注释
+
+![DevTools](./assets/DevTools_Performance4.png)
+
+INP 分析
+
+![DevTools](./assets/DevTools_Performance5.png)
+
+LCP 分析
+
+![DevTools](./assets/DevTools_Performance6.png)
+
+Render blocking requests 分析
+
+![DevTools](./assets/DevTools_Performance7.png)
+
+关键帧 分析
+
+![DevTools](./assets/DevTools_Performance8.png)
+
+## 参考资料
+
+[Performance debugging in DevTools](https://www.youtube.com/watch?v=BHqxD9qr6Gw)

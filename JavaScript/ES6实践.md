@@ -969,7 +969,7 @@ let log = ::console.log
 var log = console.log.bind(console)
 ```
 
-## optional-chaining(?.)
+## 可选链(?.)
 
 ```js
 const obj = {
@@ -996,74 +996,23 @@ exists?.() // undefined
 
 需要添加 @babel/plugin-proposal-optional-chaining 插件支持
 
-## 逻辑或(||)
-
-返回第一个真值（Truthy），若左侧为假值（Falsy），则返回右侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
+可选链（`?.`）仅在 `?.` 前面的值为 `null` 或 `undefined` 时才会短路求值。其他假值（如 false、0、"" 等）仍会继续访问后续属性。
 
 ```js
-// Basic boolean operations
-true || false // returns true
-false || true // returns true
-false || false // returns false
-
-// Working with different types
-"hello" || "world" // returns "hello"
-"" || "fallback" // returns "fallback"
-null || "default" // returns "default"
-undefined || 42 // returns 42
-
-// Clean default value syntax
-function greet(name) {
-  return `Hello, ${name || "friend"}!`
+if (user && user.profile && user.profile.avatar) {
+  console.log(user.profile.avatar)
 }
+// 改成可选链
+console.log(user?.profile?.avatar)
 
-// Useful for configuration objects
-const config = {
-  port: process.env.PORT || 3000,
-  host: process.env.HOST || "localhost",
-  timeout: process.env.TIMEOUT || 5000,
-}
+// 其他例子
+const name = response?.data?.user?.name
+const value = document.querySelector("#myInput")?.value
+user?.sendMessage?.("Hello!")
+const title = props?.article?.data?.attributes?.title
 ```
 
-## 逻辑与(&&)
-
-若左侧为真值（Truthy），返回右侧；否则返回左侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
-
-```js
-// Boolean operations
-true && false // returns false
-true && true // returns true
-false && true // returns false
-
-// Working with values
-"hello" && "world" // returns "world"
-"" && "test" // returns ""
-null && "anything" // returns null
-
-// Pattern 1: Single-line conditional execution
-isValid && sendToServer(data)
-
-// Under the hood, this is doing:
-if (isValid) {
-  sendToServer(data)
-}
-
-// Pattern 2: Conditional rendering in React
-return (
-  <div>
-    {isLoggedIn && <UserDashboard />}
-    {hasError && <ErrorMessage text={errorText} />}
-  </div>
-)
-
-// React processes this as:
-{
-  true && <Component />
-} // renders <Component />
-{
-  false && <Component />
-} // renders false (React ignores it)
-```
+![optional_chaining](./assets/optional_chaining.png)
 
 ## 空值合并运算符(??)
 
@@ -1116,9 +1065,9 @@ function processUserData(response) {
 
 需要 @babel/plugin-proposal-nullish-coalescing-operator 插件支持
 
-## Nullish coalescing assignment(??=)
+## 逻辑空值赋值运算符(??=)
 
-逻辑空赋值运算符（`x ??= y`）仅在 **x 是空值**（`null` 或 `undefined`）时对其赋值。
+逻辑空赋值运算符（`x ??= y`）仅在 x 为 `null` 或 `undefined` 时对其赋值。
 
 ```js
 const a = { duration: 50 }
@@ -1149,11 +1098,86 @@ user.name =
 user.name ??= "Anonymous"
 ```
 
-## logical-assignment-operators(||= &&=)
+## 逻辑或(||)
 
-逻辑或赋值（`x ||= y`）运算仅在 **x 为假**值时为其赋值。
+返回第一个真值（Truthy），若左侧为假值（Falsy），则返回右侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
 
-逻辑与赋值（`x &&= y`）运算仅在 **x 为真**值时为其赋值。
+- 全部为假值 → 则返回最后一个假值
+- 遇到真值 → 短路并返回该真值
+
+```js
+// Basic boolean operations
+true || false // returns true
+false || true // returns true
+false || false // returns false
+
+// Working with different types
+"hello" || "world" // returns "hello"
+"" || "fallback" // returns "fallback"
+null || "default" // returns "default"
+undefined || 42 // returns 42
+
+// Clean default value syntax
+function greet(name) {
+  return `Hello, ${name || "friend"}!`
+}
+
+// Useful for configuration objects
+const config = {
+  port: process.env.PORT || 3000,
+  host: process.env.HOST || "localhost",
+  timeout: process.env.TIMEOUT || 5000,
+}
+```
+
+## 逻辑与(&&)
+
+若左侧为真值（Truthy），返回右侧；否则返回左侧。假值范围：`false`, `0`, `""`, `null`, `undefined`, `NaN`。
+
+- 全部为真值 → 返回最后一个值
+- 遇到假值 → 短路并返回该假值
+
+```js
+// Boolean operations
+true && false // returns false
+true && true // returns true
+false && true // returns false
+
+// Working with values
+"hello" && "world" // returns "world"
+"" && "test" // returns ""
+null && "anything" // returns null
+
+// Pattern 1: Single-line conditional execution
+isValid && sendToServer(data)
+
+// Under the hood, this is doing:
+if (isValid) {
+  sendToServer(data)
+}
+
+// Pattern 2: Conditional rendering in React
+return (
+  <div>
+    {isLoggedIn && <UserDashboard />}
+    {hasError && <ErrorMessage text={errorText} />}
+  </div>
+)
+
+// React processes this as:
+{
+  true && <Component />
+} // renders <Component />
+{
+  false && <Component />
+} // renders false (React ignores it)
+```
+
+## 逻辑赋值运算符(||= &&=)
+
+逻辑或赋值（`x ||= y`）运算仅在 **x 为假**值时为其赋值。`x = x || value`
+
+逻辑与赋值（`x &&= y`）运算仅在 **x 为真**值时为其赋值。`x = x && value`
 
 ```js
 a ||= b
@@ -1209,7 +1233,7 @@ function example(a = b) {
 
 需要 @babel/plugin-proposal-logical-assignment-operators 插件支持
 
-## pipeline-operator(|>)
+## 管道运算符(|>)
 
 ```js
 const double = (n) => n * 2
@@ -1239,3 +1263,5 @@ double(increment(double(5))) // 22
 [JavaScript Operators: '||' vs '&&' vs '??'](https://www.trevorlasn.com/blog/javascript-logical-operators)
 
 [Mastering default values in JavaScript with the nullish coalescing (??) operator](https://allthingssmitty.com/2025/04/10/mastering-default-values-in-javascript-with-the-nullish-coalescing-operator/)
+
+[Write more reliable JavaScript with optional chaining](https://allthingssmitty.com/2025/06/02/write-more-reliable-javascript-with-optional-chaining/)

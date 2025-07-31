@@ -4,25 +4,47 @@
 
 `Web Worker`的分类有如下几种：
 
-- 专用 `worker` 是由单个脚本使用的 `worker`。该上下文由 `DedicatedWorkerGlobalScope` 对象表示。
+- `worker` 是由单个脚本使用的 `worker`。该上下文由 `DedicatedWorkerGlobalScope` 对象表示。
 - `Shared worker` 是可以由在不同窗口、Iframe 等中运行的多个脚本使用的 `worker`，只要它们与 `worker` 在同一域中。它们比专用的 `worker` 稍微复杂一点——脚本必须通过活动端口进行通信。
 - `Service Worker` 基本上是作为代理服务器，位于 web 应用程序、浏览器和网络（如果可用）之间。它们的目的是（除开其他方面）创建有效的离线体验、拦截网络请求，以及根据网络是否可用采取合适的行动并更新驻留在服务器上的资源。它们还将允许访问推送通知和后台同步 API。
 
 `worker` 在一个与当前 `window` 不同的全局上下文中运行。在 `worker` 的上下文中，全局对象是 `WorkerGlobalScope`，你可以通过 `self` 或者直接调用全局对象的方法来访问。虽然 `window` 不能直接用于 `worker`，但许多相同的方法被定义在一个共享的混入（`WindowOrWorkerGlobalScope`）中，并通过 `worker` 自己的 `WorkerGlobalScope` 衍生的上下文提供给它们：
 
-- `DedicatedWorkerGlobalScope` 用于专用 `worker`
-- `SharedWorkerGlobalScope` 用于 `shared worker`
-- `ServiceWorkerGlobalScope` 用于 `service worker`
+`WorkerGlobalScope` 是所有 `worker` 类型（DedicatedWorker、SharedWorker、ServiceWorker）的基类接口，具体实现为：
 
-`Web Workers API` 包含有如下 API：
+- `DedicatedWorkerGlobalScope` - 专用 worker 的全局作用域
+- `SharedWorkerGlobalScope` - Shared worker 的全局作用域
+- `ServiceWorkerGlobalScope` - Service Worker 的全局作用域
 
-- `Worker`
-- `SharedWorker`
-- `DedicatedWorkerGlobalScope`
-- `SharedWorkerGlobalScope`
-- `WorkerGlobalScope`
-- `WorkerLocation`
-- `WorkerNavigator`
+1. `WorkerGlobalScope` 与 `window` 的区别
+
+- 没有 DOM 访问权限：worker 不能直接操作 DOM
+- 没有 document 对象
+- 地理位置不同：window.location 对应 self.location
+- 全局 this 指向不同：在 worker 中 this 指向 WorkerGlobalScope 实例
+
+2. `WorkerGlobalScope` 可用 API
+
+```js
+// 定时器
+self.setTimeout()
+self.setInterval()
+self.clearTimeout()
+self.clearInterval()
+
+// 网络请求
+self.fetch()
+
+// 存储
+self.indexedDB
+self.caches // 仅限 Service Worker
+
+// 其他
+self.console
+self.performance
+self.atob() / self.btoa()
+self.URL
+```
 
 ## Worker
 
@@ -211,3 +233,5 @@ self.onconnect = function (event) {
 [Exploring The Potential Of Web Workers For Multithreading On The Web](https://www.smashingmagazine.com/2023/04/potential-web-workers-multithreading-web/)
 
 [What is Web Worker?🧐 Which type of Worker to use?](https://medium.com/@amey0x/what-is-web-worker-which-type-of-worker-to-use-4026de8b3cfa)
+
+[Multithreading in JavaScript with Web Workers](https://www.honeybadger.io/blog/javascript-web-workers-multithreading/)

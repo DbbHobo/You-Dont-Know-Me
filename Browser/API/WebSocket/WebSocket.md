@@ -43,6 +43,13 @@ socket.addEventListener("message", (event) => {
 - `close()`
 - `send()`
 
+## WebSocket 事件
+
+- `onclose = (event) => { }`
+- `onerror = (event) => { }`
+- `onmessage = (event) => { }`
+- `onopen = (event) => { }`
+
 ## 使用案例
 
 ```html

@@ -1,6 +1,6 @@
 # React Hooks
 
-## Hook一览
+## Hook 一览
 
 ```ts
 const HooksDispatcherOnRerender: Dispatcher = {
@@ -22,14 +22,14 @@ const HooksDispatcherOnRerender: Dispatcher = {
   useMutableSource: updateMutableSource,
   useSyncExternalStore: updateSyncExternalStore,
   useId: updateId,
-};
+}
 ```
 
-## Hook使用的注意事项
+## Hook 使用的注意事项
 
 1. `Hook` 不能在 `Class` 组件中使用，而是在 `Function Component` 中使用
 2. 只能在函数顶层调用 `Hook`，不要在循环、条件判断或者子函数中使用
-3. 只能在函数组件中调用 `Hook`，不要在其他JS函数中调用
+3. 只能在函数组件中调用 `Hook`，不要在其他 JS 函数中调用
 
 ### useState
 
@@ -38,27 +38,25 @@ State lets a component “remember” information like user input. For example, 
 ```js
 // initialState: 状态初始值
 // init: 状态初始化函数
-const [state, setState] = useState(initialState);
+const [state, setState] = useState(initialState)
 
 let init = () => {
-  const initialState = someExpensiveComputation(props);
-  return initialState;
+  const initialState = someExpensiveComputation(props)
+  return initialState
 }
-const [state, setState] = useState(init);
+const [state, setState] = useState(init)
 
-import React, { useState } from 'react';
+import React, { useState } from "react"
 
 function Counter() {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0)
 
   return (
     <div>
       <p>You clicked {count} times</p>
-      <button onClick={() => setCount(count + 1)}>
-        Click me
-      </button>
+      <button onClick={() => setCount(count + 1)}>Click me</button>
     </div>
-  );
+  )
 }
 ```
 
@@ -103,25 +101,25 @@ const [state, dispatch] = useReducer(reducer, initialState);
 Effects let a component connect to and synchronize with external systems. This includes dealing with network, browser DOM, animations, widgets written using a different UI library, and other non-React code.
 
 ```js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react"
 
 function ExampleComponent() {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState([])
 
   useEffect(() => {
     // 数据获取操作
     fetchData()
-      .then(response => setData(response))
-      .catch(error => console.error(error));
-  }, []); // 空数组表示仅在组件挂载时运行一次
+      .then((response) => setData(response))
+      .catch((error) => console.error(error))
+  }, []) // 空数组表示仅在组件挂载时运行一次
 
   return (
     <ul>
-      {data.map(item => (
+      {data.map((item) => (
         <li key={item.id}>{item.name}</li>
       ))}
     </ul>
-  );
+  )
 }
 ```
 
@@ -135,13 +133,13 @@ function ExampleComponent() {
 Context lets a component receive information from distant parents without passing it as props. For example, your app’s top-level component can pass the current UI theme to all components below, no matter how deep.
 
 ```js
-import React, { useContext } from 'react';
-import MyContext from './MyContext';
+import React, { useContext } from "react"
+import MyContext from "./MyContext"
 
 function MyComponent() {
-  const contextValue = useContext(MyContext);
+  const contextValue = useContext(MyContext)
 
-  return <p>{contextValue}</p>;
+  return <p>{contextValue}</p>
 }
 ```
 
@@ -158,18 +156,14 @@ Refs let a component hold some information that isn’t used for rendering, like
 
 ```js
 export default function Counter() {
-  let ref = useRef(0);
+  let ref = useRef(0)
 
   function handleClick() {
-    ref.current = ref.current + 1;
-    alert('You clicked ' + ref.current + ' times!');
+    ref.current = ref.current + 1
+    alert("You clicked " + ref.current + " times!")
   }
 
-  return (
-    <button onClick={handleClick}>
-      Click me!
-    </button>
-  );
+  return <button onClick={handleClick}>Click me!</button>
 }
 ```
 
@@ -182,19 +176,19 @@ A common way to optimize re-rendering performance is to skip unnecessary work. F
 
 ```js
 function memoExample() {
-  const [btn, setBtn] = React.useState(1);
+  const [btn, setBtn] = React.useState(1)
   const changeBtn = React.useMemo(() => {
     return <button>btn</button>
-  },[btn]);
+  }, [btn])
 
   return (
     <>
-      <div onClick={()=>setBtn(0)}>memoExample</div>
-      { changeBtn }
+      <div onClick={() => setBtn(0)}>memoExample</div>
+      {changeBtn}
     </>
-  );
+  )
 }
-const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b])
 ```
 
 - 返回一个 `memoized` 值；
@@ -207,31 +201,33 @@ const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
 ### useCallback
 
 ```js
-const CallbackChildren = React.memo((props)=>{
-  console.log('子组件更新')
-  React.useEffect(()=>{
-      props.getInfo('子组件')
-  },[])
+const CallbackChildren = React.memo((props) => {
+  console.log("子组件更新")
+  React.useEffect(() => {
+    props.getInfo("子组件")
+  }, [])
   return <div>子组件</div>
 })
 
-function CallbackParent ({ id }){
+function CallbackParent({ id }) {
   const [number, setNumber] = React.useState(1)
-  const getInfo  = React.useCallback((sonName)=>{
-        console.log(sonName)
-  },[id])
-  return <div>
-      <button onClick={ () => setNumber(number+1) } >增加</button>
+  const getInfo = React.useCallback(
+    (sonName) => {
+      console.log(sonName)
+    },
+    [id]
+  )
+  return (
+    <div>
+      <button onClick={() => setNumber(number + 1)}>增加</button>
       <CallbackChildren getInfo={getInfo} />
-  </div>
+    </div>
+  )
 }
 
-const memoizedCallback = useCallback(
-  () => {
-    doSomething(a, b);
-  },
-  [a, b]
-);
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b)
+}, [a, b])
 ```
 
 - 返回一个 `memoized` 回调函数；
@@ -243,7 +239,7 @@ const memoizedCallback = useCallback(
 
 ## hook 调用时机
 
-`render`阶段在`mountIndeterminateComponent`或`updateFunctionComponent`方法中会调用`renderWithHooks`再带着`renderWithHooks`的返回内容也就是函数组件JSX对应的`React-element`进入`reconcileChildren`过程，因为`renderWithHooks`会调用该 `Fuction Component` 组件的 `function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
+`render`阶段在`mountIndeterminateComponent`或`updateFunctionComponent`方法中会调用`renderWithHooks`再带着`renderWithHooks`的返回内容也就是函数组件 JSX 对应的`React-element`进入`reconcileChildren`过程，因为`renderWithHooks`会调用该 `Fuction Component` 组件的 `function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -253,16 +249,16 @@ export function renderWithHooks<Props, SecondArg>(
   Component: (p: Props, arg: SecondArg) => any,
   props: Props,
   secondArg: SecondArg,
-  nextRenderLanes: Lanes,
+  nextRenderLanes: Lanes
 ): any {
-  renderLanes = nextRenderLanes;
-  currentlyRenderingFiber = workInProgress;
+  renderLanes = nextRenderLanes
+  currentlyRenderingFiber = workInProgress
 
   // 【省略代码...】
 
-  workInProgress.memoizedState = null;
-  workInProgress.updateQueue = null;
-  workInProgress.lanes = NoLanes;
+  workInProgress.memoizedState = null
+  workInProgress.updateQueue = null
+  workInProgress.lanes = NoLanes
 
   // The following should have already been reset
   // currentHook = null;
@@ -284,22 +280,22 @@ export function renderWithHooks<Props, SecondArg>(
   // so memoizedState would be null during updates and mounts.
   if (__DEV__) {
     if (current !== null && current.memoizedState !== null) {
-      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnUpdateInDEV
     } else if (hookTypesDev !== null) {
       // This dispatcher handles an edge case where a component is updating,
       // but no stateful hooks have been used.
       // We want to match the production code behavior (which will use HooksDispatcherOnMount),
       // but with the extra DEV validation to ensure hooks ordering hasn't changed.
       // This dispatcher does that.
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountWithHookTypesInDEV
     } else {
-      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV;
+      ReactCurrentDispatcher.current = HooksDispatcherOnMountInDEV
     }
   } else {
     ReactCurrentDispatcher.current =
       current === null || current.memoizedState === null
         ? HooksDispatcherOnMount
-        : HooksDispatcherOnUpdate;
+        : HooksDispatcherOnUpdate
   }
 
   // In Strict Mode, during development, user functions are double invoked to
@@ -328,48 +324,43 @@ export function renderWithHooks<Props, SecondArg>(
   // come from the same component invocation as the output.
   //
   // There are plenty of tests to ensure this behavior is correct.
-  
+
   const shouldDoubleRenderDEV =
     __DEV__ &&
     debugRenderPhaseSideEffectsForStrictMode &&
-    (workInProgress.mode & StrictLegacyMode) !== NoMode;
+    (workInProgress.mode & StrictLegacyMode) !== NoMode
 
-  shouldDoubleInvokeUserFnsInHooksDEV = shouldDoubleRenderDEV;
+  shouldDoubleInvokeUserFnsInHooksDEV = shouldDoubleRenderDEV
 
   // 【调用当前函数组件的function】
-  let children = Component(props, secondArg);
-  shouldDoubleInvokeUserFnsInHooksDEV = false;
+  let children = Component(props, secondArg)
+  shouldDoubleInvokeUserFnsInHooksDEV = false
 
   // Check if there was a render phase update
   if (didScheduleRenderPhaseUpdateDuringThisPass) {
     // Keep rendering until the component stabilizes (there are no more render
     // phase updates).
-    children = renderWithHooksAgain(
-      workInProgress,
-      Component,
-      props,
-      secondArg,
-    );
+    children = renderWithHooksAgain(workInProgress, Component, props, secondArg)
   }
 
   if (shouldDoubleRenderDEV) {
     // In development, components are invoked twice to help detect side effects.
-    setIsStrictModeForDevtools(true);
+    setIsStrictModeForDevtools(true)
     try {
       children = renderWithHooksAgain(
         workInProgress,
         Component,
         props,
-        secondArg,
-      );
+        secondArg
+      )
     } finally {
-      setIsStrictModeForDevtools(false);
+      setIsStrictModeForDevtools(false)
     }
   }
 
-  finishRenderingHooks(current, workInProgress);
+  finishRenderingHooks(current, workInProgress)
 
-  return children;
+  return children
 }
 ```
 
@@ -417,7 +408,7 @@ const HooksDispatcherOnMount = {
   useMutableSource: mountMutableSource,
   useSyncExternalStore: mountSyncExternalStore,
   useId: mountId,
-};
+}
 
 const HooksDispatcherOnUpdate = {
   readContext,
@@ -438,7 +429,7 @@ const HooksDispatcherOnUpdate = {
   useMutableSource: updateMutableSource,
   useSyncExternalStore: updateSyncExternalStore,
   useId: updateId,
-};
+}
 
 const HooksDispatcherOnRerender: Dispatcher = {
   readContext,
@@ -459,7 +450,7 @@ const HooksDispatcherOnRerender: Dispatcher = {
   useMutableSource: updateMutableSource,
   useSyncExternalStore: updateSyncExternalStore,
   useId: updateId,
-};
+}
 ```
 
 ---
@@ -683,19 +674,19 @@ function mountWorkInProgressHook(): Hook {
     queue: null,
 
     next: null,
-  };
+  }
 
   // 【hook用next链接起来】
   if (workInProgressHook === null) {
     // 【当前这个hook是首个hook对象】
     // This is the first hook in the list
-    currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
+    currentlyRenderingFiber.memoizedState = workInProgressHook = hook
   } else {
     // 【当前hook链接到之前的hook list上】
     // Append to the end of the list
-    workInProgressHook = workInProgressHook.next = hook;
+    workInProgressHook = workInProgressHook.next = hook
   }
-  return workInProgressHook;
+  return workInProgressHook
 }
 ```
 
@@ -799,37 +790,47 @@ function updateWorkInProgressHook(): Hook {
 }
 ```
 
-## 自定义Hook
+## 自定义 Hook
+
+### 自定义 Hook 的最佳实践
+
+- **单一职责**：每个自定义 Hook 应该只关注一个特定的功能。
+- **明确命名**：名称应以 `use` 开头，并清楚表达 Hook 的用途。
+- **文档注释**：为 Hook 添加清晰的文档说明，便于他人理解和使用。
+- **类型定义**：如果使用 TypeScript，为 Hook 添加合适的类型定义，提升类型安全。
+- **测试**：为自定义 Hook 编写测试，确保其行为符合预期并具备可靠性。
+
+### 计数器 hook
 
 ```js
 // useCounter.js
-import { useState } from 'react';
+import { useState } from "react"
 
 function useCounter(initialValue, step) {
-  const [count, setCount] = useState(initialValue);
+  const [count, setCount] = useState(initialValue)
 
   const increment = () => {
-    setCount(count + step);
-  };
+    setCount(count + step)
+  }
 
   const decrement = () => {
-    setCount(count - step);
-  };
+    setCount(count - step)
+  }
 
-  return { count, increment, decrement };
+  return { count, increment, decrement }
 }
 
-export default useCounter;
+export default useCounter
 ```
 
-```js
+```jsx
 // MyComponent.js
-import React from 'react';
-import useCounter from './useCounter';
+import React from "react"
+import useCounter from "./useCounter"
 
 function MyComponent() {
   // 使用自定义 Hook
-  const { count, increment, decrement } = useCounter(0, 1);
+  const { count, increment, decrement } = useCounter(0, 1)
 
   return (
     <div>
@@ -837,10 +838,225 @@ function MyComponent() {
       <button onClick={increment}>Increment</button>
       <button onClick={decrement}>Decrement</button>
     </div>
-  );
+  )
 }
 
-export default MyComponent;
+export default MyComponent
+```
+
+### 开关状态 Hook
+
+```jsx
+import { useState } from "react"
+
+function useToggle(initialValue = false) {
+  const [value, setValue] = useState(initialValue)
+
+  const toggle = () => {
+    setValue((prevValue) => !prevValue)
+  }
+
+  return [value, toggle]
+}
+
+// 使用示例
+function ToggleComponent() {
+  const [isOn, toggleIsOn] = useToggle(false)
+
+  return (
+    <div>
+      <button onClick={toggleIsOn}>{isOn ? "ON" : "OFF"}</button>
+    </div>
+  )
+}
+```
+
+### 数据获取 hook
+
+```jsx
+import { useState, useEffect } from "react"
+
+function useFetch(url) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error("Network response was not ok")
+        }
+        const result = await response.json()
+        setData(result)
+      } catch (err) {
+        setError(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [url])
+
+  return { data, loading, error }
+}
+
+// 使用示例
+function DataComponent() {
+  const { data, loading, error } = useFetch("https://api.example.com/data")
+
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
+
+  return <div>{JSON.stringify(data, null, 2)}</div>
+}
+```
+
+### 监听窗口宽度 hook
+
+```jsx
+import { useState, useEffect } from "react"
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth)
+
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth)
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize) // 清理副作用
+  }, [])
+
+  return width
+}
+```
+
+```jsx
+import React from "react"
+import useWindowWidth from "./useWindowWidth"
+
+function MyComponent() {
+  const width = useWindowWidth()
+
+  return <div>当前窗口宽度是：{width}px</div>
+}
+```
+
+### 防抖 hook
+
+```jsx
+import { useEffect, useState } from "react"
+
+/**
+ * useDebounce - 防抖 Hook
+ * @param {any} value - 需要防抖处理的值
+ * @param {number} delay - 延迟时间（毫秒）
+ * @returns {any} - 防抖后的值
+ */
+function useDebounce(value, delay = 500) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value) // delay 后更新值
+    }, delay)
+
+    return () => {
+      clearTimeout(timer) // 如果 value 变化快，清除前一个定时器
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+```
+
+```jsx
+import React, { useState, useEffect } from "react"
+import useDebounce from "./useDebounce"
+import axios from "axios"
+
+function SearchBox() {
+  const [input, setInput] = useState("")
+  const debouncedInput = useDebounce(input, 500)
+
+  const [results, setResults] = useState([])
+
+  useEffect(() => {
+    if (!debouncedInput) return
+
+    axios
+      .get(`https://api.example.com/search?q=${debouncedInput}`)
+      .then((res) => setResults(res.data.items))
+  }, [debouncedInput])
+
+  return (
+    <div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="输入搜索内容"
+      />
+      <ul>
+        {results.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+```
+
+### 节流 hook
+
+```jsx
+import { useState, useEffect } from "react"
+
+/**
+ * useThrottle - 节流 Hook
+ * @param {any} value - 要节流的值
+ * @param {number} delay - 节流间隔时间（单位：ms）
+ * @returns {any} - 节流后的值
+ */
+function useThrottle(value, delay = 500) {
+  const [throttledValue, setThrottledValue] = useState(value)
+
+  useEffect(() => {
+    const now = Date.now()
+
+    const handler = setTimeout(() => {
+      setThrottledValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return throttledValue
+}
+```
+
+```jsx
+import React, { useState, useEffect } from "react"
+import useThrottle from "./useThrottle"
+
+function WindowSize() {
+  const [size, setSize] = useState(window.innerWidth)
+  const throttledSize = useThrottle(size, 1000) // 每秒最多触发一次
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSize(window.innerWidth)
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  return <div>窗口宽度（节流后）：{throttledSize}px</div>
+}
 ```
 
 ## 参考资料

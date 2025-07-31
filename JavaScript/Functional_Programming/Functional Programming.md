@@ -218,3 +218,7 @@ mozart([1, 2, 3, 4, 5]) // 12
 [JavaScript 专题之函数组合](https://juejin.cn/post/6844903493740789774)
 
 [JavaScript 专题之函数柯里化](https://juejin.cn/post/6844903490771222542)
+
+[Higher-Order Functions](https://eloquentjavascript.net/05_higher_order.html)
+
+[Higher Order Functions in JavaScript – Explained with Practical Examples](https://www.freecodecamp.org/news/higher-order-functions-in-javascript-explained/)
