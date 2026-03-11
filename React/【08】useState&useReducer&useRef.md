@@ -105,7 +105,7 @@ useState<S>(
 
 创建一个对应的 `hook` 并定义 `memoizedState` 、 `baseState` 、 `queue` 等属性，返回`[hook.memoizedState, dispatch]`， `dispatch` 就是返回给用户更新状态的方法：
 
-1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储或者说串联到对应`fiber`的`memoizedState`属性 `hook list` 上；
+1. 调用`mountWorkInProgressHook`方法创建一个`hook`实例并存储或者说串联到对应`fiber`的`memoizedState`属性`hook list`上；
 2. 初始值如果用户传的是函数就执行获取，然后将初始值`initialState`存储到`hook`实例的`memoizedState`和`baseState`属性上；
 3. 构造一个`UpdateQueue`实例挂载在`hook`的`queue`属性上；
 4. 构造`dispatch`方法挂载在`hook.queue.dispatch`上，实质是调用的`React`提供的`dispatchSetState`方法，这个方法里除了计算最新的`state`值与旧值比较还会根据`state`值是否改变，如果改变了会构造`update`任务并调用`scheduleUpdateOnFiber`安排`performConcurrentWorkOnRoot`进`TaskQueue`任务队列；
@@ -177,13 +177,14 @@ const dispatch: Dispatch<BasicStateAction<S>> = (queue.dispatch =
     (dispatchSetState.bind(null, currentlyRenderingFiber, queue): any));
 ```
 
-`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`update`任务加入当前`hook`的`queue`的`pending` 队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化去调度更新。主要工作就是构造`update`任务并调度 `rerender`，并根据情况是否提前计算新值。
+`dispatchSetState`首先会构造一个`update`任务，然后可能有两种情况，一种是在 `render` 过程中产生的 `update`，那就会把当前`update`任务加入当前`hook`的`queue`的`pending`队列，另外一种就是非 `render` 过程，那就会先趁空隙计算出当前状态值，和之前的状态值对比，如果没有变化那也就不需要更新，如果有变化就要去调度更新。主要工作就是构造`update`任务并调度 `rerender`，并根据情况是否提前计算新值。
 
 1. `render`过程中产生的进入`enqueueRenderPhaseUpdate`，`update`任务直接加入对应`hook`的`queue`的`pending`队列；
 2. 非`render`过程中产生的会提前计算新值，根据新旧值是否相同会提前跳出这一轮更新或者进行接下来的步骤；
-3. 非`render`过程中产生的接下来进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
+3. 非`render`过程中产生的接下来进入`enqueueConcurrentHookUpdate`，会将`fiber`、`queue`、`update`、`lane`加入`concurrentQueues`等待后续合适时机的处理，而不是直接加入`hook.queue.pending`，因为在并发模式下，如果一个组件正在渲染（render），此时你又触发了一个更新（比如在渲染过程中调用了 `setState` 或外部事件打断），直接修改 `hook.queue.pending` 队列会导致正在进行的渲染数据错乱。然后就可以和前文中的`prepareFreshStack`方法联系上，在`prepareFreshStack`方法中会调用`finishQueueingConcurrentUpdates`方法去把暂存的`update`取出并加入正确的`fiber`和`hook`。最后由`scheduleUpdateOnFiber`安排任务执行时机。根据优先级等一系列判断，本例中会进入`ScheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))`，直接进行同步任务的执行；
 4. 非`render`过程中产生的状态变化会提前计算新值赋给`update.eagerState`，提前算好后续直接从这个属性获取新增，新旧值如果相同就会跳过`scheduleUpdateOnFiber`也就不会引起`re-render`，如果是连续多次状态变化则仅计算第一次；
 5. 每次`dispatchSetState`构造的`update`任务优先级不一定相同，所以`hook`还会有一个`baseQueue`存储着优先级较低的还未执行的`update`队列，直到下一轮`render`过程可能会和其他`update`任务串联起来再去执行；
+6. 在安排完`update`之后，会调用`markUpdateLaneFromFiberToRoot`方法将`lanes`上浮，祖先节点的`childLane`s会打标记；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -321,11 +322,21 @@ export function enqueueConcurrentHookUpdate<S, A>(
   queue: HookQueue<S, A>,
   update: HookUpdate<S, A>,
   lane: Lane,
-): FiberRoot | null {
-  const concurrentQueue: ConcurrentQueue = (queue: any);
-  const concurrentUpdate: ConcurrentUpdate = (update: any);
-  enqueueUpdate(fiber, concurrentQueue, concurrentUpdate, lane);
-  return getRootForUpdatedFiber(fiber);
+) {
+  const interleaved = queue.interleaved;
+  if (interleaved === null) {
+    // This is the first update. Create a circular list.
+    update.next = update;
+    // At the end of the current render, this queue's interleaved updates will
+    // be transferred to the pending queue.
+    pushConcurrentUpdateQueue(queue);
+  } else {
+    update.next = interleaved.next;
+    interleaved.next = update;
+  }
+  queue.interleaved = update;
+  // 【从下往上标记lanes】
+  return markUpdateLaneFromFiberToRoot(fiber, lane);
 }
 
 function enqueueUpdate(
@@ -374,20 +385,45 @@ function beginWork(
 ![react](./assets/useState/dispatchSetState2.png)
 ![react](./assets/useState/dispatchSetState3.png)
 
+```jsx
+export default function App() {
+  const [input, setInput] = useState("")
+
+  const handleInputAdd = () => {
+    setInput("111")
+    setInput("222")
+    setInput("333")
+  }
+
+  return (
+    <div>
+      <div onClick={handleInputAdd}>点击变化input值</div>
+      <input value={input} placeholder='输入点什么...' />
+    </div>
+  )
+}
+// 【假设点击某个按钮调用方法setState值三次，这三次状态的改变造成的更新优先级是相同的都为1，所以不会有三次任务入队，会经过判断合并为一次】
+// 【第一次set会提前计算eager值，因为优先级为1，所以会调用scheduleMicrotask安排flushSyncCallbacks任务入队】
+// 【第二次第三次set不会提前计算，并且因为优先级和第一次一样都为1，所以不会安排重复任务入队】
+// 【然后同步任务完成之后微任务开始执行，所以开始执行flushSyncCallbacks从而进入performSyncWorkOnRoot】
+// 【三次set的update内容挂载在concurrentQueues中，待正式进入render过程之前，finishQueueingConcurrentUpdates方法会取出并挂载到对应节点的hook.queue上】
+// 【进入render之前hook.pending就会挂载三个相同优先级的update任务用于后续处理】
+```
+
 ### `updateState` => `updateReducer`
 
-`dispatchSetState`调用之后，也就是用户去改变`state`值，引起了`performSyncWorkOnRoot`更新 DOM 任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useState`方法，然后这一次是更新情况下就会调用`updateState`方法从而进入`updateReducer`方法。
+`dispatchSetState`调用之后，也就是用户去改变`state`值，从而引起`performSyncWorkOnRoot`更新 DOM 任务，所以会再一次进入组件的`beginWork`阶段，也就会调用`renderWithHooks`方法，从而调用`useState`方法，然后这一次是更新情况下就会调用`updateState`方法从而进入`updateReducer`方法。
 
 `updateState` 实际调用的是 `updateReducer`，首先拿到当前对应 `hook` 和 `hook.queue`，然后把 `pending` 的 `queue` 加入到上一轮还没执行的 `update` 队列 `current.baseQueue` 中形成一个单向循环链表，然后遍历执行这个已经串起来的 `update` 队列。`update` 队列的每一项都根据其参数进行进行处理，获取最新的 `state` 然后更新到对应 `hook` 上。
 
 1. 调用`updateWorkInProgressHook`方法更新`hook`实例，其实就是找到当前正在构造的`fiber`对应的`current fiber`上的`hook`状态去复用，调用了`dispatchSetState`之后`current fiber`上的`hook.queue.pending`会更新；
 2. 处理`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务，将其和`current hook`的`baseQueue`串起来形成一个单向循环链表，然后清空`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务；
 3. 如果有多次`setState`调用，`workInProgress hook`上的`queue`里保存的`pending`中的`update`任务里会有多个`update`任务；
-4. 开始处理串起来后的两个`update`队列`baseQueue`，`update`任务链表会遍历每一个`update`任务，根据`update`任务的`lane`优先级决定本轮是否要跳过，优先级低的会留在`baseQueue`等待下一轮处理，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务，循环终止条件是`update`为`null`或者`update`回到`first`；
+4. 开始处理串起来后的两个`update`队列`baseQueue`，`update`任务链表会遍历每一个`update`任务，根据`update`任务的`lane`优先级决定本轮是否要跳过，优先级低的会留在`baseQueue`等待下一轮处理，获取`update`任务的`action`，根据是`useState`还是`useReducer`处理方式不同，最终会更新`current hook`的`baseState`属性，然后继续处理下一个`update`任务，循环终止条件是`update`为`null`或者`update`回到`first`，所以每轮跟新都是将 pending 合并到 baseQueue，可能会留下一些低优先级任务到下一次处理；
 5. (`update.action`为**值**)此处去提前计算新值的前提是`fiber`节点`lane`为`NoLanes`且`alternate === null || alternate.lanes === NoLanes`，表明没当前节点上没有其他更新事件会去提前计算新值，如果有更新事件就会跳过，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次（// The priority hasn't changed. We can reuse the existing task. Exit.）。而后到 rerender 过程中执行 `updateReducer` 会遍历 `hook.queue.pending+hook.baseQueue` 上的每一个 `update` 获取最新值，有 `eagerState` 的时候就获取 `eagerState`，没有的时候就执行 `action`，如果 `action` 是值则直接赋值，这也是为什么连续执行`setState(count + 1)`几次只会得到一个`+1`的效果；
 6. (`update.action`为**函数**)，同样地，`scheduleUpdateOnFiber`更新任务的调度如果是多次优先级相同的更新那就会合并为一次，但是`action`为函数时，在`hook.queue.pending`中由于每一个`update`的`action`函数并不相同，所以在后续`updateReducer`方法中遍历 `update` 时就会依次依赖上一次的结果计算每一次的值，所以连续`setAge((prevAge) => prevAge + 1)`几次值会得到几次值累加的最终计算结果；
 7. 更新当前`hook`的`memoizedState`、`baseState`、`baseQueue`、`queue.lastRenderedState`到最新状态；
-8. 最后返回`[hook.memoizedState, dispatch]`；
+8. 最后返回`[hook.memoizedState, dispatch]`，此时`hook.memoizedState`已经是最新状态，后续可能在视图中体现；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -703,8 +739,7 @@ useReducer is a React Hook that lets you add a reducer to your component.
             <h1
               onClick={() => {
                 dispatch({ type: "incremented_age" })
-              }}
-            >
+              }}>
               Hello World!
             </h1>
             <h2>HOBO~{state.age}</h2>
@@ -1176,16 +1211,13 @@ function updateRef<T>(initialValue: T): { current: T } {
 2. `detach`在`commitMutationEffectsOnFiber`阶段，是`commitLayoutEffectOnFiber`之前的阶段，有些类似`useEffect`里先调用`effect.destory()`再调用`effect.create()`，清空再获取最新内容的意思；
 3. 可以看到无论是`attach`还是`detach`，是否要进行操作的依据就是`fiber`上的`flags & Ref`判断条件，那这个 flags 在何时添加呢？有一个方法`markRef`是为`fiber`打上`ref`标识的，在`beginWork`阶段的`updateHostComponent`等方法中会被调用，根据`fiber`上是否有`ref`进行标识；
 
-- `markRef`在`beginWork`阶段根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
+- `markRef`在`beginWork`阶段的`updateHostComponent`方法中，根据当前`workInProgress`节点是否存在`ref`属性等判断并标识`ref flag`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function markRef(current: Fiber | null, workInProgress: Fiber) {
   const ref = workInProgress.ref
-  if (
-    (current === null && ref !== null) ||
-    (current !== null && current.ref !== ref)
-  ) {
+  if ((current === null && ref !== null) || (current !== null && current.ref !== ref)) {
     // Schedule a Ref effect
     workInProgress.flags |= Ref
     workInProgress.flags |= RefStatic
@@ -1202,7 +1234,7 @@ function commitLayoutEffectOnFiber(
   finishedRoot: FiberRoot,
   current: Fiber | null,
   finishedWork: Fiber,
-  committedLanes: Lanes
+  committedLanes: Lanes,
 ): void {
   // When updating this function, also update reappearLayoutEffects, which does
   // most of the same things when an offscreen tree goes from hidden -> visible.
@@ -1281,7 +1313,7 @@ function commitAttachRef(finishedWork: Fiber) {
           console.error(
             "Unexpected ref object provided for %s. " +
               "Use either a ref-setter function or React.createRef().",
-            getComponentNameFromFiber(finishedWork)
+            getComponentNameFromFiber(finishedWork),
           )
         }
       }
@@ -1348,7 +1380,7 @@ function safelyDetachRef(current: Fiber, nearestMountedAncestor: Fiber | null) {
           console.error(
             "Unexpected return value from a callback ref in %s. " +
               "A callback ref should not return a function.",
-            getComponentNameFromFiber(current)
+            getComponentNameFromFiber(current),
           )
         }
       }

@@ -42,36 +42,99 @@
 
 ### Lane priority
 
-`Lane priority`我称之为节点层级的任务`Update`实例数据结构如下：
+`Lane priority`我称之为**节点层级**的任务`update`实例数据结构如下：
 
 ```ts
-export const TotalLanes = 31;
+// 【packages/react-reconciler/src/ReactFiberLane.js】
+export const TotalLanes = 31
 
-export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000;
-export const NoLane: Lane = /*                          */ 0b0000000000000000000000000000000;
+export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000
+export const NoLane: Lane = /*                          */ 0b0000000000000000000000000000000
 
-export const SyncHydrationLane: Lane = /*               */ 0b0000000000000000000000000000001;
-export const SyncLane: Lane = /*                        */ 0b0000000000000000000000000000010;
+export const SyncHydrationLane: Lane = /*               */ 0b0000000000000000000000000000001
+export const SyncLane: Lane = /*                        */ 0b0000000000000000000000000000010
 
-export const InputContinuousHydrationLane: Lane = /*    */ 0b0000000000000000000000000000100;
-export const InputContinuousLane: Lane = /*             */ 0b0000000000000000000000000001000;
+export const InputContinuousHydrationLane: Lane = /*    */ 0b0000000000000000000000000000100
+export const InputContinuousLane: Lane = /*             */ 0b0000000000000000000000000001000
 
-export const DefaultHydrationLane: Lane = /*            */ 0b0000000000000000000000000010000;
-export const DefaultLane: Lane = /*                     */ 0b0000000000000000000000000100000;
+export const DefaultHydrationLane: Lane = /*            */ 0b0000000000000000000000000010000
+export const DefaultLane: Lane = /*                     */ 0b0000000000000000000000000100000
 
-export const SyncUpdateLanes: Lane = /*                */ 0b0000000000000000000000000101010;
+export const SyncUpdateLanes: Lane = /*                */ 0b0000000000000000000000000101010
 // ...
 
-const update: Update<S, A> = {
-  lane,
-  action,
-  hasEagerState: false,
-  eagerState: null,
-  next: (null: any),
-};
+// 【hook的update任务】
+export type Update<S, A> = {
+  lane: Lane
+  revertLane: Lane
+  action: A
+  hasEagerState: boolean
+  eagerState: S | null
+  next: Update<S, A>
+}
+
+// 【fiber的update任务】
+export type Update<State> = {
+  lane: Lane
+
+  tag: 0 | 1 | 2 | 3
+  payload: any
+  callback: (() => mixed) | null
+
+  next: Update<State> | null
+}
 ```
 
-我们知道在`fiber`节点上有`hook list`，然后对于`useState hook`之类的有一个`updateQueue`会在更新阶段调用各个任务。`lane`就是用于描述节点上不同的`update`任务优先级的。
+我们知道在`fiber`节点上有`hook list`，然后`fiber`或`hook`上都会有一个`updateQueue`会在更新阶段调用各个任务。`lane`就是用于描述`fiber`或`hook`上不同的`update`任务优先级的。
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberReconciler.js】
+function updateContainerImpl(
+  rootFiber: Fiber,
+  lane: Lane,
+  element: ReactNodeList,
+  container: OpaqueRoot,
+  parentComponent: ?React$Component<any, any>,
+  callback: ?Function,
+): void {
+  // 【省略代码...】
+
+  // 【构造update任务】
+  // 【const update: Update<mixed> = {
+  //   lane,
+  //   tag: UpdateState,
+  //   payload: null,
+  //   callback: null,
+  //   next: null,
+  //  }】
+  const update = createUpdate(lane)
+  // Caution: React DevTools currently depends on this property
+  // being called "element".
+  update.payload = { element }
+
+  // 【省略代码...】
+
+  const root = enqueueUpdate(rootFiber, update, lane)
+  if (root !== null) {
+    startUpdateTimerByLane(lane)
+    scheduleUpdateOnFiber(root, rootFiber, lane)
+    entangleTransitions(root, rootFiber, lane)
+  }
+}
+// 【packages/react-reconciler/src/ReactFiberClassUpdateQueue.js】
+export function createUpdate(lane: Lane): Update<mixed> {
+  const update: Update<mixed> = {
+    lane,
+
+    tag: UpdateState,
+    payload: null,
+    callback: null,
+
+    next: null,
+  }
+  return update
+}
+```
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
@@ -147,23 +210,16 @@ export function intersectLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
 }
 ```
 
-接下来看，`lanes`在`update`任务具体的执行中的作用。前文已知更改`state`状态会调用`dispatchSetState`方法，构造`update`任务将`update`任务入队调度`update`任务，调度`update`任务`scheduleUpdateOnFiber` => `ensureRootIsScheduled`，可以看到`ensureRootIsScheduled`会取出`lane`字段进行判断根据是否有同步任务，没有的话从`Lane priority`映射到`Scheduler priority`优先级，从而进入`scheduleSyncCallback`或者`scheduleCallback`进一步安排`update`任务：
+接下来看，`lanes`在`update`任务具体的执行中的作用。前文已知更改`state`状态会调用`dispatchSetState`方法，构造`update`任务将`update`任务入队调度`update`任务，调度`update`任务`scheduleUpdateOnFiber` => `ensureRootIsScheduled`，可以看到`ensureRootIsScheduled`会取出`lane`字段进行判断根据是否有同步任务，有同步任务直接安排微任务调度这个同步任务(根据是否支持微任务)，没有的话从`Lane priority`映射到`Scheduler priority`优先级，从而进入`scheduleSyncCallback`或者`scheduleCallback`进一步调度视图更新`performConcurrentWorkOnRoot`任务：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
-export function scheduleUpdateOnFiber(
-  root: FiberRoot,
-  fiber: Fiber,
-  lane: Lane
-) {
+export function scheduleUpdateOnFiber(root: FiberRoot, fiber: Fiber, lane: Lane) {
   // 【省略代码...】
   // Mark that the root has a pending update.
   markRootUpdated(root, lane)
 
-  if (
-    (executionContext & RenderContext) !== NoLanes &&
-    root === workInProgressRoot
-  ) {
+  if ((executionContext & RenderContext) !== NoLanes && root === workInProgressRoot) {
     // This update was dispatched during the render phase. This is a mistake
     // if the update originates from user space (with the exception of local
     // hook updates, which are handled differently and don't reach this
@@ -196,7 +252,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Determine the next lanes to work on, and their priority.
   const nextLanes = getNextLanes(
     root,
-    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   )
 
   // 【省略代码...】
@@ -211,7 +267,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 
   // Schedule a new callback.
   let newCallbackNode
-  // 【有同步SyncLane的任务】
+  // 【-----有同步SyncLane的任务-----】
   if (includesSyncLane(newCallbackPriority)) {
     // Special case: Sync React callbacks are scheduled on a special
     // internal queue
@@ -236,10 +292,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
           // https://github.com/facebook/react/issues/22459
           // We don't support running callbacks in the middle of render
           // or commit so we need to check against that.
-          if (
-            (executionContext & (RenderContext | CommitContext)) ===
-            NoContext
-          ) {
+          if ((executionContext & (RenderContext | CommitContext)) === NoContext) {
             // Note that this would still prematurely flush the callbacks
             // if this happens outside render or commit phase (e.g. in an event).
             flushSyncCallbacks()
@@ -273,7 +326,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     }
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
-      performConcurrentWorkOnRoot.bind(null, root)
+      performConcurrentWorkOnRoot.bind(null, root),
     )
   }
 
@@ -296,7 +349,7 @@ export function lanesToEventPriority(lanes: Lanes): EventPriority {
 }
 ```
 
-根据前文可知，`scheduleSyncCallback`或者`scheduleCallback`安排好任务之后在合适时机就进入任务的执行阶段，接下来看视图的更新任务`performConcurrentWorkOnRoot`，在开始正式的`render`之前，它会先做准备工作，从当前节点开始往祖先节点标记`lanes`和`childLanes`字段直到根节点，`lanes`和`childLanes`字段是后续判断是否要`bailout`的重要标志。那哪些节点是有`update`任务的节点呢，其实就是前文中提到的`concurrentQueues`数组中存储的节点：
+根据前文可知，`scheduleSyncCallback`或者`scheduleCallback`安排好任务之后在合适时机就进入任务的执行阶段，接下来看视图的更新任务`performConcurrentWorkOnRoot`，在开始正式的`render`之前，它会先做准备工作，从当前节点开始往祖先节点标记`lanes`和`childLanes`字段直到根节点，`lanes`和`childLanes`字段是后续判断是否要`bailout`的重要标志。那哪些`fiber`或`hook`是有`update`任务的节点呢，其实就是前文中提到的`concurrentQueues`数组中存储的节点：
 
 `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack` => `finishQueueingConcurrentUpdates` => `markUpdateLaneFromFiberToRoot`
 
@@ -349,7 +402,7 @@ export function finishQueueingConcurrentUpdates(): void {
   concurrentlyUpdatedLanes = NoLanes
 
   let i = 0
-  // 【concurrentQueues是在enqueueUpdate方法中将有Update任务的fiber节点存储起来的数组】
+  // 【concurrentQueues是在enqueueUpdate方法中将有update任务的fiber节点或者在 方法中将有Update任务的hook.queue存储起来的数组】
   while (i < endIndex) {
     const fiber: Fiber = concurrentQueues[i]
     concurrentQueues[i++] = null
@@ -373,7 +426,7 @@ export function finishQueueingConcurrentUpdates(): void {
     }
 
     if (lane !== NoLane) {
-      // 【！！！从当前节点开始往祖先节点标记lanes和childLanes字段直到根节点！！！】
+      // 【！！！！！从有更新需求的fiber节点开始往祖先节点标记lanes和childLanes字段直到根节点！！！！！】
       markUpdateLaneFromFiberToRoot(fiber, update, lane)
     }
   }
@@ -382,7 +435,7 @@ export function finishQueueingConcurrentUpdates(): void {
 function markUpdateLaneFromFiberToRoot(
   sourceFiber: Fiber,
   update: ConcurrentUpdate | null,
-  lane: Lane
+  lane: Lane,
 ): void {
   // Update the source fiber's lanes
   sourceFiber.lanes = mergeLanes(sourceFiber.lanes, lane)
@@ -421,10 +474,7 @@ function markUpdateLaneFromFiberToRoot(
       // account for it. (There may be other cases that we haven't discovered,
       // too.)
       const offscreenInstance: OffscreenInstance | null = parent.stateNode
-      if (
-        offscreenInstance !== null &&
-        !(offscreenInstance._visibility & OffscreenVisible)
-      ) {
+      if (offscreenInstance !== null && !(offscreenInstance._visibility & OffscreenVisible)) {
         isHidden = true
       }
     }
@@ -442,18 +492,14 @@ function markUpdateLaneFromFiberToRoot(
 
 `prepareFreshStack`结束之后就到`beginWork`阶段，`didReceiveUpdate`变量标志了是否有`update`任务或者其他变化，`beginWork`阶段首先进行一系列判断能否复用旧节点，判断逻辑如下：
 
-1. 如果新旧`Props`改变或者`context`改变, `didReceiveUpdate`设为`true`并继续；
-2. 如果没有继续调用`checkScheduledUpdateOrContext()`方法检查节点上是否有`update`任务；
+1. 如果新旧`props`改变或者`context`改变, `didReceiveUpdate`设为`true`并继续；
+2. 如果没有继续调用`checkScheduledUpdateOrContext()`方法检查`fiber`节点上是否有`update`任务；
 3. 如果没有调用`attemptEarlyBailoutIfNoScheduledUpdate`说明后续节点没有更新内容了，提前退出；
 4. 最后需要走更新步骤根据 tag 进入不同的更新方法；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
+function beginWork(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes): Fiber | null {
   // 【省略代码...】
 
   if (current !== null) {
@@ -472,10 +518,7 @@ function beginWork(
     } else {
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
-      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
-        current,
-        renderLanes
-      )
+      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(current, renderLanes)
       if (
         !hasScheduledUpdateOrContext &&
         // If this is the second pass of an error or suspense boundary, there
@@ -486,11 +529,7 @@ function beginWork(
         // 【后面的子节点没有Update任务了】
         didReceiveUpdate = false
         // 【复用current节点的内容，得到复用的节点直接返回】
-        return attemptEarlyBailoutIfNoScheduledUpdate(
-          current,
-          workInProgress,
-          renderLanes
-        )
+        return attemptEarlyBailoutIfNoScheduledUpdate(current, workInProgress, renderLanes)
       }
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
@@ -538,20 +577,14 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps)
-      return updateFunctionComponent(
-        current,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateFunctionComponent(current, workInProgress, Component, resolvedProps, renderLanes)
     }
     // 【省略代码...】
   }
 
   throw new Error(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
-      "React. Please file an issue."
+      "React. Please file an issue.",
   )
 }
 ```
@@ -560,10 +593,7 @@ function beginWork(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function checkScheduledUpdateOrContext(
-  current: Fiber,
-  renderLanes: Lanes
-): boolean {
+function checkScheduledUpdateOrContext(current: Fiber, renderLanes: Lanes): boolean {
   // Before performing an early bailout, we must check if there are pending
   // updates or context.
   const updateLanes = current.lanes
@@ -582,11 +612,11 @@ function checkScheduledUpdateOrContext(
 }
 ```
 
-到此为止我们知道了在调度任务阶段会`lanes`判断是否同步任务以及将`Lane priority`映射到`Scheduler priority`优先级去进行任务的调度，在任务执行的`render`阶段`lanes`和`childLanes`字段要用于是否继续深入子节点更新的判断。
+到此为止我们知道了在调度任务阶段会用`lane`字段判断是否同步任务以及将`Lane priority`映射到`Scheduler priority`优先级去进行任务的调度，在任务执行的`render`阶段`lanes`和`childLanes`字段要用于是否继续深入子节点更新的判断。
 
 ### Scheduler priority
 
-`Scheduler priority`我称之为任务调度系统层级的任务`Task`，实例数据结构如下：
+`Scheduler priority`我称之为**任务调度系统层级**的任务`Task`，任务实例数据结构如下：
 
 ```ts
 export const NoPriority = 0
@@ -606,7 +636,7 @@ var newTask: Task = {
 }
 ```
 
-在调度`performConcurrentWorkOnRoot`更新视图或者`flushPassiveEffects`副作用操作之类的任务之前首先需要确定这个任务的`Scheduler priority`优先级，由`Update`实例的`lanes`映射到`schedulerPriorityLevel`的五个层级如下：
+在调度`performConcurrentWorkOnRoot`更新视图或者`flushPassiveEffects`副作用操作之类的任务之前首先需要确定这个任务的`Scheduler priority`优先级，由`update`实例的`lanes`映射到`schedulerPriorityLevel`的五个层级如下：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -624,7 +654,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Determine the next lanes to work on, and their priority.
   const nextLanes = getNextLanes(
     root,
-    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   )
 
   // We use the highest priority lane to represent the priority of the callback.
@@ -633,6 +663,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Schedule a new callback.
   let newCallbackNode
   if (includesSyncLane(newCallbackPriority)) {
+    // 【省略代码...】
   } else {
     let schedulerPriorityLevel
     // 【优先级映射lanes=>schduler priority】
@@ -656,7 +687,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     // 【任务调度，第一个参数是任务优先级，第二个参数是具体任务】
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
-      performConcurrentWorkOnRoot.bind(null, root)
+      performConcurrentWorkOnRoot.bind(null, root),
     )
   }
 
@@ -706,7 +737,7 @@ var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
-  options?: { delay: number }
+  options?: { delay: number },
 ): Task {
   var currentTime = getCurrentTime()
   // 【获取开始时间】
@@ -755,7 +786,7 @@ function unstable_scheduleCallback(
   if (enableProfiling) {
     newTask.isQueued = false
   }
-  // 【未就绪任务入队timerQueue】
+  // 【-----未就绪任务入队timerQueue-----】
   if (startTime > currentTime) {
     // This is a delayed task.
     newTask.sortIndex = startTime
@@ -772,7 +803,7 @@ function unstable_scheduleCallback(
       requestHostTimeout(handleTimeout, startTime - currentTime)
     }
   } else {
-    // 【已就绪任务入队taskQueue】
+    // 【-----已就绪任务入队taskQueue-----】
     newTask.sortIndex = expirationTime
     push(taskQueue, newTask)
     if (enableProfiling) {
@@ -794,7 +825,7 @@ function unstable_scheduleCallback(
 
 ### Event priority
 
-`Event priority`我称之为事件层级的任务`Task`实例数据结构如下：
+`Event priority`我称之为**事件层级**的任务`Task`实例数据结构如下：
 
 ```ts
 // 【packages/react-reconciler/src/ReactEventPriorities.js】
@@ -938,7 +969,7 @@ export function getEventPriority(domEventName: DOMEventName): EventPriority {
 export function createEventListenerWrapperWithPriority(
   targetContainer: EventTarget,
   domEventName: DOMEventName,
-  eventSystemFlags: EventSystemFlags
+  eventSystemFlags: EventSystemFlags,
 ): Function {
   const eventPriority = getEventPriority(domEventName)
   let listenerWrapper
@@ -954,18 +985,13 @@ export function createEventListenerWrapperWithPriority(
       listenerWrapper = dispatchEvent
       break
   }
-  return listenerWrapper.bind(
-    null,
-    domEventName,
-    eventSystemFlags,
-    targetContainer
-  )
+  return listenerWrapper.bind(null, domEventName, eventSystemFlags, targetContainer)
 }
 ```
 
 ## 任务调度 Scheduler 流程
 
-React 中有如下方法可能触发更新，每次更新都会构造一个`update`任务，然后调用`scheduleLegacySyncCallback`或者`scheduleCallback`对任务进行调度。
+React 中有如下方法可能触发更新，每次事件触发的更新都会在对应`fiber`节点构造一个`update`任务，然后调用`scheduleLegacySyncCallback`或者`scheduleCallback`对任务进行调度。
 
 - `ReactDOM.render` —— HostRoot
 - `this.setState` —— ClassComponent
@@ -975,7 +1001,14 @@ React 中有如下方法可能触发更新，每次更新都会构造一个`upda
 
 ### 安排任务阶段
 
-`scheduleLegacySyncCallback`/`scheduleSyncCallback`方法调度**同步任务**，将任务加入`syncQueue`任务栈。
+在 React 中有多种安排任务入队的方式
+
+- scheduleLegacySyncCallback
+- scheduleSyncCallback
+- scheduleMicrotask
+- scheduleCallback
+
+`scheduleLegacySyncCallback`/`scheduleSyncCallback`/`scheduleMicrotask`方法可以调度**同步任务**，将任务加入`syncQueue`任务栈。
 
 ```ts
 let syncQueue: Array<SchedulerCallback> | null = null
@@ -1000,7 +1033,7 @@ export function scheduleLegacySyncCallback(callback: SchedulerCallback) {
 }
 ```
 
-`scheduleCallback`方法调度**非同步任务**由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrent`模式下以某个优先级异步调度一个 callback 函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如-1 其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
+`scheduleCallback`方法调度**非同步任务**由`Scheduler`模块提供，实际调用了`unstable_scheduleCallback`方法，用于`Concurrent`模式下以某个优先级异步调度一个 callback 函数，将任务加入`taskQueue`或者`timerQueue`。对于每一个任务根据它的优先级分类有以下几种，不同优先级有一个超时时间，比如 -1 其实相当于立马就过期了，说明这个任务需要立即执行是高优先级：
 
 - `IMMEDIATE_PRIORITY_TIMEOUT`: -1
 - `USER_BLOCKING_PRIORITY_TIMEOUT`: 250
@@ -1026,7 +1059,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Determine the next lanes to work on, and their priority.
   const nextLanes = getNextLanes(
     root,
-    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   )
 
   // We use the highest priority lane to represent the priority of the callback.
@@ -1059,7 +1092,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     // 【任务调度，第一个参数是任务优先级，第二个参数是具体任务】
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
-      performConcurrentWorkOnRoot.bind(null, root)
+      performConcurrentWorkOnRoot.bind(null, root),
     )
   }
 
@@ -1119,7 +1152,7 @@ var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
-  options?: { delay: number }
+  options?: { delay: number },
 ): Task {
   var currentTime = getCurrentTime()
   // 【获取开始时间】
@@ -1155,8 +1188,8 @@ function unstable_scheduleCallback(
       break
   }
 
-  var expirationTime = startTime + timeout
   // 【创建任务，expirationTime代表过期时间】
+  var expirationTime = startTime + timeout
   var newTask: Task = {
     id: taskIdCounter++,
     callback,
@@ -1168,9 +1201,11 @@ function unstable_scheduleCallback(
   if (enableProfiling) {
     newTask.isQueued = false
   }
-  // 【未就绪任务入队timerQueue】
+
   if (startTime > currentTime) {
     // This is a delayed task.
+    // 【未就绪任务入队timerQueue】
+    // 【未就绪任务的索引设置为startTime】
     newTask.sortIndex = startTime
     push(timerQueue, newTask)
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
@@ -1186,6 +1221,7 @@ function unstable_scheduleCallback(
     }
   } else {
     // 【已就绪任务入队taskQueue】
+    // 【已就绪任务的索引设置为expirationTime】
     newTask.sortIndex = expirationTime
     push(taskQueue, newTask)
     if (enableProfiling) {
@@ -1211,12 +1247,10 @@ function unstable_scheduleCallback(
 
 接下来`requestHostCallback`进入安排执行任务`flushWork`的过程，调用`schedulePerformWorkUntilDeadline`方法，`schedulePerformWorkUntilDeadline`通过三种方式调度异步任务`setImmediate`、`MessageChannel`、`setTimeout`，然后就会异步进入`performWorkUntilDeadline`：
 
-<!-- 【TODO：`MessageChannel`、`setTimeout`执行顺序】 -->
-
 ```ts
 // 【packages/scheduler/src/forks/Scheduler.js】
 function requestHostCallback(
-  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean
+  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean,
 ) {
   // 【flushWork赋值给scheduledHostCallback】
   scheduledHostCallback = callback
@@ -1285,7 +1319,7 @@ const performWorkUntilDeadline = () => {
       hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime)
     } finally {
       if (hasMoreWork) {
-        // 【如果还有任务继续异步调用】
+        // 【如果还有被打断的任务继续异步调用】
         // If there's more work, schedule the next message event at the end
         // of the preceding one.
         schedulePerformWorkUntilDeadline()
@@ -1362,15 +1396,9 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   advanceTimers(currentTime)
   // 【从taskQueue取出任务一一执行】
   currentTask = peek(taskQueue)
-  while (
-    currentTask !== null &&
-    !(enableSchedulerDebugging && isSchedulerPaused)
-  ) {
+  while (currentTask !== null && !(enableSchedulerDebugging && isSchedulerPaused)) {
     // 【-----时间切片：关键判断点，决定了是否暂停-----】
-    if (
-      currentTask.expirationTime > currentTime &&
-      (!hasTimeRemaining || shouldYieldToHost())
-    ) {
+    if (currentTask.expirationTime > currentTime && (!hasTimeRemaining || shouldYieldToHost())) {
       // This currentTask hasn't expired, and we've reached the deadline.
       break
     }
@@ -1431,6 +1459,21 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   }
 }
 
+// 【React中时间切片是5ms】
+export const frameYieldMs = 5
+export const continuousYieldMs = 50
+export const maxYieldMs = 300
+// Scheduler periodically yields in case there is other work on the main
+// thread, like user events. By default, it yields multiple times per frame.
+// It does not attempt to align with frame boundaries, since most tasks don't
+// need to be frame aligned; for those that do, use requestAnimationFrame.
+let frameInterval = frameYieldMs
+const continuousInputInterval = continuousYieldMs
+const maxInterval = maxYieldMs
+let startTime = -1
+
+let needsPaint = false
+
 function shouldYieldToHost(): boolean {
   // 【当前时间-开始时间=已等待时长】
   const timeElapsed = getCurrentTime() - startTime
@@ -1480,7 +1523,7 @@ function shouldYieldToHost(): boolean {
 }
 ```
 
-`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是**函数**说明当前任务还没执行完，需要在中断处继续执行，否则说明执行完了就把当前任务 pop 出来。`const continuationCallback = callback(didUserCallbackTimeout);`。例如最通常我们进行组件更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
+`workLoop`有一个控制任务的很关键的点在于，它调用任务时要检测任务的返回结果，如果返回的是**函数**说明当前任务还没执行完，需要在中断处继续执行，否则说明执行完了就把当前任务 pop 出来。`const continuationCallback = callback(didUserCallbackTimeout);`。例如最通常我们进行视图更新的任务`performConcurrentWorkOnRoot`，更新任务在前文中提到过会用`shouldYield`方法控制当前的解析过程是否需要继续：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1489,9 +1532,7 @@ const shouldTimeSlice =
   !includesBlockingLane(root, lanes) &&
   !includesExpiredLane(root, lanes) &&
   (disableSchedulerTimeoutInWorkLoop || !didTimeout)
-let exitStatus = shouldTimeSlice
-  ? renderRootConcurrent(root, lanes)
-  : renderRootSync(root, lanes)
+let exitStatus = shouldTimeSlice ? renderRootConcurrent(root, lanes) : renderRootSync(root, lanes)
 
 // 【！！！返回函数，performConcurrentWorkOnRoot本身，说明之前任务被打断了，需要继续执行，否则的话返回null表示任务全部结束】
 if (root.callbackNode === originalCallbackNode) {
@@ -1561,12 +1602,12 @@ function shouldYieldToHost(): boolean {
 所以总结来说是如下的流程：
 
 1. `scheduleCallback`安排异步任务进`taskQueue`已就绪任务（最小堆）或者`timerQueue`未就绪任务（最小堆），任务优先级决定了可执行时间，同步任务的话加入`syncQueue`；
-2. `schedulePerformWorkUntilDeadline`通过`setImmediate`或者`MessageChannel`或者`setTimeout`异步调用`performWorkUntilDeadline`， `performWorkUntilDeadline`调用`flushWork`继而调用`workLoop`去遍历执行`TaskQueue`里的任务；
+2. `schedulePerformWorkUntilDeadline`通过`setImmediate`或者`MessageChannel`或者`setTimeout`异步调用`performWorkUntilDeadline`， `performWorkUntilDeadline`中会去调用`flushWork`继而调用`workLoop`去遍历执行`TaskQueue`里的任务，如果任务是被打断的hasMoreWork为true，继续调用`schedulePerformWorkUntilDeadline`去执行；
 3. `workLoop`根据任务执行的返回结果是否是函数确定当前任务是否执行完毕，任务是可打断的；
 
 ## 总结
 
-![react](./assets/Scheduler/Scheduler.png)
+![react](./assets/Scheduler/Scheduler.svg)
 
 1. 当`fiber`节点上有事件触发状态改变等，就会构造对应的`update`任务，`update`任务都会有一个`lane`字段表示优先级；
 2. 任务调度阶段，调度`update`任务的时候，会根据`lane`进行优先级判断，是否同步，最后如果是异步任务取最高优先级的`lane`映射到`Scheduler`优先级继续进行`task`的调度；
@@ -1597,7 +1638,7 @@ function shouldYieldToHost(): boolean {
       function B({ children }) {
         console.log("render component B")
         return (
-          <div className="component" data-name="B">
+          <div className='component' data-name='B'>
             {children}
           </div>
         )
@@ -1605,12 +1646,9 @@ function shouldYieldToHost(): boolean {
       function C({ children }) {
         console.log("render component C")
         const [count, setCount] = React.useState(0)
-        const increment = React.useCallback(
-          () => setCount((count) => count + 1),
-          []
-        )
+        const increment = React.useCallback(() => setCount((count) => count + 1), [])
         return (
-          <div className="component" data-name="C">
+          <div className='component' data-name='C'>
             <button onClick={increment}>{count}</button>
             <D />
           </div>
@@ -1620,7 +1658,7 @@ function shouldYieldToHost(): boolean {
       function D({ children }) {
         console.log("render component D")
         return (
-          <div className="component" data-name="D">
+          <div className='component' data-name='D'>
             {children}
           </div>
         )
@@ -1629,7 +1667,7 @@ function shouldYieldToHost(): boolean {
       function E({ children }) {
         console.log("render component E")
         return (
-          <div className="component" data-name="E">
+          <div className='component' data-name='E'>
             {children}
           </div>
         )
@@ -1638,7 +1676,7 @@ function shouldYieldToHost(): boolean {
       function F({ children }) {
         console.log("render component F")
         return (
-          <div className="component" data-name="F">
+          <div className='component' data-name='F'>
             {children}
           </div>
         )
@@ -1647,7 +1685,7 @@ function shouldYieldToHost(): boolean {
       function App() {
         console.log("render component A")
         return (
-          <div className="component" data-name="A">
+          <div className='component' data-name='A'>
             <B>
               <C></C>
             </B>

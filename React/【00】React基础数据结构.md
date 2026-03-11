@@ -457,8 +457,7 @@ export const Passive = /*                      */ 0b000000000000000100000000000
 export const Visibility = /*                   */ 0b000000000000010000000000000
 export const StoreConsistency = /*             */ 0b000000000000100000000000000
 
-export const LifecycleEffectMask =
-  Passive | Update | Callback | Ref | Snapshot | StoreConsistency
+export const LifecycleEffectMask = Passive | Update | Callback | Ref | Snapshot | StoreConsistency
 
 // Union of all commit flags (flags with the lifetime of a particular commit)
 export const HostEffectMask = /*               */ 0b00000000000011111111111111
@@ -502,13 +501,7 @@ export const BeforeMutationMask: number =
     : 0)
 
 export const MutationMask =
-  Placement |
-  Update |
-  ChildDeletion |
-  ContentReset |
-  Ref |
-  Hydrating |
-  Visibility
+  Placement | Update | ChildDeletion | ContentReset | Ref | Hydrating | Visibility
 export const LayoutMask = Update | Callback | Ref | Visibility
 
 // TODO: Split into PassiveMountMask and PassiveUnmountMask
@@ -518,6 +511,129 @@ export const PassiveMask = Passive | Visibility | ChildDeletion
 // This allows certain concepts to persist without recalculating them,
 // e.g. whether a subtree contains passive effects or portals.
 export const StaticMask = LayoutStatic | PassiveStatic | RefStatic
+```
+
+创建 `fiber` 实例的方法：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiber.js】
+// 【创建Fragment类型的fiber】
+export function createFiberFromFragment(
+  elements: ReactFragment,
+  mode: TypeOfMode,
+  lanes: Lanes,
+  key: null | string,
+): Fiber {
+  const fiber = createFiber(Fragment, elements, key, mode)
+  fiber.lanes = lanes
+  return fiber
+}
+// 【创建Suspense类型的fiber】
+export function createFiberFromSuspense(
+  pendingProps: any,
+  mode: TypeOfMode,
+  lanes: Lanes,
+  key: null | string,
+): Fiber {
+  const fiber = createFiber(SuspenseComponent, pendingProps, key, mode)
+  fiber.elementType = REACT_SUSPENSE_TYPE
+  fiber.lanes = lanes
+  return fiber
+}
+// 【创建Offscreen类型的fiber】
+export function createFiberFromOffscreen(
+  pendingProps: OffscreenProps,
+  mode: TypeOfMode,
+  lanes: Lanes,
+  key: null | string,
+): Fiber {
+  const fiber = createFiber(OffscreenComponent, pendingProps, key, mode)
+  fiber.elementType = REACT_OFFSCREEN_TYPE
+  fiber.lanes = lanes
+  const primaryChildInstance: OffscreenInstance = {
+    _visibility: OffscreenVisible,
+    _pendingVisibility: OffscreenVisible,
+    _pendingMarkers: null,
+    _retryCache: null,
+    _transitions: null,
+    _current: null,
+    detach: () => detachOffscreenInstance(primaryChildInstance),
+    attach: () => attachOffscreenInstance(primaryChildInstance),
+  }
+  fiber.stateNode = primaryChildInstance
+  return fiber
+}
+
+const createFiber = enableObjectFiber ? createFiberImplObject : createFiberImplClass
+
+function createFiberImplObject(
+  tag: WorkTag,
+  pendingProps: mixed,
+  key: null | string,
+  mode: TypeOfMode,
+): Fiber {
+  const fiber: Fiber = {
+    // Instance
+    // tag, key - defined at the bottom as dynamic properties
+    elementType: null,
+    type: null,
+    stateNode: null,
+
+    // Fiber
+    return: null,
+    child: null,
+    sibling: null,
+    index: 0,
+
+    ref: null,
+    refCleanup: null,
+
+    // pendingProps - defined at the bottom as dynamic properties
+    memoizedProps: null,
+    updateQueue: null,
+    memoizedState: null,
+    dependencies: null,
+
+    // Effects
+    flags: NoFlags,
+    subtreeFlags: NoFlags,
+    deletions: null,
+
+    lanes: NoLanes,
+    childLanes: NoLanes,
+
+    alternate: null,
+
+    // dynamic properties at the end for more efficient hermes bytecode
+    tag,
+    key,
+    pendingProps,
+    mode,
+  }
+
+  if (enableProfilerTimer) {
+    fiber.actualDuration = -0
+    fiber.actualStartTime = -1.1
+    fiber.selfBaseDuration = -0
+    fiber.treeBaseDuration = -0
+  }
+
+  if (__DEV__) {
+    // This isn't directly used but is handy for debugging internals:
+    fiber._debugInfo = null
+    fiber._debugOwner = null
+    if (enableOwnerStacks) {
+      fiber._debugStack = null
+      fiber._debugTask = null
+    }
+    fiber._debugNeedsRemount = false
+    fiber._debugHookTypes = null
+    if (!hasBadMapPolyfill && typeof Object.preventExtensions === "function") {
+      Object.preventExtensions(fiber)
+    }
+  }
+  return fiber
+}
 ```
 
 ## Hook
@@ -563,6 +679,27 @@ export type Effect = {
 ## Update
 
 ```ts
+// 【hook的update任务】
+export type Update<S, A> = {
+  lane: Lane
+  revertLane: Lane
+  action: A
+  hasEagerState: boolean
+  eagerState: S | null
+  next: Update<S, A>
+}
+
+export type UpdateQueue<S, A> = {
+  pending: Update<S, A> | null,
+  lanes: Lanes,
+  dispatch: (A => mixed) | null,
+  lastRenderedReducer: ((S, A) => S) | null,
+  lastRenderedState: S | null,
+}
+```
+
+```ts
+// 【fiber的update任务】
 export type Update<State> = {
   lane: Lane
 

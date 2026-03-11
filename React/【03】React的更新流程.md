@@ -138,7 +138,386 @@ function dispatchSetState<S, A>(
 
 `scheduleUpdateOnFiber` => `ensureRootIsScheduled` => ... => `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` + `commitRoot`
 
-前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程**render 流程**（`renderRootSync`/`renderRootConcurrent`）和**commit 流程**（`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前页面上渲染展示的内容的`fiber`树，然后`prepareFreshStack`中会去调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
+```ts
+// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
+export function scheduleUpdateOnFiber(root: FiberRoot, fiber: Fiber, lane: Lane) {
+  // 【省略代码...】
+
+  // 【-----被suspense的情况-----】
+  // Check if the work loop is currently suspended and waiting for data to
+  // finish loading.
+  if (
+    // Suspended render phase
+    (root === workInProgressRoot &&
+      (workInProgressSuspendedReason === SuspendedOnData ||
+        workInProgressSuspendedReason === SuspendedOnAction)) ||
+    // Suspended commit phase
+    root.cancelPendingCommit !== null
+  ) {
+    // The incoming update might unblock the current render. Interrupt the
+    // current attempt and restart from the top.
+    prepareFreshStack(root, NoLanes)
+    const didAttemptEntireTree = false
+    markRootSuspended(
+      root,
+      workInProgressRootRenderLanes,
+      workInProgressDeferredLane,
+      didAttemptEntireTree,
+    )
+  }
+
+  // Mark that the root has a pending update.
+  markRootUpdated(root, lane)
+
+  // 【React内部方法某些情况分支】
+  if ((executionContext & RenderContext) !== NoLanes && root === workInProgressRoot) {
+    // This update was dispatched during the render phase. This is a mistake
+    // if the update originates from user space (with the exception of local
+    // hook updates, which are handled differently and don't reach this
+    // function), but there are some internal React features that use this as
+    // an implementation detail, like selective hydration.
+    warnAboutRenderPhaseUpdatesInDEV(fiber)
+
+    // Track lanes that were updated during the render phase
+    workInProgressRootRenderPhaseUpdatedLanes = mergeLanes(
+      workInProgressRootRenderPhaseUpdatedLanes,
+      lane,
+    )
+  } else {
+    // 【-----普通的需要update的情况-----】
+    // This is a normal update, scheduled from outside the render phase. For
+    // example, during an input event.
+    // 【省略代码...】
+
+    if (root === workInProgressRoot) {
+      // Received an update to a tree that's in the middle of rendering. Mark
+      // that there was an interleaved update work on this root.
+      if ((executionContext & RenderContext) === NoContext) {
+        workInProgressRootInterleavedUpdatedLanes = mergeLanes(
+          workInProgressRootInterleavedUpdatedLanes,
+          lane,
+        )
+      }
+      if (workInProgressRootExitStatus === RootSuspendedWithDelay) {
+        // The root already suspended with a delay, which means this render
+        // definitely won't finish. Since we have a new update, let's mark it as
+        // suspended now, right before marking the incoming update. This has the
+        // effect of interrupting the current render and switching to the update.
+        // TODO: Make sure this doesn't override pings that happen while we've
+        // already started rendering.
+        const didAttemptEntireTree = false
+        markRootSuspended(
+          root,
+          workInProgressRootRenderLanes,
+          workInProgressDeferredLane,
+          didAttemptEntireTree,
+        )
+      }
+    }
+    // 【进入performConcurrentWorkOnRoot任务安排的阶段】
+    ensureRootIsScheduled(root)
+    if (
+      lane === SyncLane &&
+      executionContext === NoContext &&
+      !disableLegacyMode &&
+      (fiber.mode & ConcurrentMode) === NoMode
+    ) {
+      if (__DEV__ && ReactSharedInternals.isBatchingLegacy) {
+        // Treat `act` as if it's inside `batchedUpdates`, even in legacy mode.
+      } else {
+        // Flush the synchronous work now, unless we're already working or inside
+        // a batch. This is intentionally inside scheduleUpdateOnFiber instead of
+        // scheduleCallbackForFiber to preserve the ability to schedule a callback
+        // without immediately flushing it. We only do this for user-initiated
+        // updates, to preserve historical behavior of legacy mode.
+        resetRenderTimer()
+        flushSyncWorkOnLegacyRootsOnly()
+      }
+    }
+  }
+}
+
+// 【packages/react-reconciler/src/ReactFiberRootScheduler.js】
+export function ensureRootIsScheduled(root: FiberRoot): void {
+  // This function is called whenever a root receives an update. It does two
+  // things 1) it ensures the root is in the root schedule, and 2) it ensures
+  // there's a pending microtask to process the root schedule.
+  //
+  // Most of the actual scheduling logic does not happen until
+  // `scheduleTaskForRootDuringMicrotask` runs.
+
+  // 【此函数在根节点收到更新时被调用，主要完成两项任务：1) 确保根节点被纳入调度队列；2) 确保存在待处理的微任务用来执行调度队列的处理。】
+  // Add the root to the schedule
+  if (root === lastScheduledRoot || root.next !== null) {
+    // Fast path. This root is already scheduled.
+  } else {
+    if (lastScheduledRoot === null) {
+      firstScheduledRoot = lastScheduledRoot = root
+    } else {
+      lastScheduledRoot.next = root
+      lastScheduledRoot = root
+    }
+  }
+
+  // Any time a root received an update, we set this to true until the next time
+  // we process the schedule. If it's false, then we can quickly exit flushSync
+  // without consulting the schedule.
+  mightHavePendingSyncWork = true
+
+  // At the end of the current event, go through each of the roots and ensure
+  // there's a task scheduled for each one at the correct priority.
+  if (__DEV__ && ReactSharedInternals.actQueue !== null) {
+    // We're inside an `act` scope.
+    if (!didScheduleMicrotask_act) {
+      didScheduleMicrotask_act = true
+      scheduleImmediateRootScheduleTask()
+    }
+  } else {
+    if (!didScheduleMicrotask) {
+      didScheduleMicrotask = true
+      scheduleImmediateRootScheduleTask()
+    }
+  }
+
+  // 【省略代码...】
+}
+
+function scheduleImmediateRootScheduleTask() {
+  // 【省略代码...】
+
+  // TODO: Can we land supportsMicrotasks? Which environments don't support it?
+  // Alternatively, can we move this check to the host config?
+  if (supportsMicrotasks) {
+    scheduleMicrotask(() => {
+      // In Safari, appending an iframe forces microtasks to run.
+      // https://github.com/facebook/react/issues/22459
+      // We don't support running callbacks in the middle of render
+      // or commit so we need to check against that.
+      const executionContext = getExecutionContext()
+      if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
+        // Note that this would still prematurely flush the callbacks
+        // if this happens outside render or commit phase (e.g. in an event).
+
+        // Intentionally using a macrotask instead of a microtask here. This is
+        // wrong semantically but it prevents an infinite loop. The bug is
+        // Safari's, not ours, so we just do our best to not crash even though
+        // the behavior isn't completely correct.
+        Scheduler_scheduleCallback(ImmediateSchedulerPriority, processRootScheduleInImmediateTask)
+        return
+      }
+      processRootScheduleInMicrotask()
+    })
+  } else {
+    // If microtasks are not supported, use Scheduler.
+    Scheduler_scheduleCallback(ImmediateSchedulerPriority, processRootScheduleInImmediateTask)
+  }
+}
+
+function processRootScheduleInMicrotask() {
+  // This function is always called inside a microtask. It should never be
+  // called synchronously.
+  didScheduleMicrotask = false
+  // 【省略代码...】
+
+  // We'll recompute this as we iterate through all the roots and schedule them.
+  mightHavePendingSyncWork = false
+
+  let syncTransitionLanes = NoLanes
+  if (currentEventTransitionLane !== NoLane) {
+    if (shouldAttemptEagerTransition()) {
+      // A transition was scheduled during an event, but we're going to try to
+      // render it synchronously anyway. We do this during a popstate event to
+      // preserve the scroll position of the previous page.
+      syncTransitionLanes = currentEventTransitionLane
+    }
+    currentEventTransitionLane = NoLane
+  }
+
+  const currentTime = now()
+
+  let prev = null
+  let root = firstScheduledRoot
+  while (root !== null) {
+    const next = root.next
+    const nextLanes = scheduleTaskForRootDuringMicrotask(root, currentTime)
+    if (nextLanes === NoLane) {
+      // This root has no more pending work. Remove it from the schedule. To
+      // guard against subtle reentrancy bugs, this microtask is the only place
+      // we do this — you can add roots to the schedule whenever, but you can
+      // only remove them here.
+
+      // Null this out so we know it's been removed from the schedule.
+      root.next = null
+      if (prev === null) {
+        // This is the new head of the list
+        firstScheduledRoot = next
+      } else {
+        prev.next = next
+      }
+      if (next === null) {
+        // This is the new tail of the list
+        lastScheduledRoot = prev
+      }
+    } else {
+      // This root still has work. Keep it in the list.
+      prev = root
+
+      // This is a fast-path optimization to early exit from
+      // flushSyncWorkOnAllRoots if we can be certain that there is no remaining
+      // synchronous work to perform. Set this to true if there might be sync
+      // work left.
+      if (
+        // Skip the optimization if syncTransitionLanes is set
+        syncTransitionLanes !== NoLanes ||
+        // Common case: we're not treating any extra lanes as synchronous, so we
+        // can just check if the next lanes are sync.
+        includesSyncLane(nextLanes) ||
+        (enableSwipeTransition && isGestureRender(nextLanes))
+      ) {
+        mightHavePendingSyncWork = true
+      }
+    }
+    root = next
+  }
+
+  // At the end of the microtask, flush any pending synchronous work. This has
+  // to come at the end, because it does actual rendering work that might throw.
+  flushSyncWorkAcrossRoots_impl(syncTransitionLanes, false)
+}
+
+function scheduleTaskForRootDuringMicrotask(root: FiberRoot, currentTime: number): Lane {
+  // This function is always called inside a microtask, or at the very end of a
+  // rendering task right before we yield to the main thread. It should never be
+  // called synchronously.
+
+  // This function also never performs React work synchronously; it should
+  // only schedule work to be performed later, in a separate task or microtask.
+
+  // Check if any lanes are being starved by other work. If so, mark them as
+  // expired so we know to work on those next.
+  markStarvedLanesAsExpired(root, currentTime)
+
+  // Determine the next lanes to work on, and their priority.
+  const rootWithPendingPassiveEffects = getRootWithPendingPassiveEffects()
+  const pendingPassiveEffectsLanes = getPendingPassiveEffectsLanes()
+  const workInProgressRoot = getWorkInProgressRoot()
+  const workInProgressRootRenderLanes = getWorkInProgressRootRenderLanes()
+  const rootHasPendingCommit = root.cancelPendingCommit !== null || root.timeoutHandle !== noTimeout
+  const nextLanes =
+    enableYieldingBeforePassive && root === rootWithPendingPassiveEffects
+      ? // This will schedule the callback at the priority of the lane but we used to
+        // always schedule it at NormalPriority. Discrete will flush it sync anyway.
+        // So the only difference is Idle and it doesn't seem necessarily right for that
+        // to get upgraded beyond something important just because we're past commit.
+        pendingPassiveEffectsLanes
+      : getNextLanes(
+          root,
+          root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
+          rootHasPendingCommit,
+        )
+
+  const existingCallbackNode = root.callbackNode
+  if (
+    // Check if there's nothing to work on
+    nextLanes === NoLanes ||
+    // If this root is currently suspended and waiting for data to resolve, don't
+    // schedule a task to render it. We'll either wait for a ping, or wait to
+    // receive an update.
+    //
+    // Suspended render phase
+    (root === workInProgressRoot && isWorkLoopSuspendedOnData()) ||
+    // Suspended commit phase
+    root.cancelPendingCommit !== null
+  ) {
+    // Fast path: There's nothing to work on.
+    if (existingCallbackNode !== null) {
+      cancelCallback(existingCallbackNode)
+    }
+    root.callbackNode = null
+    root.callbackPriority = NoLane
+    return NoLane
+  }
+
+  // Schedule a new callback in the host environment.
+  if (
+    includesSyncLane(nextLanes) &&
+    // If we're prerendering, then we should use the concurrent work loop
+    // even if the lanes are synchronous, so that prerendering never blocks
+    // the main thread.
+    !(enableSiblingPrerendering && checkIfRootIsPrerendering(root, nextLanes))
+  ) {
+    // Synchronous work is always flushed at the end of the microtask, so we
+    // don't need to schedule an additional task.
+    if (existingCallbackNode !== null) {
+      cancelCallback(existingCallbackNode)
+    }
+    root.callbackPriority = SyncLane
+    root.callbackNode = null
+    return SyncLane
+  } else {
+    // We use the highest priority lane to represent the priority of the callback.
+    const existingCallbackPriority = root.callbackPriority
+    const newCallbackPriority = getHighestPriorityLane(nextLanes)
+
+    if (
+      newCallbackPriority === existingCallbackPriority &&
+      // Special case related to `act`. If the currently scheduled task is a
+      // Scheduler task, rather than an `act` task, cancel it and re-schedule
+      // on the `act` queue.
+      !(
+        __DEV__ &&
+        ReactSharedInternals.actQueue !== null &&
+        existingCallbackNode !== fakeActCallbackNode
+      )
+    ) {
+      // 【！！！！！重要分支：新旧优先级相同的话，无需再一次安排任务入队！！！！！】
+      // 【举例来说：()=>{ setState("111")
+      //                 setState("222")
+      //                 setState("333") }
+      //  假设点击某个按钮调用方法setState值三次，这三次状态的改变造成的更新优先级是相同的都为1，所以不会有三次任务入队，会经过判断合并为一次】
+      // 【第一次set会提前计算eager值，因为优先级为1，所以会调用scheduleMicrotask安排flushSyncCallbacks任务入队】
+      // 【第二次第三次set不会提前计算，并且因为优先级和第一次一样都为1，所以不会安排重复任务入队】
+      // 【然后同步任务完成之后微任务开始执行，所以开始执行flushSyncCallbacks从而进入performSyncWorkOnRoot】
+      // The priority hasn't changed. We can reuse the existing task.
+      return newCallbackPriority
+    } else {
+      // Cancel the existing callback. We'll schedule a new one below.
+      cancelCallback(existingCallbackNode)
+    }
+
+    let schedulerPriorityLevel
+    switch (lanesToEventPriority(nextLanes)) {
+      // Scheduler does have an "ImmediatePriority", but now that we use
+      // microtasks for sync work we no longer use that. Any sync work that
+      // reaches this path is meant to be time sliced.
+      case DiscreteEventPriority:
+      case ContinuousEventPriority:
+        schedulerPriorityLevel = UserBlockingSchedulerPriority
+        break
+      case DefaultEventPriority:
+        schedulerPriorityLevel = NormalSchedulerPriority
+        break
+      case IdleEventPriority:
+        schedulerPriorityLevel = IdleSchedulerPriority
+        break
+      default:
+        schedulerPriorityLevel = NormalSchedulerPriority
+        break
+    }
+
+    const newCallbackNode = scheduleCallback(
+      schedulerPriorityLevel,
+      performWorkOnRootViaSchedulerTask.bind(null, root),
+    )
+
+    root.callbackPriority = newCallbackPriority
+    root.callbackNode = newCallbackNode
+    return newCallbackPriority
+  }
+}
+```
+
+前一篇中可知`performConcurrentWorkOnRoot`有两个重要的流程 **render 流程** （`renderRootSync`/`renderRootConcurrent`）和 **commit 流程** （`commitRoot`），更新过程中同样要经历这两个流程，首先来看`render`流程，和首次挂载时一样，`prepareFreshStack`由`FiberRootNode`的`current`创建`workInProgress`，此时`FiberRootNode`的`current`就是目前页面上渲染展示的内容的`fiber`树，然后`prepareFreshStack`中会去调用`finishQueueingConcurrentUpdates`为`current fiber`树装载之前创建好的`update`任务，然后进入`workLoopSync`/`workLoopConcurrent`过程：
 
 `renderRootSync` => `prepareFreshStack` + `workLoopSync` => `finishQueueingConcurrentUpdates`
 
@@ -356,11 +735,7 @@ export function finishQueueingConcurrentUpdates(): void {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
+function beginWork(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes): Fiber | null {
   // 【省略代码...】
 
   if (current !== null) {
@@ -368,6 +743,7 @@ function beginWork(
     const oldProps = current.memoizedProps
     const newProps = workInProgress.pendingProps
 
+    // 【对比新旧props直接用全等符号】
     if (
       oldProps !== newProps ||
       hasLegacyContextChanged() ||
@@ -381,10 +757,7 @@ function beginWork(
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
       // 【通过lane判断当前节点是否有update任务】
-      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
-        current,
-        renderLanes
-      )
+      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(current, renderLanes)
       if (
         !hasScheduledUpdateOrContext &&
         // If this is the second pass of an error or suspense boundary, there
@@ -394,11 +767,7 @@ function beginWork(
         // No pending updates or context. Bail out now.
         didReceiveUpdate = false
         // 【hasScheduledUpdateOrContext为false，表明节点上没有update任务，尝试复用current节点的内容，得到复用的节点直接返回】
-        return attemptEarlyBailoutIfNoScheduledUpdate(
-          current,
-          workInProgress,
-          renderLanes
-        )
+        return attemptEarlyBailoutIfNoScheduledUpdate(current, workInProgress, renderLanes)
       }
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
@@ -454,13 +823,7 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps)
-      return updateFunctionComponent(
-        current,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateFunctionComponent(current, workInProgress, Component, resolvedProps, renderLanes)
     }
     case ClassComponent: {
       const Component = workInProgress.type
@@ -469,13 +832,7 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps)
-      return updateClassComponent(
-        current,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateClassComponent(current, workInProgress, Component, resolvedProps, renderLanes)
     }
     case HostRoot:
       return updateHostRoot(current, workInProgress, renderLanes)
@@ -519,19 +876,13 @@ function beginWork(
               outerPropTypes,
               resolvedProps, // Resolved for outer only
               "prop",
-              getComponentNameFromType(type)
+              getComponentNameFromType(type),
             )
           }
         }
       }
       resolvedProps = resolveDefaultProps(type.type, resolvedProps)
-      return updateMemoComponent(
-        current,
-        workInProgress,
-        type,
-        resolvedProps,
-        renderLanes
-      )
+      return updateMemoComponent(current, workInProgress, type, resolvedProps, renderLanes)
     }
     case SimpleMemoComponent: {
       return updateSimpleMemoComponent(
@@ -539,7 +890,7 @@ function beginWork(
         workInProgress,
         workInProgress.type,
         workInProgress.pendingProps,
-        renderLanes
+        renderLanes,
       )
     }
     case IncompleteClassComponent: {
@@ -567,7 +918,7 @@ function beginWork(
 
   throw new Error(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
-      "React. Please file an issue."
+      "React. Please file an issue.",
   )
 }
 ```
@@ -588,7 +939,7 @@ function beginWork(
 function attemptEarlyBailoutIfNoScheduledUpdate(
   current: Fiber,
   workInProgress: Fiber,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   // This fiber does not have any pending work. Bailout without entering
   // the begin phase. There's still some bookkeeping we that needs to be done
@@ -656,7 +1007,7 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
 function bailoutOnAlreadyFinishedWork(
   current: Fiber | null,
   workInProgress: Fiber,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ): Fiber | null {
   // 【省略代码...】
 
@@ -667,10 +1018,7 @@ function bailoutOnAlreadyFinishedWork(
 }
 
 // 【packages/react-reconciler/src/ReactChildFiber.js】
-export function cloneChildFibers(
-  current: Fiber | null,
-  workInProgress: Fiber
-): void {
+export function cloneChildFibers(current: Fiber | null, workInProgress: Fiber): void {
   if (current !== null && workInProgress.child !== current.child) {
     throw new Error("Resuming work not yet implemented.")
   }
@@ -686,10 +1034,7 @@ export function cloneChildFibers(
   newChild.return = workInProgress
   while (currentChild.sibling !== null) {
     currentChild = currentChild.sibling
-    newChild = newChild.sibling = createWorkInProgress(
-      currentChild,
-      currentChild.pendingProps
-    )
+    newChild = newChild.sibling = createWorkInProgress(currentChild, currentChild.pendingProps)
     newChild.return = workInProgress
   }
   newChild.sibling = null
@@ -705,12 +1050,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     // node that we're free to reuse. This is lazily created to avoid allocating
     // extra objects for things that are never updated. It also allow us to
     // reclaim the extra memory if needed.
-    workInProgress = createFiber(
-      current.tag,
-      pendingProps,
-      current.key,
-      current.mode
-    )
+    workInProgress = createFiber(current.tag, pendingProps, current.key, current.mode)
     workInProgress.elementType = current.elementType
     workInProgress.type = current.type
     workInProgress.stateNode = current.stateNode
@@ -806,7 +1146,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 
 ![react](./assets/update/update_beginWork1.png)
 
-接下来`beginWork`会根据`tag`类型进入不同的 `update` 方法，在`ƒ App()`节点的`beginWork`阶段会走进`updateFunctionComponent`方法：
+接下来`beginWork`会根据`tag`类型进入不同的`update`方法，在`ƒ App()`节点的`beginWork`阶段会走进`updateFunctionComponent`方法：
 
 1. 调用`renderWithHooks`方法调用函数组件本身生成`nextChildren`，就是这个函数组件的内容对应的`React-Element`，本例中就是`div`对应的`React-Element`；
 2. 进入`reconcileChildren(current, workInProgress, nextChildren, renderLanes)`方法构造子内容的`fiber`；
@@ -820,7 +1160,7 @@ function updateFunctionComponent(
   workInProgress: Fiber,
   Component: any,
   nextProps: any,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   // 【省略代码...】
 
@@ -845,7 +1185,7 @@ function updateFunctionComponent(
       Component,
       nextProps,
       context,
-      renderLanes
+      renderLanes,
     )
     hasId = checkDidRenderIdHook()
     setIsRendering(false)
@@ -857,7 +1197,7 @@ function updateFunctionComponent(
       Component,
       nextProps,
       context,
-      renderLanes
+      renderLanes,
     )
     hasId = checkDidRenderIdHook()
   }
@@ -887,7 +1227,7 @@ export function renderWithHooks<Props, SecondArg>(
   Component: (p: Props, arg: SecondArg) => any,
   props: Props,
   secondArg: SecondArg,
-  nextRenderLanes: Lanes
+  nextRenderLanes: Lanes,
 ): any {
   renderLanes = nextRenderLanes
   currentlyRenderingFiber = workInProgress
@@ -963,12 +1303,7 @@ export function renderWithHooks<Props, SecondArg>(
     // In development, components are invoked twice to help detect side effects.
     setIsStrictModeForDevtools(true)
     try {
-      children = renderWithHooksAgain(
-        workInProgress,
-        Component,
-        props,
-        secondArg
-      )
+      children = renderWithHooksAgain(workInProgress, Component, props, secondArg)
     } finally {
       setIsStrictModeForDevtools(false)
     }
@@ -991,11 +1326,7 @@ export function renderWithHooks<Props, SecondArg>(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function updateHostComponent(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-) {
+function updateHostComponent(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes) {
   pushHostContext(workInProgress)
 
   if (current === null) {
@@ -1029,7 +1360,7 @@ function updateHostComponent(
 
 ![react](./assets/update/update_beginWork2.png)
 
-`updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`，根据 `current` 是否为 `null` 会进入 `mountChildFibers` 或 `reconcileChildFibers` 流程，这一次我们是更新流程所以进入`reconcileChildFibers`，`mountChildFibers` 和 `reconcileChildFibers`是由`createChildReconciler`返回的内部的方法：
+`updateFunctionComponent`、`updateHostComponent`等方法都会进入`reconcileChildren`，根据`current`是否为`null`会进入`mountChildFibers`或 `reconcileChildFibers` 流程，这一次我们是更新流程所以进入`reconcileChildFibers`，`mountChildFibers` 和 `reconcileChildFibers`是由`createChildReconciler`返回的内部的方法：
 
 - 初次创建时`fiber`节点没有比较对象, 所以在向下生成子节点的时候没有任何多余的逻辑, 只管创建就行
 - 对比更新时需要把`ReactElement`对象与旧`fiber`节点进行比较, 来判断是否需要复用旧`fiber`对象
@@ -1040,7 +1371,7 @@ export function reconcileChildren(
   current: Fiber | null,
   workInProgress: Fiber,
   nextChildren: any,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   if (current === null) {
     // 【首次挂载】
@@ -1048,12 +1379,7 @@ export function reconcileChildren(
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
-    workInProgress.child = mountChildFibers(
-      workInProgress,
-      null,
-      nextChildren,
-      renderLanes
-    )
+    workInProgress.child = mountChildFibers(workInProgress, null, nextChildren, renderLanes)
   } else {
     // 【更新】
     // If the current child is the same as the work in progress, it means that
@@ -1066,7 +1392,7 @@ export function reconcileChildren(
       workInProgress,
       current.child,
       nextChildren,
-      renderLanes
+      renderLanes,
     )
   }
 }
@@ -1079,15 +1405,13 @@ export const mountChildFibers: ChildReconciler = createChildReconciler(false)
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
 // live outside of this function.
-function createChildReconciler(
-  shouldTrackSideEffects: boolean
-): ChildReconciler {
+function createChildReconciler(shouldTrackSideEffects: boolean): ChildReconciler {
   // 【省略代码...】
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     newChildren: Array<any>,
-    lanes: Lanes
+    lanes: Lanes,
   ): Fiber | null {
     // 【省略代码...】
   }
@@ -1095,7 +1419,7 @@ function createChildReconciler(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     element: ReactElement,
-    lanes: Lanes
+    lanes: Lanes,
   ): Fiber {
     // 【省略代码...】
   }
@@ -1103,7 +1427,7 @@ function createChildReconciler(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     newChild: any,
-    lanes: Lanes
+    lanes: Lanes,
   ): Fiber | null {
     // 【省略代码...】
   }
@@ -1112,7 +1436,7 @@ function createChildReconciler(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
     newChild: any,
-    lanes: Lanes
+    lanes: Lanes,
   ): Fiber | null {
     // This indirection only exists so we can reset `thenableState` at the end.
     // It should get inlined by Closure.
@@ -1121,7 +1445,7 @@ function createChildReconciler(
       returnFiber,
       currentFirstChild,
       newChild,
-      lanes
+      lanes,
     )
     thenableState = null
     // Don't bother to reset `thenableIndexCounter` to 0 because it always gets
@@ -1136,7 +1460,7 @@ function createChildReconciler(
 ![react](./assets/update/update_beginWork4.png)
 ![react](./assets/update/createChildReconciler.png)
 
-下一步进入`reconcileChildFibersImpl`也是`createChildReconciler`内部的方法，通过对 `newChild` 分类进行不同的处理，单独的节点，或者数组也就是多节点通过不同的方法进行处理：
+下一步进入`reconcileChildFibersImpl`也是`createChildReconciler`内部的方法，通过对`newChild`分类进行不同的处理，单独的节点，或者数组也就是多节点通过不同的方法进行处理：
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -1743,7 +2067,7 @@ function reconcileSingleElement(
   returnFiber: Fiber,
   currentFirstChild: Fiber | null,
   element: ReactElement,
-  lanes: Lanes
+  lanes: Lanes,
 ): Fiber {
   const key = element.key
   let child = currentFirstChild
@@ -1770,9 +2094,7 @@ function reconcileSingleElement(
         if (
           child.elementType === elementType ||
           // Keep this check inline so it only runs on the false path:
-          (__DEV__
-            ? isCompatibleFamilyForHotReloading(child, element)
-            : false) ||
+          (__DEV__ ? isCompatibleFamilyForHotReloading(child, element) : false) ||
           // Lazy types should reconcile their resolved type.
           // We need to do this after the Hot Reloading check above,
           // because hot reloading has different semantics than prod because
@@ -1809,7 +2131,7 @@ function reconcileSingleElement(
       element.props.children,
       returnFiber.mode,
       lanes,
-      element.key
+      element.key,
     )
     created.return = returnFiber
     return created
@@ -1850,10 +2172,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     if ((completedWork.flags & Incomplete) === NoFlags) {
       setCurrentDebugFiberInDEV(completedWork)
       let next
-      if (
-        !enableProfilerTimer ||
-        (completedWork.mode & ProfileMode) === NoMode
-      ) {
+      if (!enableProfilerTimer || (completedWork.mode & ProfileMode) === NoMode) {
         // 【completeWork处理当前节点】
         next = completeWork(current, completedWork, renderLanes)
       } else {
@@ -1888,10 +2207,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         return
       }
 
-      if (
-        enableProfilerTimer &&
-        (completedWork.mode & ProfileMode) !== NoMode
-      ) {
+      if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
         // Record the render duration for the fiber that errored.
         stopProfilerTimerIfRunningAndRecordDelta(completedWork, false)
 
@@ -1945,7 +2261,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
 `completeWork`里根据`tag`分类进入不同方法
 
-1. 进入`HostComponent`分支，如果是首次挂载会调用 `createInstance` 创建对应的真实 `DOM` 并赋值给 `workInProgress.stateNode` 属性，但这一次是更新会进入`updateHostComponent`方法；
+1. 进入`HostComponent`分支，如果是首次挂载会调用`createInstance`创建对应的真实`DOM`并赋值给 `workInProgress.stateNode` 属性，但这一次是更新会进入`updateHostComponent`方法；
 2. `updateHostComponent`方法会调用`prepareUpdate`继而调用`diffProperties`去对比新旧 DOM 节点的属性；
    - 处理`onClick`、`onChange`等回调函数的注册
    - 处理`style prop`
@@ -2554,11 +2870,7 @@ function bubbleProperties(completedWork: Fiber) {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function updateHostComponent(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-) {
+function updateHostComponent(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes) {
   pushHostContext(workInProgress)
 
   if (current === null) {
@@ -2704,7 +3016,7 @@ function commitRootImpl(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,
   transitions: Array<Transition> | null,
-  renderPriorityLevel: EventPriority
+  renderPriorityLevel: EventPriority,
 ) {
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
@@ -2750,12 +3062,10 @@ function commitRootImpl(
   // only other reason this optimization exists is because it affects profiling.
   // Reconsider whether this is necessary.
   const subtreeHasEffects =
-    (finishedWork.subtreeFlags &
-      (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
+    (finishedWork.subtreeFlags & (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
     NoFlags
   const rootHasEffect =
-    (finishedWork.flags &
-      (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
+    (finishedWork.flags & (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
     NoFlags
 
   if (subtreeHasEffects || rootHasEffect) {
@@ -2769,10 +3079,7 @@ function commitRootImpl(
     // state of the host tree right before we mutate it. This is where
     // getSnapshotBeforeUpdate is called.
     // 【-----第一步 commitBeforeMutationEffects-----】
-    const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(
-      root,
-      finishedWork
-    )
+    const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(root, finishedWork)
 
     // 【省略代码...】
 
@@ -2825,11 +3132,7 @@ function commitRootImpl(
 }
 
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
-export function commitMutationEffects(
-  root: FiberRoot,
-  finishedWork: Fiber,
-  committedLanes: Lanes
-) {
+export function commitMutationEffects(root: FiberRoot, finishedWork: Fiber, committedLanes: Lanes) {
   inProgressLanes = committedLanes
   inProgressRoot = root
 
@@ -2843,15 +3146,12 @@ export function commitMutationEffects(
 ```
 
 1. `commitBeforeMutationEffects`
-
    - `DOM` 变化之前。主要处理节点标记（`flags`）为`Snapshot`等的`fiber`节点。
 
 2. `commitMutationEffects`
-
    - `DOM` 变化阶段。 主要处理节点标记（`flags`）为`Placement`, `Update`, `Deletion`, `Hydrating`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`destroy`。处理的顺序是`Deletion`、`Placement`、`Update`。
 
 3. `commitLayoutEffects`
-
    - `DOM` 变化后。主要处理节点标记（`flags`）为`Update` , `Callback`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`create`。
 
 ### commitBeforeMutationEffects
@@ -3082,11 +3382,7 @@ function commitBeforeMutationEffectsDeletion(deletion: Fiber) {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
-export function commitMutationEffects(
-  root: FiberRoot,
-  finishedWork: Fiber,
-  committedLanes: Lanes
-) {
+export function commitMutationEffects(root: FiberRoot, finishedWork: Fiber, committedLanes: Lanes) {
   inProgressLanes = committedLanes
   inProgressRoot = root
 
@@ -3832,7 +4128,7 @@ function commitPlacement(finishedWork: Fiber): void {
     default:
       throw new Error(
         "Invalid host parent fiber. This error is likely caused by a bug " +
-          "in React. Please file an issue."
+          "in React. Please file an issue.",
       )
   }
 }
@@ -3842,11 +4138,7 @@ function commitPlacement(finishedWork: Fiber): void {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
-function insertOrAppendPlacementNode(
-  node: Fiber,
-  before: ?Instance,
-  parent: Instance
-): void {
+function insertOrAppendPlacementNode(node: Fiber, before: ?Instance, parent: Instance): void {
   const { tag } = node
   const isHost = tag === HostComponent || tag === HostText
   if (isHost) {
@@ -4223,12 +4515,12 @@ function commitLayoutEffectOnFiber(
 ## 总结
 
 1. 和首次挂载一样`performSyncWorkOnRoot.bind(null, root)`/`performConcurrentWorkOnRoot.bind(null, root)`还是会进入两个关键步骤，一个是**render 过程**`renderRootSync`/`renderRootConcurrent`，一个是**commit 过程**`commitRoot`；
-2. `render`阶段和首次挂载一样，首先调用`prepareFreshStack`做准备工作，复制一份`current`树作为`alternate`，确定`workInProgress`指向的`alternate`节点，然后进入`beginWork`阶段，和初次挂载不同的是，会进 prop 等属性的对比看是否能直接复用旧节点，会对比新旧节点并为节点`flags`打上`Placement`/`Deletion`标签。在遇到多个子节点新旧对比时就是我们通常所说的 diff 算法。不论是首次挂载还是更新，最终会生成新的子`fiber`节点并赋值给`workInProgress.child`，并且作为本次`beginWork`返回值，还会作为下次`performUnitOfWork`执行时`workInProgress`的传参直到`fiber`树底部；
+2. `render`阶段和首次挂载一样，首先调用`prepareFreshStack`做准备工作，复制一份`current`树作为`alternate`，确定`workInProgress`指向的`alternate`节点，然后进入`beginWork`阶段，和初次挂载不同的是，会进行 prop 等属性的对比看是否能直接复用旧节点，会对比新旧节点并为节点`flags`打上`Placement`/`Deletion`标签。在遇到多个子节点新旧对比时就是我们通常所说的 diff 算法。不论是首次挂载还是更新，最终会生成新的子`fiber`节点并赋值给`workInProgress.child`，并且作为本次`beginWork`返回值，还会作为下次`performUnitOfWork`执行时`workInProgress`的传参直到`fiber`树底部；
 3. `completeWork`阶段和首次挂载不同的是，会根据当前节点对应 DOM 是否存在决定要新建 DOM 还是仅对比`props`，对比`props`后如果有更新为这个节点标记`Update`需要更新，在`commit`阶段会进行具体的处理，在向上回溯的过程中会把子节点带有的标记往祖先节点带，所以最终在根节点上`subtreeFlags`属性能知道子节点具体到底需不要更新等；
 4. `commit`过程（`commitRoot`）仍然是三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，在`commitMutationEffects`过程中，主要通过判断每一个`fiber`节点的`flags`属性然后进行具体的 DOM 操作，`commitMutationEffects`阶段会按照删除（下一层）、新增（下一层）、更新（本层）DOM 的顺序进行；
-5. 在`completeWork`阶段对比 `props` 的时候可以看到绑定的事件即使没有改变也是判定为前后是两个不同的事件（FunctionComponent 重新执行生成的事件即使函数体相同在内存中也是两个不同函数对象），这也是后续用 `memo`、`useCallback` 进行优化的原因；
+5. 在`completeWork`阶段对比`props`的时候可以看到绑定的事件即使没有改变也是判定为前后是两个不同的事件（FunctionComponent 重新执行生成的事件即使函数体相同在内存中也是两个不同函数对象），这也是后续用 `memo`、`useCallback` 进行优化的原因；
 
-![react](./assets/update/update.png)
+![react](./assets/update/update.svg)
 ![react](./assets/update/update_fiber.png)
 
 ## 参考资料

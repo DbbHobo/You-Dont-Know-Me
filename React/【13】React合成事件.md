@@ -177,6 +177,7 @@ function addTrappedEventListener(
     // the performance wins from the change. So we emulate
     // the existing behavior manually on the roots now.
     // https://github.com/facebook/react/issues/19651
+    // 【这几个事件单独设置passive为true】
     if (
       domEventName === 'touchstart' ||
       domEventName === 'touchmove' ||
@@ -339,14 +340,14 @@ addEventListener(type, listener, options)
 addEventListener(type, listener, useCapture)
 ```
 
-在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建包装后的事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispathEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
+在注册事件阶段调用的 `addTrappedEventListener` 方法中，会使用 `createEventListenerWrapperWithPriority` 函数来创建包装后的事件回调 `dispatchEvent`。 `createEventListenerWrapperWithPriority` 函数根据事件类型，划分出若干个不同优先级的 `dispatchEvent`。因此，事件回调最终都调用 `dispatchEvent` 方法去派发。最后根据不同的`passive`、`capture`参数添加事件监听。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/ReactDOMEventListener.js】
 export function createEventListenerWrapperWithPriority(
   targetContainer: EventTarget,
   domEventName: DOMEventName,
-  eventSystemFlags: EventSystemFlags
+  eventSystemFlags: EventSystemFlags,
 ): Function {
   const eventPriority = getEventPriority(domEventName)
   let listenerWrapper
@@ -362,12 +363,7 @@ export function createEventListenerWrapperWithPriority(
       listenerWrapper = dispatchEvent
       break
   }
-  return listenerWrapper.bind(
-    null,
-    domEventName,
-    eventSystemFlags,
-    targetContainer
-  )
+  return listenerWrapper.bind(null, domEventName, eventSystemFlags, targetContainer)
 }
 
 export function getEventPriority(domEventName: DOMEventName): EventPriority {
@@ -479,7 +475,7 @@ function dispatchDiscreteEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   container: EventTarget,
-  nativeEvent: AnyNativeEvent
+  nativeEvent: AnyNativeEvent,
 ) {
   const prevTransition = ReactSharedInternals.T
   ReactSharedInternals.T = null
@@ -498,7 +494,7 @@ function dispatchContinuousEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   container: EventTarget,
-  nativeEvent: AnyNativeEvent
+  nativeEvent: AnyNativeEvent,
 ) {
   const prevTransition = ReactSharedInternals.T
   ReactSharedInternals.T = null
@@ -517,7 +513,7 @@ export function dispatchEvent(
   domEventName: DOMEventName,
   eventSystemFlags: EventSystemFlags,
   targetContainer: EventTarget,
-  nativeEvent: AnyNativeEvent
+  nativeEvent: AnyNativeEvent,
 ): void {
   if (!_enabled) {
     return
@@ -530,20 +526,14 @@ export function dispatchEvent(
       eventSystemFlags,
       nativeEvent,
       return_targetInst,
-      targetContainer
+      targetContainer,
     )
     clearIfContinuousEvent(domEventName, nativeEvent)
     return
   }
 
   if (
-    queueIfContinuousEvent(
-      blockedOn,
-      domEventName,
-      eventSystemFlags,
-      targetContainer,
-      nativeEvent
-    )
+    queueIfContinuousEvent(blockedOn, domEventName, eventSystemFlags, targetContainer, nativeEvent)
   ) {
     nativeEvent.stopPropagation()
     return
@@ -552,10 +542,7 @@ export function dispatchEvent(
   // queueing is accumulative.
   clearIfContinuousEvent(domEventName, nativeEvent)
 
-  if (
-    eventSystemFlags & IS_CAPTURE_PHASE &&
-    isDiscreteEventThatRequiresHydration(domEventName)
-  ) {
+  if (eventSystemFlags & IS_CAPTURE_PHASE && isDiscreteEventThatRequiresHydration(domEventName)) {
     while (blockedOn !== null) {
       const fiber = getInstanceFromNode(blockedOn)
       if (fiber !== null) {
@@ -568,7 +555,7 @@ export function dispatchEvent(
           eventSystemFlags,
           nativeEvent,
           return_targetInst,
-          targetContainer
+          targetContainer,
         )
       }
       if (nextBlockedOn === blockedOn) {
@@ -589,7 +576,7 @@ export function dispatchEvent(
     eventSystemFlags,
     nativeEvent,
     null,
-    targetContainer
+    targetContainer,
   )
 }
 ```
@@ -609,13 +596,18 @@ export function dispatchEvent(
 
 触发一个原生事件时，大致的执行流程如下：
 
-1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，回调方法中可以获取到原生事件对象 `nativeEvent`；
+1. 用户操作，原生事件触发后，进入 `dispatchEvent` 回调方法，回调方法中可以获取到一个构造的事件对象 `nativeEvent`；
 2. `findInstanceBlockingEvent` 方法根据该原生事件对象 `nativeEvent` 查找到事件触发所在的 `DOM` 节点和其对应的 `fiber` 节点；
-3. 触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
-4. `dispatchEventsForPlugins`：`extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
-5. `dispatchEventsForPlugins`：最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
+3. `dispatchEventForPluginEventSystem`中确定这个 `DOM` 对应的 `Fiber` 节点真的属于当前处理事件的这个 React Root 节点，而后触发的具体事件和 `fiber` 等信息被派发给插件系统进行处理，插件系统（`ChangeEventPlugin`、`BeforeInputEventPlugin`、`EnterLeaveEventPlugin`等）调用各插件暴露的 `extractEvents` 方法；
+4. `dispatchEventsForPlugins`关键第一步：`extractEvents` 方法中，`accumulateSinglePhaseListeners` 方法从触发事件的节点向上收集 `fiber` 树上监听该相关事件的其他回调函数，构造合成事件并加入到队列 `dispatchQueue` 中；
+5. `dispatchEventsForPlugins`关键第二步：最后调用 `processDispatchQueue` 方法，基于捕获或冒泡阶段的标识，按倒序或顺序执行 `dispatchQueue` 中所有的`listener`事件回调；
 
 `dispatchEvent` => `findInstanceBlockingEvent` + `dispatchEventForPluginEventSystem` => `dispatchEventsForPlugins` => `extractEvents` + `processDispatchQueue`
+
+这里有个调试技巧，在调试合成事件触发的时候我们经常会进入鼠标`move`等事件，如果我们想只监测`click`事件可以：
+
+1. 不要直接点击行号打断点，而是右键点击行号，选择`Add conditional breakpoint`。
+2. 在 Chrome 开发者工具的右侧栏，有一个 `Event Listener Breakpoints` 面板：展开 `Mouse` 分类，勾选 `click`，不要勾选 `mousemove` 或其他选项。
 
 ```ts
 // 【packages/react-dom-bindings/src/events/ReactDOMEventListener.js】
@@ -772,6 +764,7 @@ export function dispatchEventForPluginEventSystem(
   targetContainer: EventTarget,
 ): void {
   let ancestorInst = targetInst;
+  // 【这个 DOM 对应的 Fiber 节点真的属于当前处理事件的这个 React 根节点（Root）吗？】
   if (
     (eventSystemFlags & IS_EVENT_HANDLE_NON_MANAGED_NODE) === 0 &&
     (eventSystemFlags & IS_NON_DELEGATED) === 0
@@ -1346,7 +1339,7 @@ export function accumulateSinglePhaseListeners(
 // 【packages/react-dom-bindings/src/events/DOMPluginEventSystem.js】
 export function processDispatchQueue(
   dispatchQueue: DispatchQueue,
-  eventSystemFlags: EventSystemFlags
+  eventSystemFlags: EventSystemFlags,
 ): void {
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0
   for (let i = 0; i < dispatchQueue.length; i++) {
@@ -1359,7 +1352,7 @@ export function processDispatchQueue(
 function processDispatchQueueItemsInOrder(
   event: ReactSyntheticEvent,
   dispatchListeners: Array<DispatchListener>,
-  inCapturePhase: boolean
+  inCapturePhase: boolean,
 ): void {
   let previousInstance
   if (inCapturePhase) {
@@ -1370,13 +1363,7 @@ function processDispatchQueueItemsInOrder(
         return
       }
       if (__DEV__ && enableOwnerStacks && instance !== null) {
-        runWithFiberInDEV(
-          instance,
-          executeDispatch,
-          event,
-          listener,
-          currentTarget
-        )
+        runWithFiberInDEV(instance, executeDispatch, event, listener, currentTarget)
       } else {
         executeDispatch(event, listener, currentTarget)
       }
@@ -1390,13 +1377,7 @@ function processDispatchQueueItemsInOrder(
         return
       }
       if (__DEV__ && enableOwnerStacks && instance !== null) {
-        runWithFiberInDEV(
-          instance,
-          executeDispatch,
-          event,
-          listener,
-          currentTarget
-        )
+        runWithFiberInDEV(instance, executeDispatch, event, listener, currentTarget)
       } else {
         executeDispatch(event, listener, currentTarget)
       }
@@ -1408,7 +1389,7 @@ function processDispatchQueueItemsInOrder(
 function executeDispatch(
   event: ReactSyntheticEvent,
   listener: Function,
-  currentTarget: EventTarget
+  currentTarget: EventTarget,
 ): void {
   event.currentTarget = currentTarget
   try {
@@ -1530,7 +1511,7 @@ reset.addEventListener("click", () => document.location.reload())
 
 事件触发之后就会进入回调函数`dispatchEvent`，然后进入事件插件派发系统，找到所有注册了的事件回调并有序调用。
 
-![react](./assets/SyntheticEvent/SyntheticEvent.png)
+![react](./assets/SyntheticEvent/SyntheticEvent.svg)
 
 ## 参考资料
 

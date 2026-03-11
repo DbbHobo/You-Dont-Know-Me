@@ -25,6 +25,12 @@ const HooksDispatcherOnRerender: Dispatcher = {
 }
 ```
 
+React19.2新增：
+
+- useActionState
+- useEffectValue
+- useOptimistic
+
 ## Hook 使用的注意事项
 
 1. `Hook` 不能在 `Class` 组件中使用，而是在 `Function Component` 中使用
@@ -215,7 +221,7 @@ function CallbackParent({ id }) {
     (sonName) => {
       console.log(sonName)
     },
-    [id]
+    [id],
   )
   return (
     <div>
@@ -239,7 +245,7 @@ const memoizedCallback = useCallback(() => {
 
 ## hook 调用时机
 
-`render`阶段在`mountIndeterminateComponent`或`updateFunctionComponent`方法中会调用`renderWithHooks`再带着`renderWithHooks`的返回内容也就是函数组件 JSX 对应的`React-element`进入`reconcileChildren`过程，因为`renderWithHooks`会调用该 `Fuction Component` 组件的 `function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
+`render`阶段在`mountIndeterminateComponent`或`updateFunctionComponent`方法中会调用`renderWithHooks`再带着`renderWithHooks`的返回内容也就是函数组件 JSX 对应的`React-element`进入`reconcileChildren`过程，因为`renderWithHooks`会调用该`Fuction Component`组件的`function`，调用过程中就会调用用户写的 `useEffect`等 `hook`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -249,7 +255,7 @@ export function renderWithHooks<Props, SecondArg>(
   Component: (p: Props, arg: SecondArg) => any,
   props: Props,
   secondArg: SecondArg,
-  nextRenderLanes: Lanes
+  nextRenderLanes: Lanes,
 ): any {
   renderLanes = nextRenderLanes
   currentlyRenderingFiber = workInProgress
@@ -347,12 +353,7 @@ export function renderWithHooks<Props, SecondArg>(
     // In development, components are invoked twice to help detect side effects.
     setIsStrictModeForDevtools(true)
     try {
-      children = renderWithHooksAgain(
-        workInProgress,
-        Component,
-        props,
-        secondArg
-      )
+      children = renderWithHooksAgain(workInProgress, Component, props, secondArg)
     } finally {
       setIsStrictModeForDevtools(false)
     }
@@ -638,7 +639,7 @@ export type Fiber = {
 
 ### fiber.updateQueue
 
-存储的是`fiber`后续需要“触发更新”的事件，更新事件直接通过`next`链接，`useEffect`创建的`effect`实例也会存储在这个属性。
+存储的是组件层级的`fiber`后续需要“触发更新”的事件，更新事件直接通过`next`链接，`useEffect`创建的`effect`实例也会存储在这个属性。
 
 ### hook.memoizedState
 
@@ -993,11 +994,7 @@ function SearchBox() {
 
   return (
     <div>
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="输入搜索内容"
-      />
+      <input value={input} onChange={(e) => setInput(e.target.value)} placeholder='输入搜索内容' />
       <ul>
         {results.map((item) => (
           <li key={item.id}>{item.name}</li>
@@ -1057,6 +1054,29 @@ function WindowSize() {
 
   return <div>窗口宽度（节流后）：{throttledSize}px</div>
 }
+```
+
+## 调试技巧
+
+```js
+// 写了一个方法用于调试监测fiberNode.flags
+window.parseFlags = (flags) => {
+  const flagMap = {
+    Placement: 0b00000000000000000000000010,
+    Deletion: 0b00000000000000000000001000,
+    Ref: 0b00000000000000001000000000,
+    Passive: 0b00000000000000100000000000, // useEffect
+    PassiveStatic: 0b00100000000000000000000000, // useEffect
+    Update: 0b00000000000000000000000100, // useLayoutEffect
+    LayoutStatic: 0b00010000000000000000000000, // useLayoutEffect
+  }
+  return (
+    Object.keys(flagMap)
+      .filter((name) => (flags & flagMap[name]) !== 0)
+      .join(" | ") || "No Flags"
+  )
+}
+// 在浏览器watch监测window.parseFlags(workInProgress.flags)即可打印出到底有哪些flags
 ```
 
 ## 参考资料

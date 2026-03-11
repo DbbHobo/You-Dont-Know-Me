@@ -1,4 +1,4 @@
-# `<Suspense>` & lazy
+# `<Suspense>` & lazy & use
 
 ## Suspense 原理
 
@@ -66,12 +66,11 @@ Only Suspense-enabled data sources will activate the `<Suspense>` component. The
       function App() {
         const [data, setData] = React.useState(null)
         return (
-          <div className="app">
+          <div className='app'>
             <button
               onClick={() => {
                 setData(getData("Hello HOBO~"))
-              }}
-            >
+              }}>
               获取数据
             </button>
             <React.Suspense fallback={<Loading />}>
@@ -94,11 +93,7 @@ Only Suspense-enabled data sources will activate the `<Suspense>` component. The
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
+function beginWork(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes): Fiber | null {
   if (current !== null) {
     // 【省略代码...】
   } else {
@@ -124,10 +119,10 @@ function beginWork(
 
 `updateSuspenseComponent`方法内容如下：
 
-1. 首先确定`showFallback`表示是否显示`fallback`，取决于`didSuspend`这个变量，最终取决于`fiber`是否标识有`DidCapture`这个 flag；
+1. 首先确定`showFallback`表示是否显示`fallback`，默认值是 false，取决于`didSuspend`这个变量，实质上取决于`fiber`是否标识有`DidCapture`这个 flag；
 2. 根据`current`是否存在，走首次渲染的情况或者更新的情况；
-3. 如果是首次渲染，根据`showFallback`是否显示`fallback`，是的话调用`mountSuspenseFallbackChildren`/`mountSuspenseOffscreenState`将`fallback fiber`和`offScreen fiber`都构造了，否则调用`mountSuspensePrimaryChildren`仅构造`primary fiber`即可；
-4. 如果是更新阶段，根据`showFallback`是否显示`fallback`，是的话调用`updateSuspenseFallbackChildren`，否则调用`updateSuspensePrimaryChildren`；
+3. 如果是**首次渲染**，根据`showFallback`是否显示`fallback`，是的话调用`mountSuspenseFallbackChildren`/`mountSuspenseOffscreenState`将`fallback fiber`和`offScreen fiber`都构造了，否则调用`mountSuspensePrimaryChildren`仅构造`primary fiber`即可；
+4. 如果是**更新阶段**，根据`showFallback`是否显示`fallback`，是的话调用`updateSuspenseFallbackChildren`，否则调用`updateSuspensePrimaryChildren`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -138,12 +133,7 @@ function updateSuspenseComponent(
 ) {
   const nextProps = workInProgress.pendingProps;
 
-  // This is used by DevTools to force a boundary to suspend.
-  if (__DEV__) {
-    if (shouldSuspend(workInProgress)) {
-      workInProgress.flags |= DidCapture;
-    }
-  }
+  // 【省略代码...】
 
   // 【showFallback控制是显示fallback内容还是正式的内容】
   let showFallback = false;
@@ -307,7 +297,7 @@ function updateSuspenseComponent(
         renderLanes,
       );
       const primaryChildFragment: Fiber = (workInProgress.child: any);
-      // 【创建或更新OffScreen fiber】
+      // 【创建或更新Offscreen fiber】
       const prevOffscreenState: OffscreenState | null = (current.child: any)
         .memoizedState;
       primaryChildFragment.memoizedState =
@@ -372,6 +362,14 @@ function updateSuspenseComponent(
 ```
 
 ### 构造`fallback fiber`和`primaryChild fiber`(render 阶段)
+
+React 采用了一种“乐观渲染”的策略：它总是优先尝试渲染 `primaryChild`，只有在发现子组件“挂起”（抛出 `Promise`）时，才会回退去处理 `fallback`。
+
+在 `render` 阶段（`beginWork`），React 的逻辑如下：
+
+1. 首选 `primaryChild`：React 默认假设你的应用是正常的，它会先尝试为 `primaryChild` 创建或更新 `Fiber` 节点，首先构造一个`offscreen fiber`然后进一步构造内部内容的fiber，此时就可能会抛出`Promise`。
+2. 触发异常：如果 `primaryChild` 在执行过程中调用了 `use` 或 `lazy` 并抛出了一个 `Promise`，React 的执行流会跳出当前的 `render` 循环，进入 `handleError` 逻辑。
+3. 降级 `fallback`：只有当 `primaryChild` 确定无法完成渲染（即处于 `didSuspend` 状态）时，React 才会回头去构造 `fallback` 的 `Fiber` 节点。
 
 判断首次渲染还是更新根据`current`是否存在，判断到底显示`fallback`还是`primaryChild`主要是判断`workInProgress.flags & DidCapture`以及`shouldRemainOnFallback`方法如下：
 
@@ -441,6 +439,8 @@ export function hasSuspenseListContext(
 
 #### 首次渲染-先显示 fallback 再显示 primaryChild
 
+React 总是优先尝试渲染 `primaryChild`，只有在发现子组件“挂起”（抛出 `Promise`，进入`handleError`）时，才会回退去处理 `fallback`。
+
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 // 【updateSuspenseComponent】
@@ -456,8 +456,10 @@ primaryChildFragment.memoizedState = mountSuspenseOffscreenState(renderLanes);
 return fallbackFragment;
 ```
 
-1. 构造包裹`primaryChild`的`OffScreen fiber`；
-2. 构造包裹`fallback`的`Fragment fiber`；
+关键入口：
+
+1. **`mountSuspenseFallbackChildren`**构造包裹`fallback fiber`的壳`<Fragment>`；
+2. **`mountSuspenseOffscreenState`**构造包裹`primaryChild fiber`的壳`<OffscreenComponent>`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -465,7 +467,7 @@ function mountSuspenseFallbackChildren(
   workInProgress: Fiber,
   primaryChildren: $FlowFixMe,
   fallbackChildren: $FlowFixMe,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   const mode = workInProgress.mode
   const progressedPrimaryFragment: Fiber | null = workInProgress.child
@@ -477,10 +479,7 @@ function mountSuspenseFallbackChildren(
 
   let primaryChildFragment
   let fallbackChildFragment
-  if (
-    (mode & ConcurrentMode) === NoMode &&
-    progressedPrimaryFragment !== null
-  ) {
+  if ((mode & ConcurrentMode) === NoMode && progressedPrimaryFragment !== null) {
     // In legacy mode, we commit the primary tree as if it successfully
     // completed, even though it's in an inconsistent state.
     primaryChildFragment = progressedPrimaryFragment
@@ -498,26 +497,12 @@ function mountSuspenseFallbackChildren(
       primaryChildFragment.treeBaseDuration = 0
     }
 
-    fallbackChildFragment = createFiberFromFragment(
-      fallbackChildren,
-      mode,
-      renderLanes,
-      null
-    )
+    fallbackChildFragment = createFiberFromFragment(fallbackChildren, mode, renderLanes, null)
   } else {
-    // 【primaryChild由OffScreen fiber包裹】
-    primaryChildFragment = mountWorkInProgressOffscreenFiber(
-      primaryChildProps,
-      mode,
-      NoLanes
-    )
+    // 【primaryChild由Offscreen fiber包裹】
+    primaryChildFragment = mountWorkInProgressOffscreenFiber(primaryChildProps, mode, NoLanes)
     // 【fallback由Fragment fiber包裹】
-    fallbackChildFragment = createFiberFromFragment(
-      fallbackChildren,
-      mode,
-      renderLanes,
-      null
-    )
+    fallbackChildFragment = createFiberFromFragment(fallbackChildren, mode, renderLanes, null)
   }
 
   primaryChildFragment.return = workInProgress
@@ -535,7 +520,7 @@ function mountSuspenseOffscreenState(renderLanes: Lanes): OffscreenState {
 }
 ```
 
-结束 beginWork 阶段后，`fallback`对应的 fiber 结构已经是连内容完整的，而`primaryChild`仅仅有`OffScreen fiber`这个节点。此时走到`commit`阶段，`primaryChild`会根据之前是隐藏还是显示决定是不是要翻转状态等，然后更新对应的`stateNode`节点，下一步就进入`fallback`的`commit`阶段直到渲染出`fallback`。
+结束 `beginWork` 阶段后，`fallback`对应的 fiber 结构已经是连内容完整的，而`primaryChild`仅仅有`<OffscreenComponent>`这个节点。此时走到`commit`阶段，`primaryChild`会根据之前是隐藏还是显示决定是不是要翻转状态等，然后更新对应的`stateNode`节点，下一步就进入`fallback`的`commit`阶段直到渲染出`fallback`。
 
 #### 首次渲染-直接显示 primaryChild
 
@@ -543,27 +528,27 @@ function mountSuspenseOffscreenState(renderLanes: Lanes): OffscreenState {
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 // 【updateSuspenseComponent】
 pushPrimaryTreeSuspenseHandler(workInProgress)
-return mountSuspensePrimaryChildren(
-  workInProgress,
-  nextPrimaryChildren,
-  renderLanes
-)
+return mountSuspensePrimaryChildren(workInProgress, nextPrimaryChildren, renderLanes)
 ```
 
-1. 改造`pendingProps`，添加了`mode`可以是`visible`或者`hidden`，相当于为`suspense`组件内部内容单独构造了一种`pendingProps`叫`OffscreenProps`；
+关键入口：
+
+**`mountSuspensePrimaryChildren`** 方法进入 `mountWorkInProgressOffscreenFiber` 方法直接构造`<OffscreenComponent>`
+
+1. 改造`pendingProps`，添加了`mode`可以是`visible`或者`hidden`，相当于为`<SuspenseComponent>`组件内部内容单独构造了一种`pendingProps`叫`OffscreenProps`；
 2. 调用`mountWorkInProgressOffscreenFiber`，实际上进入`createFiberFromOffscreen`方法；
-3. `createFiberFromOffscreen`方法实际就是创建`fiber`，和普通节点`fiber`不同的是`elementType`是`REACT_OFFSCREEN_TYPE`、`stateNode`并非`DOM`而是一个叫`primaryChildInstance`对象、`pendingProps`是第一步中构造的`OffscreenProps`；
-4. 完成以上内容返回`updateSuspenseComponent`，此时`suspense`包裹的正式内容的“壳”对应`fiber`已构造好类型是`REACT_OFFSCREEN_TYPE`，下一步`beginWork`就进入这个“壳”`fiber`的`beginWork`过程；
+3. `createFiberFromOffscreen`方法实际就是创建`<OffscreenComponent>`节点，和普通节点`fiber`不同的是`elementType`是`REACT_OFFSCREEN_TYPE`、`stateNode`并非`DOM`而是一个叫`primaryChildInstance`对象、`pendingProps`是第一步中构造的`OffscreenProps`；
+4. 完成以上内容返回`updateSuspenseComponent`，此时需要显示的正式内容的“壳”对应`<OffscreenComponent>`已构造好类型是`REACT_OFFSCREEN_TYPE`，下一步`beginWork`就进入这个“壳”`<OffscreenComponent>`的`beginWork`过程；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
 function mountSuspensePrimaryChildren(
   workInProgress: Fiber,
   primaryChildren: $FlowFixMe,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   const mode = workInProgress.mode
-  // 【包裹改造常规的pendingProps，添加了mode，称之为OffscreenProps】
+  // 【改造常规的pendingProps，添加了mode，称之为OffscreenProps】
   const primaryChildProps: OffscreenProps = {
     mode: "visible",
     children: primaryChildren,
@@ -572,7 +557,7 @@ function mountSuspensePrimaryChildren(
   const primaryChildFragment = mountWorkInProgressOffscreenFiber(
     primaryChildProps,
     mode,
-    renderLanes
+    renderLanes,
   )
   primaryChildFragment.return = workInProgress
   workInProgress.child = primaryChildFragment
@@ -582,7 +567,7 @@ function mountSuspensePrimaryChildren(
 function mountWorkInProgressOffscreenFiber(
   offscreenProps: OffscreenProps,
   mode: TypeOfMode,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   // The props argument to `createFiberFromOffscreen` is `any` typed, so we use
   // this wrapper function to constrain it.
@@ -593,7 +578,7 @@ export function createFiberFromOffscreen(
   pendingProps: OffscreenProps,
   mode: TypeOfMode,
   lanes: Lanes,
-  key: null | string
+  key: null | string,
 ): Fiber {
   // 【构造fiber，pendingProps是之前经过改造的OffscreenProps】
   const fiber = createFiber(OffscreenComponent, pendingProps, key, mode)
@@ -616,7 +601,7 @@ export function createFiberFromOffscreen(
 }
 ```
 
-1. 此时`suspense fiber`有了一个`child`是`offScreen fiber`，继续进入`REACT_OFFSCREEN_TYPE`类型的`fiber`的`beginWork`过程，此时会进入`updateOffscreenComponent`；
+1. 此时`<SuspenseComponent>`有了一个`child`是`<OffscreenComponent>`，继续进入`REACT_OFFSCREEN_TYPE`类型的`<OffscreenComponent>`的`beginWork`过程，此时会进入`updateOffscreenComponent`；
 2. 提取出`pendingProps`，这一次的`nextChild`是`pendingProps.children`属性，因为这个`pendingProps`是前面改造过的，同时还要用`pendingProps`的`mode`属性判断内容到底要不要显示；
 3. 最后和其他`fiber`一样进入`reconcileChildren`进行子内容的`fiber`构造；
 
@@ -645,7 +630,7 @@ function updateOffscreenComponent(
       nextProps.mode === 'unstable-defer-without-hiding') ||
     nextIsDetached
   ) {
-    // 【OffScreen fiber需要隐藏的情况】
+    // 【Offscreen fiber需要隐藏的情况】
     // Rendering a hidden tree.
 
     const didSuspend = (workInProgress.flags & DidCapture) !== NoFlags;
@@ -759,7 +744,7 @@ function updateOffscreenComponent(
       pushOffscreenSuspenseHandler(workInProgress);
     }
   } else {
-    // 【OffScreen fiber需要显示的情况】
+    // 【Offscreen fiber需要显示的情况】
     // Rendering a visible tree.
     if (prevState !== null) {
       // 【之前fiber就构造好了，隐藏=》显示】
@@ -812,7 +797,7 @@ function updateOffscreenComponent(
     }
   }
 
-  // 【构造OffScreen内容的fiber】
+  // 【构造Offscreen内容的fiber】
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   return workInProgress.child;
 }
@@ -854,14 +839,16 @@ primaryChildFragment.memoizedState =
 return fallbackChildFragment;
 ```
 
-这一步是需要显示`fallback`的情况，不过在`updateSuspenseFallbackChildren`方法中，正式内容的`fiber`和`fallback`的`fiber`都会被创建/更新，如果`currentFallbackChildFragment`存在的话复用然后更新生成`workInProgress fallback fiber`，不存在的话就创建一个全新的`workInProgress fallback fiber`并打上`Placement`标记。最后`workInProgress`的`child`指向`primaryChildFragment`，`primaryChildFragment`的`sibling`指向`fallbackChildFragment`。可以看出，在`suspense`范围这个`fiber`树是这样的，`suspense fiber`的直接子节点是`primaryChild fiber`,`primaryChild fiber`的兄弟节点是`fallback fiber`，两者在同一层级，但是会先显示`fallback fiber`再显示`primaryChild fiber`。最后会返回`fallback fiber`节点。
+关键入口：
 
-`suspense fiber`
+**`updateSuspenseFallbackChildren`** 构造`<Fragment>` + **`mountSuspenseOffscreenState`** / **`updateSuspenseOffscreenState`** 构造或更新`<OffscreenComponent>`
 
-      ||
+这一步是需要显示`fallback`的情况，不过在`updateSuspenseFallbackChildren`方法中，正式内容的`fiber`和`fallback`的`fiber`都会被创建/更新，如果`currentFallbackChildFragment`存在的话复用然后更新生成`workInProgress fallback fiber`，不存在的话就创建一个全新的`workInProgress fallback fiber`并打上`Placement`标记。最后`workInProgress`的`child`指向`<OffscreenComponent>`，`<OffscreenComponent>`的`sibling`指向`fallbackChildFragment`。可以看出，在`<SuspenseComponent>`范围这个`fiber`树是这样的，`<SuspenseComponent>`的直接子节点是`<OffscreenComponent>`,`<OffscreenComponent>`的兄弟节点是`<Fragment>`，两者在同一层级，但是会先显示`fallback fiber`再显示`primaryChild fiber`。
 
-      🔽
-
+`<SuspenseComponent>`
+||
+🔽
+`<OffscreenComponent>` => `<Fragment>`
 `primaryChild fiber` => `fallback fiber`
 
 ```ts
@@ -878,6 +865,7 @@ function updateSuspenseFallbackChildren(
   const currentFallbackChildFragment: Fiber | null =
     currentPrimaryChildFragment.sibling;
 
+  // 【改造常规的pendingProps，添加了mode，称之为OffscreenProps，用于后续构造Offscreen子内容的props】
   const primaryChildProps: OffscreenProps = {
     mode: 'hidden',
     children: primaryChildren,
@@ -973,13 +961,17 @@ const primaryChildFragment = updateSuspensePrimaryChildren(
   current,
   workInProgress,
   nextPrimaryChildren,
-  renderLanes
+  renderLanes,
 )
 workInProgress.memoizedState = null
 return primaryChildFragment
 ```
 
-`updateSuspensePrimaryChildren`主要是更新阶段构造`Suspense`正式内容的`fiber`，会在`current fiber`的基础上进行调整。完成后同样返回`updateSuspenseComponent`，此时`suspense`包裹的正式内容的“壳”对应`fiber`已更新，下一步`beginWork`就进入这个“壳”`fiber`的`beginWork`过程也就会进入`updateOffscreenComponent`：
+关键入口：
+
+**`updateSuspensePrimaryChildren`** 更新`<OffscreenComponent>`
+
+`updateSuspensePrimaryChildren`主要是更新阶段构造`<SuspenseComponent>`正式内容的`fiber`，会在`current fiber`的基础上进行调整。完成后同样返回`updateSuspenseComponent`，此时`<SuspenseComponent>`包裹的正式内容的“壳”对应`<OffscreenComponent>`已更新，下一步`beginWork`就进入这个“壳”`<OffscreenComponent>`的`beginWork`过程也就会进入`updateOffscreenComponent`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -1141,7 +1133,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
 
 ### 先显示 fallback 然后切换到 primaryChild 原理
 
-无论是在首次渲染还是更新阶段，先显示`fallback`再显示`primaryChild`的流程是何时如何进行转变的呢？我们可以先看`renderRootSync`/`renderRootConcurrent`：
+无论是在首次渲染还是更新阶段，先显示`fallback`再显示`primaryChild`的流程是何时如何进行转变的呢？我们可以先看`renderRootSync`和`renderRootConcurrent`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1158,10 +1150,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
   outer: do {
     try {
       // 【workInProgressSuspendedReason判断suspense组件状态】
-      if (
-        workInProgressSuspendedReason !== NotSuspended &&
-        workInProgress !== null
-      ) {
+      if (workInProgressSuspendedReason !== NotSuspended && workInProgress !== null) {
         // The work loop is suspended. During a synchronous render, we don't
         // yield to the main thread. Immediately unwind the stack. This will
         // trigger either a fallback or an error boundary.
@@ -1339,7 +1328,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 }
 ```
 
-`workLoopSync`/`workLoopConcurrent`包裹在一个`try`、`catch`中，`catch`中会执行一个方法`handleThrow`，其实这个方法就是确定`workInProgressSuspendedReason`的方法。因为我们在`workLoopSync`/`workLoopConcurrent`过程中遇到组件有“异常”抛出可能就是遇到`Suspense`组件的正式内容抛出，但是也不排除有程序上的其他错误。用例中我们是手动写了抛出`Promise`，在`render`这个`Child`组件过程中我们就会抛出`Promise`，因此我们在`do while`循环`workLoopSync`/`workLoopConcurrent`的过程中用`catch`去捕捉这个异常，然后判断`Suspense`组件状态。除此之外，例如`beginWork`过程中同样也可能抛出异常如下：
+可以看到`workLoopSync`/`workLoopConcurrent`包裹在一个`try`、`catch`中，`catch`中会执行一个方法`handleError`，其实这个方法就是确定`workInProgressSuspendedReason`的方法。因为我们在`workLoopSync`/`workLoopConcurrent`过程中遇到组件有“异常”抛出可能就是遇到`Suspense`组件的正式内容抛出，但是也不排除有程序上的其他错误。用例中我们是手动写了抛出`Promise`，在`render`这个`Child`组件过程中我们就会抛出`Promise`，因此我们在`do while`循环`workLoopSync`/`workLoopConcurrent`的过程中用`catch`去捕捉这个异常，然后判断`<Suspense>`组件状态。除此之外，例如`beginWork`过程中同样也可能抛出异常如下：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1353,10 +1342,7 @@ if (__DEV__ && replayFailedUnitOfWorkWithInvokeGuardedCallback) {
 
     // Before entering the begin phase, copy the work-in-progress onto a dummy
     // fiber. If beginWork throws, we'll use this to reset the state.
-    const originalWorkInProgressCopy = assignFiberPropertiesInDEV(
-      dummyFiber,
-      unitOfWork
-    )
+    const originalWorkInProgressCopy = assignFiberPropertiesInDEV(dummyFiber, unitOfWork)
     try {
       return originalBeginWork(current, unitOfWork, lanes)
     } catch (originalError) {
@@ -1382,443 +1368,163 @@ if (__DEV__ && replayFailedUnitOfWorkWithInvokeGuardedCallback) {
 }
 ```
 
-每当前被`suspended`的组件`fiber`的`beginWork`完成之后，接下来进入到除了抛出异常的方法`handleThrow`：
+每当前被`suspended`的组件`fiber`的`beginWork`完成之后，接下来进入到处理抛出异常的方法`handleError`：
 
-1. `handleThrow`首先判断`error`类型，本例中`Promise`进入普通`error`处理分支；
+1. `handleError`首先判断`error`类型，本例中`Promise`进入普通`error`处理分支；
 2. `error.then`如果是方法（`thenable`）则`isWakeable`为`true`，`workInProgressSuspendedReason`就设置为`SuspendedOnDeprecatedThrowPromise`；
-3. 然后分别调用`markComponentRenderStopped()`、`markComponentSuspended()`两个方法，表示当前组件 render 暂停、当前组件被 suspened 了(要等 Promise 返回)的状态；
-4. 最后继续回到`renderRootSync`/`renderRootConcurrent`，因为`workInProgressSuspendedReason !== NotSuspended`所以会调用`unwindSuspendedUnitOfWork(unitOfWork, thrownValue);`；
+3. 然后分别调用`markComponentRenderStopped()`、`markComponentSuspended()`两个方法，表示当前组件节点 render 暂停了、当前组件节点被 suspened 了(要等 Promise 返回)的状态；
+4. 然后继续回到`renderRootSync`/`renderRootConcurrent`中组件节点的 `completeUnitOfWork` 过程，因为`workInProgressSuspendedReason !== NotSuspended`所以会进入`throwAndUnwindWorkLoop(unitOfWork, thrownValue)`方法；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
-function handleThrow(root: FiberRoot, thrownValue: any): void {
-  // A component threw an exception. Usually this is because it suspended, but
-  // it also includes regular program errors.
-  //
-  // We're either going to unwind the stack to show a Suspense or error
-  // boundary, or we're going to replay the component again. Like after a
-  // promise resolves.
-  //
-  // Until we decide whether we're going to unwind or replay, we should preserve
-  // the current state of the work loop without resetting anything.
-  //
-  // If we do decide to unwind the stack, module-level variables will be reset
-  // in resetSuspendedWorkLoopOnUnwind.
+function handleError(root, thrownValue): void {
+  do {
+    let erroredWork = workInProgress
+    try {
+      // Reset module-level state that was set during the render phase.
+      resetContextDependencies()
+      resetHooksAfterThrow()
+      resetCurrentDebugFiberInDEV()
+      // TODO: I found and added this missing line while investigating a
+      // separate issue. Write a regression test using string refs.
+      ReactCurrentOwner.current = null
 
-  // These should be reset immediately because they're only supposed to be set
-  // when React is executing user code.
-  resetHooksAfterThrow();
-  resetCurrentDebugFiberInDEV();
-  ReactCurrentOwner.current = null;
-
-  if (thrownValue === SuspenseException) {
-    // This is a special type of exception used for Suspense. For historical
-    // reasons, the rest of the Suspense implementation expects the thrown value
-    // to be a thenable, because before `use` existed that was the (unstable)
-    // API for suspending. This implementation detail can change later, once we
-    // deprecate the old API in favor of `use`.
-    thrownValue = getSuspendedThenable();
-    workInProgressSuspendedReason = shouldAttemptToSuspendUntilDataResolves()
-      ? SuspendedOnData
-      : SuspendedOnImmediate;
-  } else if (thrownValue === SelectiveHydrationException) {
-    // An update flowed into a dehydrated boundary. Before we can apply the
-    // update, we need to finish hydrating. Interrupt the work-in-progress
-    // render so we can restart at the hydration lane.
-    //
-    // The ideal implementation would be able to switch contexts without
-    // unwinding the current stack.
-    //
-    // We could name this something more general but as of now it's the only
-    // case where we think this should happen.
-    workInProgressSuspendedReason = SuspendedOnHydration;
-  } else {
-    // This is a regular error.
-    const isWakeable =
-      thrownValue !== null &&
-      typeof thrownValue === 'object' &&
-      typeof thrownValue.then === 'function';
-
-    workInProgressSuspendedReason = isWakeable
-      ? // A wakeable object was thrown by a legacy Suspense implementation.
-        // This has slightly different behavior than suspending with `use`.
-        SuspendedOnDeprecatedThrowPromise
-      : // This is a regular error. If something earlier in the component already
-        // suspended, we must clear the thenable state to unblock the work loop.
-        SuspendedOnError;
-  }
-
-  workInProgressThrownValue = thrownValue;
-
-  const erroredWork = workInProgress;
-  if (erroredWork === null) {
-    // This is a fatal error
-    workInProgressRootExitStatus = RootFatalErrored;
-    workInProgressRootFatalError = thrownValue;
-    return;
-  }
-
-  if (enableProfilerTimer && erroredWork.mode & ProfileMode) {
-    // Record the time spent rendering before an error was thrown. This
-    // avoids inaccurate Profiler durations in the case of a
-    // suspended render.
-    stopProfilerTimerIfRunningAndRecordDelta(erroredWork, true);
-  }
-
-  if (enableSchedulingProfiler) {
-    markComponentRenderStopped();
-    switch (workInProgressSuspendedReason) {
-      case SuspendedOnError: {
-        markComponentErrored(
-          erroredWork,
-          thrownValue,
-          workInProgressRootRenderLanes,
-        );
-        break;
+      if (erroredWork === null || erroredWork.return === null) {
+        // Expected to be working on a non-root fiber. This is a fatal error
+        // because there's no ancestor that can handle it; the root is
+        // supposed to capture all errors that weren't caught by an error
+        // boundary.
+        workInProgressRootExitStatus = RootFatalErrored
+        workInProgressRootFatalError = thrownValue
+        // Set `workInProgress` to null. This represents advancing to the next
+        // sibling, or the parent if there are no siblings. But since the root
+        // has no siblings nor a parent, we set it to null. Usually this is
+        // handled by `completeUnitOfWork` or `unwindWork`, but since we're
+        // intentionally not calling those, we need set it here.
+        // TODO: Consider calling `unwindWork` to pop the contexts.
+        workInProgress = null
+        return
       }
-      case SuspendedOnData:
-      case SuspendedOnImmediate:
-      case SuspendedOnDeprecatedThrowPromise:
-      case SuspendedAndReadyToContinue: {
-        const wakeable: Wakeable = (thrownValue: any);
-        markComponentSuspended(
-          erroredWork,
-          wakeable,
-          workInProgressRootRenderLanes,
-        );
-        break;
+
+      // 【省略代码...】
+      // 【进入对抛出内容的处理逻辑】
+      throwException(
+        root,
+        erroredWork.return,
+        erroredWork,
+        thrownValue,
+        workInProgressRootRenderLanes,
+      )
+      completeUnitOfWork(erroredWork)
+    } catch (yetAnotherThrownValue) {
+      // Something in the return path also threw.
+      thrownValue = yetAnotherThrownValue
+      if (workInProgress === erroredWork && erroredWork !== null) {
+        // If this boundary has already errored, then we had trouble processing
+        // the error. Bubble it to the next boundary.
+        erroredWork = erroredWork.return
+        workInProgress = erroredWork
+      } else {
+        erroredWork = workInProgress
       }
-      case SuspendedOnHydration: {
-        // This is conceptually like a suspend, but it's not associated with
-        // a particular wakeable. DevTools doesn't seem to care about this case,
-        // currently. It's similar to if the component were interrupted, which
-        // we don't mark with a special function.
-        break;
-      }
+      continue
     }
-  }
-}
-
-function markComponentSuspended(
-  fiber: Fiber,
-  wakeable: Wakeable,
-  lanes: Lanes,
-): void {
-  if (isProfiling || supportsUserTimingV3) {
-    const eventType = wakeableIDs.has(wakeable) ? 'resuspend' : 'suspend';
-    const id = getWakeableID(wakeable);
-    const componentName = getDisplayNameForFiber(fiber) || 'Unknown';
-    const phase = fiber.alternate === null ? 'mount' : 'update';
-
-    // Following the non-standard fn.displayName convention,
-    // frameworks like Relay may also annotate Promises with a displayName,
-    // describing what operation/data the thrown Promise is related to.
-    // When this is available we should pass it along to the Timeline.
-    const displayName = (wakeable: any).displayName || '';
-
-    let suspenseEvent: SuspenseEvent | null = null;
-    if (isProfiling) {
-      // TODO (timeline) Record and cache component stack
-      suspenseEvent = {
-        componentName,
-        depth: 0,
-        duration: 0,
-        id: `${id}`,
-        phase,
-        promiseName: displayName,
-        resolution: 'unresolved',
-        timestamp: getRelativeTime(),
-        type: 'suspense',
-        warning: null,
-      };
-
-      if (currentTimelineData) {
-        currentTimelineData.suspenseEvents.push(suspenseEvent);
-      }
-    }
-
-    if (supportsUserTimingV3) {
-      markAndClear(
-        `--suspense-${eventType}-${id}-${componentName}-${phase}-${lanes}-${displayName}`,
-      );
-    }
-
-    wakeable.then(
-      () => {
-        if (suspenseEvent) {
-          suspenseEvent.duration =
-            getRelativeTime() - suspenseEvent.timestamp;
-          suspenseEvent.resolution = 'resolved';
-        }
-
-        if (supportsUserTimingV3) {
-          markAndClear(`--suspense-resolved-${id}-${componentName}`);
-        }
-      },
-      () => {
-        if (suspenseEvent) {
-          suspenseEvent.duration =
-            getRelativeTime() - suspenseEvent.timestamp;
-          suspenseEvent.resolution = 'rejected';
-        }
-
-        if (supportsUserTimingV3) {
-          markAndClear(`--suspense-rejected-${id}-${componentName}`);
-        }
-      },
-    );
-  }
+    // Return to the normal work loop.
+    return
+  } while (true)
 }
 ```
 
 ![react](./assets/Suspense/suspense9.png)
 ![react](./assets/Suspense/suspense10.png)
 
-可以看到每次在进入`workLoopSync`/`workLoopConcurrent`工作之前，会对之前的`workInProgressSuspendedReason`状态进行一个判断，其实主要就是监测`Suspense`组件包裹的异步内容是否有状态改变，前面`workInProgressSuspendedReason`已经设置为`SuspendedOnDeprecatedThrowPromise`，所以进入`unwindSuspendedUnitOfWork`这个方法：
+随后进入`throwException`方法：
 
-```ts
-type SuspendedReason = 0 | 1 | 2 | 3 | 4 | 5 | 6
-const NotSuspended: SuspendedReason = 0
-const SuspendedOnError: SuspendedReason = 1
-const SuspendedOnData: SuspendedReason = 2
-const SuspendedOnImmediate: SuspendedReason = 3
-const SuspendedOnDeprecatedThrowPromise: SuspendedReason = 4
-const SuspendedAndReadyToContinue: SuspendedReason = 5
-const SuspendedOnHydration: SuspendedReason = 6
-
-// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
-function unwindSuspendedUnitOfWork(unitOfWork: Fiber, thrownValue: mixed) {
-  // This is a fork of performUnitOfWork specifcally for unwinding a fiber
-  // that threw an exception.
-  //
-  // Return to the normal work loop. This will unwind the stack, and potentially
-  // result in showing a fallback.
-  resetSuspendedWorkLoopOnUnwind()
-
-  const returnFiber = unitOfWork.return
-  if (returnFiber === null || workInProgressRoot === null) {
-    // Expected to be working on a non-root fiber. This is a fatal error
-    // because there's no ancestor that can handle it; the root is
-    // supposed to capture all errors that weren't caught by an error
-    // boundary.
-    workInProgressRootExitStatus = RootFatalErrored
-    workInProgressRootFatalError = thrownValue
-    // Set `workInProgress` to null. This represents advancing to the next
-    // sibling, or the parent if there are no siblings. But since the root
-    // has no siblings nor a parent, we set it to null. Usually this is
-    // handled by `completeUnitOfWork` or `unwindWork`, but since we're
-    // intentionally not calling those, we need set it here.
-    // TODO: Consider calling `unwindWork` to pop the contexts.
-    workInProgress = null
-    return
-  }
-
-  try {
-    // Find and mark the nearest Suspense or error boundary that can handle
-    // this "exception".
-    // 【找到离当前组件最近的`suspenseBoundary`也就是`Suspense`组件】
-    throwException(
-      workInProgressRoot,
-      returnFiber,
-      unitOfWork,
-      thrownValue,
-      workInProgressRootRenderLanes
-    )
-  } catch (error) {
-    // We had trouble processing the error. An example of this happening is
-    // when accessing the `componentDidCatch` property of an error boundary
-    // throws an error. A weird edge case. There's a regression test for this.
-    // To prevent an infinite loop, bubble the error up to the next parent.
-    workInProgress = returnFiber
-    throw error
-  }
-
-  // Return to the normal work loop.
-  completeUnitOfWork(unitOfWork)
-}
-```
-
-`unwindSuspendedUnitOfWork`方法里的两个关键步骤：`throwException()` & `completeUnitOfWork()`
-
-1. 调用`throwException`方法，首先给当前被 suspended 的组件`fiber`标记`Incomplete`，然后找到离当前组件**最近**的`suspenseBoundary`也就是`Suspense`组件；
+1. 调用`throwException`方法，首先给当前被 suspended 的组件`fiber`标记`Incomplete`，然后找到离当前组件**最近**的`suspenseBoundary`也就是`<Suspense>`组件并添加 `DidCapture` 标志，是后续决定 `showFallback` 参数的重要 `flags`；
 2. 将当前抛出的`Promise`加入`suspenseBoundary`的`updateQueue`队列；
-3. `Concurrent`模式下调用`attachPingListener(root, wakeable, rootRenderLanes)`，这个方法会在`root`上添加`root.pingCache`，并且给当前这个`Promise`添加`.then(ping, ping)`也就是`ping`方法监听，这个是后面`Promise`被`resolve`之后去通知进行`fiber`切换的重要前置条件；
-4. 结束`throwException`方法回到`unwindSuspendedUnitOfWork`，继续当前被 suspended 的组件没有完成的`completeUnitOfWork(unitOfWork)`；
+3. `Concurrent`模式下`throwException`方法中还会调用`attachPingListener(root, wakeable, rootRenderLanes)`，这个方法会在`root`上添加`root.pingCache`，并且给当前这个`Promise`添加`.then(ping, ping)`也就是`ping`方法监听，这个是后面`Promise`被`resolve`之后去通知进行`fiber`切换的重要前置条件；
 
 ```ts
-// 【packages/react-reconciler/src/ReactFiberThrow.js】
+// 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
 function throwException(
   root: FiberRoot,
   returnFiber: Fiber,
   sourceFiber: Fiber,
   value: mixed,
   rootRenderLanes: Lanes,
-): void {
-  // 【给当前组件fiber标记Incomplete】
+) {
   // The source fiber did not complete.
   sourceFiber.flags |= Incomplete;
 
-  if (enableUpdaterTracking) {
-    if (isDevToolsPresent) {
-      // If we have pending work still, restore the original updaters
-      restorePendingUpdaters(root, rootRenderLanes);
-    }
-  }
+  // 【省略代码...】
 
   if (
     value !== null &&
     typeof value === 'object' &&
     typeof value.then === 'function'
   ) {
-    // 【-----thenable类型的error-----】
+    // 【抛出内容是一个thenable对象，通常是一个promise】
     // This is a wakeable. The component suspended.
     const wakeable: Wakeable = (value: any);
     resetSuspendedComponent(sourceFiber, rootRenderLanes);
 
     // 【省略代码...】
 
-    // Mark the nearest Suspense boundary to switch to rendering a fallback.
-    // 【-----找到最近的suspense组件-----】
-    const suspenseBoundary = getSuspenseHandler();
+    // Schedule the nearest Suspense to re-render the timed out view.
+    // 【找到suspense边界，也就是被最近的哪个suspense组件包裹的】
+    const suspenseBoundary = getNearestSuspenseBoundaryToCapture(returnFiber);
     if (suspenseBoundary !== null) {
-      switch (suspenseBoundary.tag) {
-        case SuspenseComponent: {
-          // If this suspense boundary is not already showing a fallback, mark
-          // the in-progress render as suspended. We try to perform this logic
-          // as soon as soon as possible during the render phase, so the work
-          // loop can know things like whether it's OK to switch to other tasks,
-          // or whether it can wait for data to resolve before continuing.
-          // TODO: Most of these checks are already performed when entering a
-          // Suspense boundary. We should track the information on the stack so
-          // we don't have to recompute it on demand. This would also allow us
-          // to unify with `use` which needs to perform this logic even sooner,
-          // before `throwException` is called.
-          if (sourceFiber.mode & ConcurrentMode) {
-            if (getShellBoundary() === null) {
-              // Suspended in the "shell" of the app. This is an undesirable
-              // loading state. We should avoid committing this tree.
-              renderDidSuspendDelayIfPossible();
-            } else {
-              // If we suspended deeper than the shell, we don't need to delay
-              // the commmit. However, we still call renderDidSuspend if this is
-              // a new boundary, to tell the work loop that a new fallback has
-              // appeared during this render.
-              // TODO: Theoretically we should be able to delete this branch.
-              // It's currently used for two things: 1) to throttle the
-              // appearance of successive loading states, and 2) in
-              // SuspenseList, to determine whether the children include any
-              // pending fallbacks. For 1, we should apply throttling to all
-              // retries, not just ones that render an additional fallback. For
-              // 2, we should check subtreeFlags instead. Then we can delete
-              // this branch.
-              const current = suspenseBoundary.alternate;
-              if (current === null) {
-                // 【workInProgressRootExitStatus = RootSuspended】
-                renderDidSuspend();
-              }
-            }
-          }
-          // 【suspense组件添加ForceClientRender标记】
-          suspenseBoundary.flags &= ~ForceClientRender;
-          // 【-----suspense会在这个方法中被标记前面提到的DidCapture，会决定showFallback变量-----】
-          markSuspenseBoundaryShouldCapture(
-            suspenseBoundary,
-            returnFiber,
-            sourceFiber,
-            root,
-            rootRenderLanes,
-          );
-          // Retry listener
-          //
-          // If the fallback does commit, we need to attach a different type of
-          // listener. This one schedules an update on the Suspense boundary to
-          // turn the fallback state off.
-          //
-          // Stash the wakeable on the boundary fiber so we can access it in the
-          // commit phase.
-          //
-          // When the wakeable resolves, we'll attempt to render the boundary
-          // again ("retry").
-          // 【------当前thenable对象加入suspense组件的updateQueue-----】
-          const wakeables: Set<Wakeable> | null =
-            (suspenseBoundary.updateQueue: any);
-          if (wakeables === null) {
-            suspenseBoundary.updateQueue = new Set([wakeable]);
-          } else {
-            wakeables.add(wakeable);
-          }
-          break;
-        }
-        case OffscreenComponent: {
-          if (suspenseBoundary.mode & ConcurrentMode) {
-            suspenseBoundary.flags |= ShouldCapture;
-            const offscreenQueue: OffscreenQueue | null =
-              (suspenseBoundary.updateQueue: any);
-            if (offscreenQueue === null) {
-              const newOffscreenQueue: OffscreenQueue = {
-                transitions: null,
-                markerInstances: null,
-                wakeables: new Set([wakeable]),
-              };
-              suspenseBoundary.updateQueue = newOffscreenQueue;
-            } else {
-              const wakeables = offscreenQueue.wakeables;
-              if (wakeables === null) {
-                offscreenQueue.wakeables = new Set([wakeable]);
-              } else {
-                wakeables.add(wakeable);
-              }
-            }
-            break;
-          }
-        }
-        // eslint-disable-next-line no-fallthrough
-        default: {
-          throw new Error(
-            `Unexpected Suspense handler tag (${suspenseBoundary.tag}). This ` +
-              'is a bug in React.',
-          );
-        }
-      }
+      suspenseBoundary.flags &= ~ForceClientRender;
+      markSuspenseBoundaryShouldCapture(
+        suspenseBoundary,
+        returnFiber,
+        sourceFiber,
+        root,
+        rootRenderLanes,
+      );
       // We only attach ping listeners in concurrent mode. Legacy Suspense always
       // commits fallbacks synchronously, so there are no pings.
-      // 【-----Concurrent模式下调用attachPingListener监听-----】
       if (suspenseBoundary.mode & ConcurrentMode) {
         attachPingListener(root, wakeable, rootRenderLanes);
       }
+      attachRetryListener(suspenseBoundary, root, wakeable, rootRenderLanes);
       return;
     } else {
-      // 【没找到最近的suspense组件的情况】
       // No boundary was found. Unless this is a sync update, this is OK.
       // We can suspend and wait for more data to arrive.
 
-      if (root.tag === ConcurrentRoot) {
-        // In a concurrent root, suspending without a Suspense boundary is
-        // allowed. It will suspend indefinitely without committing.
+      if (!includesSyncLane(rootRenderLanes)) {
+        // This is not a sync update. Suspend. Since we're not activating a
+        // Suspense boundary, this will unwind all the way to the root without
+        // performing a second pass to render a fallback. (This is arguably how
+        // refresh transitions should work, too, since we're not going to commit
+        // the fallbacks anyway.)
         //
-        // TODO: Should we have different behavior for discrete updates? What
-        // about flushSync? Maybe it should put the tree into an inert state,
-        // and potentially log a warning. Revisit this for a future release.
+        // This case also applies to initial hydration.
         attachPingListener(root, wakeable, rootRenderLanes);
         renderDidSuspendDelayIfPossible();
         return;
-      } else {
-        // In a legacy root, suspending without a boundary is always an error.
-        const uncaughtSuspenseError = new Error(
-          'A component suspended while responding to synchronous input. This ' +
-            'will cause the UI to be replaced with a loading indicator. To ' +
-            'fix, updates that suspend should be wrapped ' +
-            'with startTransition.',
-        );
-        value = uncaughtSuspenseError;
       }
+
+      // This is a sync/discrete update. We treat this case like an error
+      // because discrete renders are expected to produce a complete tree
+      // synchronously to maintain consistency with external state.
+      const uncaughtSuspenseError = new Error(
+        'A component suspended while responding to synchronous input. This ' +
+          'will cause the UI to be replaced with a loading indicator. To ' +
+          'fix, updates that suspend should be wrapped ' +
+          'with startTransition.',
+      );
+
+      // If we're outside a transition, fall through to the regular error path.
+      // The error will be caught by the nearest suspense boundary.
+      value = uncaughtSuspenseError;
     }
   } else {
-    // 【-----普通的error而非suspense抛出的-----】
     // This is a regular error, not a Suspense wakeable.
     if (getIsHydrating() && sourceFiber.mode & ConcurrentMode) {
       markDidThrowWhileHydratingDEV();
-      const suspenseBoundary = getSuspenseHandler();
+      const suspenseBoundary = getNearestSuspenseBoundaryToCapture(returnFiber);
       // If the error was thrown during hydration, we may be able to recover by
       // discarding the dehydrated content and switching to a client render.
       // Instead of surfacing the error, find the nearest Suspense boundary
@@ -1853,7 +1559,7 @@ function throwException(
   // We didn't find a boundary that could handle this type of exception. Start
   // over and traverse parent path again, this time treating the exception
   // as an error.
-  let workInProgress: Fiber = returnFiber;
+  let workInProgress = returnFiber;
   do {
     switch (workInProgress.tag) {
       case HostRoot: {
@@ -1893,134 +1599,12 @@ function throwException(
       default:
         break;
     }
-    // $FlowFixMe[incompatible-type] we bail out when we get a null
     workInProgress = workInProgress.return;
   } while (workInProgress !== null);
 }
 
-function getSuspenseHandler() {
-  // 【取出之前压栈的suspense fiber】
-  return suspenseHandlerStackCursor.current;
-}
-
-function markSuspenseBoundaryShouldCapture(
-  suspenseBoundary: Fiber,
-  returnFiber: Fiber,
-  sourceFiber: Fiber,
-  root: FiberRoot,
-  rootRenderLanes: Lanes,
-): Fiber | null {
-  // This marks a Suspense boundary so that when we're unwinding the stack,
-  // it captures the suspended "exception" and does a second (fallback) pass.
-  if ((suspenseBoundary.mode & ConcurrentMode) === NoMode) {
-    // Legacy Mode Suspense
-    //
-    // If the boundary is in legacy mode, we should *not*
-    // suspend the commit. Pretend as if the suspended component rendered
-    // null and keep rendering. When the Suspense boundary completes,
-    // we'll do a second pass to render the fallback.
-    if (suspenseBoundary === returnFiber) {
-      // Special case where we suspended while reconciling the children of
-      // a Suspense boundary's inner Offscreen wrapper fiber. This happens
-      // when a React.lazy component is a direct child of a
-      // Suspense boundary.
-      //
-      // Suspense boundaries are implemented as multiple fibers, but they
-      // are a single conceptual unit. The legacy mode behavior where we
-      // pretend the suspended fiber committed as `null` won't work,
-      // because in this case the "suspended" fiber is the inner
-      // Offscreen wrapper.
-      //
-      // Because the contents of the boundary haven't started rendering
-      // yet (i.e. nothing in the tree has partially rendered) we can
-      // switch to the regular, concurrent mode behavior: mark the
-      // boundary with ShouldCapture and enter the unwind phase.
-      suspenseBoundary.flags |= ShouldCapture;
-    } else {
-      suspenseBoundary.flags |= DidCapture;
-      sourceFiber.flags |= ForceUpdateForLegacySuspense;
-
-      // We're going to commit this fiber even though it didn't complete.
-      // But we shouldn't call any lifecycle methods or callbacks. Remove
-      // all lifecycle effect tags.
-      sourceFiber.flags &= ~(LifecycleEffectMask | Incomplete);
-
-      if (sourceFiber.tag === ClassComponent) {
-        const currentSourceFiber = sourceFiber.alternate;
-        if (currentSourceFiber === null) {
-          // This is a new mount. Change the tag so it's not mistaken for a
-          // completed class component. For example, we should not call
-          // componentWillUnmount if it is deleted.
-          sourceFiber.tag = IncompleteClassComponent;
-        } else {
-          // When we try rendering again, we should not reuse the current fiber,
-          // since it's known to be in an inconsistent state. Use a force update to
-          // prevent a bail out.
-          const update = createUpdate(SyncLane);
-          update.tag = ForceUpdate;
-          enqueueUpdate(sourceFiber, update, SyncLane);
-        }
-      }
-
-      // The source fiber did not complete. Mark it with Sync priority to
-      // indicate that it still has pending work.
-      sourceFiber.lanes = mergeLanes(sourceFiber.lanes, SyncLane);
-    }
-    return suspenseBoundary;
-  }
-  // Confirmed that the boundary is in a concurrent mode tree. Continue
-  // with the normal suspend path.
-  //
-  // After this we'll use a set of heuristics to determine whether this
-  // render pass will run to completion or restart or "suspend" the commit.
-  // The actual logic for this is spread out in different places.
-  //
-  // This first principle is that if we're going to suspend when we complete
-  // a root, then we should also restart if we get an update or ping that
-  // might unsuspend it, and vice versa. The only reason to suspend is
-  // because you think you might want to restart before committing. However,
-  // it doesn't make sense to restart only while in the period we're suspended.
-  //
-  // Restarting too aggressively is also not good because it starves out any
-  // intermediate loading state. So we use heuristics to determine when.
-
-  // Suspense Heuristics
-  //
-  // If nothing threw a Promise or all the same fallbacks are already showing,
-  // then don't suspend/restart.
-  //
-  // If this is an initial render of a new tree of Suspense boundaries and
-  // those trigger a fallback, then don't suspend/restart. We want to ensure
-  // that we can show the initial loading state as quickly as possible.
-  //
-  // If we hit a "Delayed" case, such as when we'd switch from content back into
-  // a fallback, then we should always suspend/restart. Transitions apply
-  // to this case. If none is defined, JND is used instead.
-  //
-  // If we're already showing a fallback and it gets "retried", allowing us to show
-  // another level, but there's still an inner boundary that would show a fallback,
-  // then we suspend/restart for 500ms since the last time we showed a fallback
-  // anywhere in the tree. This effectively throttles progressive loading into a
-  // consistent train of commits. This also gives us an opportunity to restart to
-  // get to the completed state slightly earlier.
-  //
-  // If there's ambiguity due to batching it's resolved in preference of:
-  // 1) "delayed", 2) "initial render", 3) "retry".
-  //
-  // We want to ensure that a "busy" state doesn't get force committed. We want to
-  // ensure that new initial loading states can commit as soon as possible.
-  suspenseBoundary.flags |= ShouldCapture;
-  // TODO: I think we can remove this, since we now use `DidCapture` in
-  // the begin phase to prevent an early bailout.
-  suspenseBoundary.lanes = rootRenderLanes;
-  return suspenseBoundary;
-}
-
-export function attachPingListener(
-  root: FiberRoot,
-  wakeable: Wakeable,
-  lanes: Lanes,
-) {
+// 【packages/react-reconciler/src/ReactFiberThrow.js】
+function attachPingListener(root: FiberRoot, wakeable: Wakeable, lanes: Lanes) {
   // Attach a ping listener
   //
   // The data might resolve before we have a chance to commit the fallback. Or,
@@ -2037,7 +1621,7 @@ export function attachPingListener(
   let threadIDs;
   if (pingCache === null) {
     pingCache = root.pingCache = new PossiblyWeakMap();
-    threadIDs = new Set<mixed>();
+    threadIDs = new Set();
     pingCache.set(wakeable, threadIDs);
   } else {
     threadIDs = pingCache.get(wakeable);
@@ -2047,8 +1631,6 @@ export function attachPingListener(
     }
   }
   if (!threadIDs.has(lanes)) {
-    workInProgressRootDidAttachPingListener = true;
-
     // Memoize using the thread ID to prevent redundant listeners.
     threadIDs.add(lanes);
     const ping = pingSuspendedRoot.bind(null, root, wakeable, lanes);
@@ -2061,6 +1643,58 @@ export function attachPingListener(
     wakeable.then(ping, ping);
   }
 }
+
+// 【packages/react-reconciler/src/ReactFiberWorkLoop.old.js】
+export function pingSuspendedRoot(
+  root: FiberRoot,
+  wakeable: Wakeable,
+  pingedLanes: Lanes,
+) {
+  const pingCache = root.pingCache;
+  if (pingCache !== null) {
+    // The wakeable resolved, so we no longer need to memoize, because it will
+    // never be thrown again.
+    pingCache.delete(wakeable);
+  }
+
+  const eventTime = requestEventTime();
+  markRootPinged(root, pingedLanes, eventTime);
+
+  warnIfSuspenseResolutionNotWrappedWithActDEV(root);
+
+  if (
+    workInProgressRoot === root &&
+    isSubsetOfLanes(workInProgressRootRenderLanes, pingedLanes)
+  ) {
+    // Received a ping at the same priority level at which we're currently
+    // rendering. We might want to restart this render. This should mirror
+    // the logic of whether or not a root suspends once it completes.
+
+    // TODO: If we're rendering sync either due to Sync, Batched or expired,
+    // we should probably never restart.
+
+    // If we're suspended with delay, or if it's a retry, we'll always suspend
+    // so we can always restart.
+    if (
+      workInProgressRootExitStatus === RootSuspendedWithDelay ||
+      (workInProgressRootExitStatus === RootSuspended &&
+        includesOnlyRetries(workInProgressRootRenderLanes) &&
+        now() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+    ) {
+      // Restart from the root.
+      prepareFreshStack(root, NoLanes);
+    } else {
+      // Even though we can't restart right now, we might get an
+      // opportunity later. So we mark this render as having a ping.
+      workInProgressRootPingedLanes = mergeLanes(
+        workInProgressRootPingedLanes,
+        pingedLanes,
+      );
+    }
+  }
+
+  ensureRootIsScheduled(root, eventTime);
+}
 ```
 
 ![react](./assets/Suspense/suspense11.png)
@@ -2068,9 +1702,16 @@ export function attachPingListener(
 ![react](./assets/Suspense/suspense13.png)
 ![react](./assets/Suspense/suspense14.png)
 
-和普通节点`completeUnitOfWork()`不同的是这一次走的是`Incomplete`这个处理路径，已知前面已经给当前组件节点标记了`Incomplete`。可以看到只是处理了当前节点和`Offscreen fiber`的`flags`等等，`Offscreen fiber`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`，并没有进入真正的`completeWork`，因为正式内容要等`Promise`被`resolve`之后再显示。然后回到上一层`Offscreen fiber`节点进行`completeUnitOfWork(unitOfWork)`，同样的流程，所以最后直到`Offscreen fiber`节点的祖先节点`Suspense fiber`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`。
+`throwException`方法，完成之后就会进入当前节点的`completeUnitOfWork()`方法：
 
-`Child` => `Offscreen` => `Suspense`
+和普通节点`completeUnitOfWork()`不同的是这一次走的是`Incomplete`这个处理路径从而进入`unwindWork`，已知前面已经给当前组件节点标记了`Incomplete`。可以看到只是处理了当前`<Child>`和`<OffscreenComponent>`的`flags`等等，`<OffscreenComponent>`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`，并没有进入真正的`completeWork`，因为正式内容要等`Promise`被`resolve`之后再显示。然后回到上一层`<OffscreenComponent>`节点进行`completeUnitOfWork(unitOfWork)`，同样的流程，最后，重新返回到`<suspense>`组件的`beginWork`流程中，`<OffscreenComponent>`节点的祖先节点`<Suspense>`的`flags`会被设置为`Incomplete`等待后续的处理，`subtreeFlags`设置为`NoFlags`。`showFallback`设置为`true`，`workInProgress.flags &= ~DidCapture`，这一次再往下走的话就会先显示`fallback fiber`再等`promise`被`resolve`之后显示`primary fiber`了。
+
+在 React Fiber 架构中，当一个组件挂起（`Suspense`）或报错（`Error`）时，当前的渲染进度会被打断。`unwindWork` 的核心职责有两个：
+
+1. 清理（Pop）：把渲染过程中压入栈的状态（如 Context、HostContainer）弹出，恢复环境。
+2. 寻找捕获者（Find Catch）：寻找最近的能够处理该异常的祖先节点（如 `Suspense` 或 `ErrorBoundary`）。
+
+`<Child>` => `<OffscreenComponent>` => `<Suspense>`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -2092,6 +1733,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       // This fiber did not complete because something threw. Pop values off
       // the stack without entering the complete phase. If this is a boundary,
       // capture values if possible.
+      // 【回溯到可以处理抛出“错误”的suspense组件】
       const next = unwindWork(current, completedWork, renderLanes)
 
       // Because this fiber did not complete, don't reset its lanes.
@@ -2106,10 +1748,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         return
       }
 
-      if (
-        enableProfilerTimer &&
-        (completedWork.mode & ProfileMode) !== NoMode
-      ) {
+      if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
         // Record the render duration for the fiber that errored.
         stopProfilerTimerIfRunningAndRecordDelta(completedWork, false)
 
@@ -2156,10 +1795,11 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
   }
 }
 
+// 【packages/react-reconciler/src/ReactFiberUnwindWork.js】
 function unwindWork(
   current: Fiber | null,
   workInProgress: Fiber,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ): Fiber | null {
   // Note: This intentionally doesn't check if we're hydrating because comparing
   // to the current tree provider fiber is just as fast and less error-prone.
@@ -2175,10 +1815,7 @@ function unwindWork(
       const flags = workInProgress.flags
       if (flags & ShouldCapture) {
         workInProgress.flags = (flags & ~ShouldCapture) | DidCapture
-        if (
-          enableProfilerTimer &&
-          (workInProgress.mode & ProfileMode) !== NoMode
-        ) {
+        if (enableProfilerTimer && (workInProgress.mode & ProfileMode) !== NoMode) {
           transferActualDuration(workInProgress)
         }
         return workInProgress
@@ -2201,10 +1838,7 @@ function unwindWork(
       popTopLevelLegacyContextObject(workInProgress)
       resetMutableSourceWorkInProgressVersions()
       const flags = workInProgress.flags
-      if (
-        (flags & ShouldCapture) !== NoFlags &&
-        (flags & DidCapture) === NoFlags
-      ) {
+      if ((flags & ShouldCapture) !== NoFlags && (flags & DidCapture) === NoFlags) {
         // There was an error during render that wasn't captured by a suspense
         // boundary. Do a second pass on the root to unmount the children.
         workInProgress.flags = (flags & ~ShouldCapture) | DidCapture
@@ -2227,7 +1861,7 @@ function unwindWork(
         if (workInProgress.alternate === null) {
           throw new Error(
             "Threw in newly mounted dehydrated component. This is likely a bug in " +
-              "React. Please file an issue."
+              "React. Please file an issue.",
           )
         }
 
@@ -2238,10 +1872,7 @@ function unwindWork(
       if (flags & ShouldCapture) {
         workInProgress.flags = (flags & ~ShouldCapture) | DidCapture
         // Captured a suspense effect. Re-render the boundary.
-        if (
-          enableProfilerTimer &&
-          (workInProgress.mode & ProfileMode) !== NoMode
-        ) {
+        if (enableProfilerTimer && (workInProgress.mode & ProfileMode) !== NoMode) {
           transferActualDuration(workInProgress)
         }
         return workInProgress
@@ -2270,10 +1901,7 @@ function unwindWork(
       if (flags & ShouldCapture) {
         workInProgress.flags = (flags & ~ShouldCapture) | DidCapture
         // Captured a suspense effect. Re-render the boundary.
-        if (
-          enableProfilerTimer &&
-          (workInProgress.mode & ProfileMode) !== NoMode
-        ) {
+        if (enableProfilerTimer && (workInProgress.mode & ProfileMode) !== NoMode) {
           transferActualDuration(workInProgress)
         }
         return workInProgress
@@ -2299,9 +1927,9 @@ function unwindWork(
 }
 ```
 
-到目前为止，准备工作已完成，`Suspense`组件节点已标记`Incomplete`、`Suspense`组件节点的`updateQueue`已装载`Promise`、`primaryChild fiber`建到组件这一层、`fallback fiber`已经完整建立。然后经过`commit`过程，此时`fallback`组件就会渲染在页面上面。接下来就是`Promise`被`resolve`之后去将`fallback fiber`切换到`primaryChild fiber`显示正式内容的过程。
+到目前为止，准备工作已完成，`<Suspense>`组件节点已标记`Incomplete`、`<Suspense>`组件节点的`updateQueue`已装载`Promise`且`flags`标记了`DidCapture`，`primaryChild fiber`建到组件`<Child>`这一层、`fallback fiber`已经完整建立。然后进入`commit`过程，此时`fallback`组件就会渲染在页面上面。
 
-`commit`过程遇到`Offscreen fiber`流程如下：
+`commit`过程遇到`<OffscreenComponent>`流程如下：
 
 1. 上一轮的在`commitLayoutEffectOnFiber`过程中确定`offscreenSubtreeIsHidden`/`offscreenSubtreeWasHidden`也就是`primaryChild`这次是显示还是隐藏和之前是显示还是隐藏；
 2. 到这一轮的`commitMutationEffectsOnFiber`过程，调用`hideOrUnhideAllChildren`显示`fallback`的`DOM`内容；
@@ -2394,7 +2022,7 @@ case OffscreenComponent: {
     // Before committing the children, track on the stack whether this
     // offscreen subtree was already hidden, so that we don't unmount the
     // effects again.
-    // 【获取OffScreen组件之前是显示还是隐藏的状态】
+    // 【获取Offscreen组件之前是显示还是隐藏的状态】
     const prevOffscreenSubtreeIsHidden = offscreenSubtreeIsHidden;
     const prevOffscreenSubtreeWasHidden = offscreenSubtreeWasHidden;
     offscreenSubtreeIsHidden = prevOffscreenSubtreeIsHidden || isHidden;
@@ -2586,22 +2214,24 @@ export function unhideInstance(instance: Instance, props: Props): void {
 
 总结一下这部分内容：
 
-1. `Suspense` 组件用 `DidCapture` 这个 `flag` 来判断要显示 `fallback` 还是 `primaryChild`；
-2. `Suspense` 组件具体的内容是通过 `OffScreen` 组件来包裹的，这样，即使显示的是 `fallback`，`Suspense` 组件具体的内容仍旧在整个 `fiber` 树上，状态仍然保存着；
-3. 在 `do/while` 循环执行 `workLoopSync`/`workLoopConcurrent` 的过程中如果有 `Promise` 抛出：
-   - 先给当前组件表示 `Incomplete` 并找到最近的 `Suspense` 组件，然后标识最近的 `Suspense` 组件为 `DidCapture`，然后给 `Promise` 绑定 `ping` 回调
-   - 然后从当前组件往上回溯到 `Suspense` 组件，统一标识为 `Incomplete`
-   - 继续 `render` 过程
+1. `<Suspense>` 组件用 `DidCapture` 这个 `flag` 来判断要显示 `fallback` 还是 `primaryChild`；
+2. `<Suspense>` 组件具体的内容是通过 `<OffscreenComponent>` 组件来包裹的，这样，即使显示的是 `fallback`，`<Suspense>` 组件具体的内容仍旧在整个 `fiber` 树上，状态仍然保存着；
+3. 在 `render` 过程中会 `do/while` 循环执行 `workLoopSync`/`workLoopConcurrent` 的过程中尝试直接渲染`primaryChild`，一旦过程中如果有 `Promise` 抛出：
+   - 先给当前组件表示 `Incomplete` 并找到最近的 `<Suspense>` 组件，然后标识最近的 `<Suspense>` 组件为 `DidCapture`，然后给 `Promise` 绑定 `ping` 回调
+   - 然后从当前组件往上回溯到 `<Suspense>` 组件，统一标识为 `Incomplete`
+   - 完成抛出 `Promise` 节点的 `completeUnitOfWork()` 过程并往上重新回到`<Suspense>` 组件的 `beginWork` 过程
 4. `render` 过程结束之后进行 `commit` 过程，这个阶段确定之前的显示状态和即将要达成的显示状态，然后调用`hideOrUnhideAllChildren`显示内容；
-5. 后面就是要讲当 `Promise resolve` 之后如何引起 `rerender` 然后渲染 `Suspense` 组件具体内容的过程；
+5. 后面就是要讲当 `Promise` 被 `resolve` 之后如何引起 `rerender` 然后渲染 `<Suspense>` 组件具体内容的过程；
+
+接下来就是`Promise`被`resolve`之后去将`fallback fiber`切换到`primaryChild fiber`显示正式内容的过程。
 
 ---
 
-当 `Promise resolve` 之后，就会调用`then`回调事件`ping`，前面已知`attachPingListener`除了将`wakeable（Promise）`加入根 `FiberRootNode` 节点的`pingCache`属性存储的`WeakMap`之外还会给这个`wakeable`绑定`then`回调事件`ping`，所以之前抛出的`Promise`在`resolve`之后其实会调用`ping`方法也就是`pingSuspendedRoot`方法如下：
+当 `Promise` 被 `resolve` 之后，就会调用`then`回调事件`ping`，前面已知`attachPingListener`方法除了将`wakeable（Promise）`加入根 `FiberRootNode` 节点的`pingCache`属性存储的`WeakMap`之外还会给这个`wakeable`绑定`then`回调事件`ping`，所以之前抛出的`Promise`在`resolve`之后其实会调用`ping`方法实质上是`pingSuspendedRoot`方法如下：
 
 1. 从`root.pingCache`取出当前`wakeable（Promise）`；
 2. `markRootPinged`标记`ping`成功；
-3. 进入`ensureRootIsScheduled`方法进行`fallback`和`OffScreen`切换的任务调度；
+3. 进入`ensureRootIsScheduled`方法进行`fallback`和`Offscreen`切换的任务调度；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -2615,11 +2245,7 @@ if (enableUpdaterTracking) {
 }
 wakeable.then(ping, ping)
 
-function pingSuspendedRoot(
-  root: FiberRoot,
-  wakeable: Wakeable,
-  pingedLanes: Lanes
-) {
+function pingSuspendedRoot(root: FiberRoot, wakeable: Wakeable, pingedLanes: Lanes) {
   // 【当前异步任务完成，取出当前异步任务】
   const pingCache = root.pingCache
   if (pingCache !== null) {
@@ -2633,10 +2259,7 @@ function pingSuspendedRoot(
 
   warnIfSuspenseResolutionNotWrappedWithActDEV(root)
 
-  if (
-    workInProgressRoot === root &&
-    isSubsetOfLanes(workInProgressRootRenderLanes, pingedLanes)
-  ) {
+  if (workInProgressRoot === root && isSubsetOfLanes(workInProgressRootRenderLanes, pingedLanes)) {
     // Received a ping at the same priority level at which we're currently
     // rendering. We might want to restart this render. This should mirror
     // the logic of whether or not a root suspends once it completes.
@@ -2664,10 +2287,7 @@ function pingSuspendedRoot(
     } else {
       // Even though we can't restart right now, we might get an
       // opportunity later. So we mark this render as having a ping.
-      workInProgressRootPingedLanes = mergeLanes(
-        workInProgressRootPingedLanes,
-        pingedLanes
-      )
+      workInProgressRootPingedLanes = mergeLanes(workInProgressRootPingedLanes, pingedLanes)
     }
   }
 
@@ -2681,16 +2301,13 @@ function pingSuspendedRoot(
 
 再次进入更新流程：
 
-1. `commitMutationEffectsOnFiber`方法遇到`SuspenseComponent`、`OffscreenComponent`、`SuspenseListComponent`，若`flags`有`Update`标记就会进入`attachSuspenseRetryListeners`方法；
+1. `commitMutationEffectsOnFiber`方法遇到`<SuspenseComponent>`、`<OffscreenComponent>`、`<SuspenseListComponent>`，若`flags`有`Update`标记就会进入`attachSuspenseRetryListeners`方法；
 2. `attachSuspenseRetryListeners`方法主要是给之前的`Promise`（从`fiber.updateQueue`中取出）绑定`then`回调方法`resolveRetryWakeable`；
 3. `Promise`被`resolve`之后就会进入`resolveRetryWakeable`方法，从而进入`retryTimedOutBoundary`方法，`retryTimedOutBoundary`方法会安排新的一次更新，这一次会构造和渲染`primaryChild fiber`，并移除`fallback fiber`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
-function attachSuspenseRetryListeners(
-  finishedWork: Fiber,
-  wakeables: Set<Wakeable>
-) {
+function attachSuspenseRetryListeners(finishedWork: Fiber, wakeables: Set<Wakeable>) {
   // If this boundary just timed out, then it will have a set of wakeables.
   // For each wakeable, attach a listener so that when it resolves, React
   // attempts to re-render the boundary in the primary (pre-timeout) state.
@@ -2708,9 +2325,7 @@ function attachSuspenseRetryListeners(
             // If we have pending work still, associate the original updaters with it.
             restorePendingUpdaters(inProgressRoot, inProgressLanes)
           } else {
-            throw Error(
-              "Expected finished root and lanes to be set. This is a bug in React."
-            )
+            throw Error("Expected finished root and lanes to be set. This is a bug in React.")
           }
         }
       }
@@ -2743,8 +2358,7 @@ export function resolveRetryWakeable(boundaryFiber: Fiber, wakeable: Wakeable) {
     }
     default:
       throw new Error(
-        "Pinged unknown suspense boundary type. " +
-          "This is probably a bug in React."
+        "Pinged unknown suspense boundary type. " + "This is probably a bug in React.",
       )
   }
 
@@ -2835,51 +2449,61 @@ export function lazy<T>(
     _init: lazyInitializer,
   };
 
-  if (!disableDefaultPropsExceptForClasses) {
-    if (__DEV__) {
-      // In production, this would just set it on the object.
-      let defaultProps;
-      // $FlowFixMe[prop-missing]
-      Object.defineProperties(lazyType, {
-        defaultProps: {
-          configurable: true,
-          get() {
-            return defaultProps;
-          },
-          // $FlowFixMe[missing-local-annot]
-          set(newDefaultProps) {
-            console.error(
-              'It is not supported to assign `defaultProps` to ' +
-                'a lazy component import. Either specify them where the component ' +
-                'is defined, or create a wrapping component around it.',
-            );
-            defaultProps = newDefaultProps;
-            // Match production behavior more closely:
-            // $FlowFixMe[prop-missing]
-            Object.defineProperty(lazyType, 'defaultProps', {
-              enumerable: true,
-            });
-          },
-        },
-      });
-    }
-  }
+  // 【省略代码...】
 
   return lazyType;
 }
-```
 
-### 作为 Suspense 的 Primary Child 解析
+function lazyInitializer<T>(payload: Payload<T>): T {
+  if (payload._status === Uninitialized) {
+    const ctor = payload._result;
+    const thenable = ctor();
+    // Transition to the next state.
+    // This might throw either because it's missing or throws. If so, we treat it
+    // as still uninitialized and try again next time. Which is the same as what
+    // happens if the ctor or any wrappers processing the ctor throws. This might
+    // end up fixing it if the resolution was a concurrency bug.
+    thenable.then(
+      moduleObject => {
+        if (payload._status === Pending || payload._status === Uninitialized) {
+          // Transition to the next state.
+          const resolved: ResolvedPayload<T> = (payload: any);
+          resolved._status = Resolved;
+          resolved._result = moduleObject;
+        }
+      },
+      error => {
+        if (payload._status === Pending || payload._status === Uninitialized) {
+          // Transition to the next state.
+          const rejected: RejectedPayload = (payload: any);
+          rejected._status = Rejected;
+          rejected._result = error;
+        }
+      },
+    );
+    if (payload._status === Uninitialized) {
+      // In case, we're still uninitialized, then we're waiting for the thenable
+      // to resolve. Set it as pending in the meantime.
+      const pending: PendingPayload = (payload: any);
+      pending._status = Pending;
+      pending._result = thenable;
+    }
+  }
+  if (payload._status === Resolved) {
+    const moduleObject = payload._result;
+    // 【省略代码...】
+    return moduleObject.default;
+  } else {
+    throw payload._result;
+  }
+}
+```
 
 在`beginWork`阶段会进入`LazyComponent`分支继而进入`mountLazyComponent`方法：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
+function beginWork(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes): Fiber | null {
   if (current !== null) {
     // 【省略代码...】
   } else {
@@ -2898,12 +2522,7 @@ function beginWork(
     // 【---处理LazyComponent组件---】
     case LazyComponent: {
       const elementType = workInProgress.elementType
-      return mountLazyComponent(
-        current,
-        workInProgress,
-        elementType,
-        renderLanes
-      )
+      return mountLazyComponent(current, workInProgress, elementType, renderLanes)
     }
     // 【省略代码...】
   }
@@ -2918,7 +2537,7 @@ function mountLazyComponent(
   _current: null | Fiber,
   workInProgress: Fiber,
   elementType: any,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   resetSuspendedCurrentOnMountInLegacyMode(_current, workInProgress)
 
@@ -2943,13 +2562,7 @@ function mountLazyComponent(
       if (__DEV__) {
         workInProgress.type = Component = resolveClassForHotReloading(Component)
       }
-      return updateClassComponent(
-        null,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateClassComponent(null, workInProgress, Component, resolvedProps, renderLanes)
     } else {
       const resolvedProps = disableDefaultPropsExceptForClasses
         ? props
@@ -2957,16 +2570,9 @@ function mountLazyComponent(
       workInProgress.tag = FunctionComponent
       if (__DEV__) {
         validateFunctionComponentInDev(workInProgress, Component)
-        workInProgress.type = Component =
-          resolveFunctionForHotReloading(Component)
+        workInProgress.type = Component = resolveFunctionForHotReloading(Component)
       }
-      return updateFunctionComponent(
-        null,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateFunctionComponent(null, workInProgress, Component, resolvedProps, renderLanes)
     }
   } else if (Component !== undefined && Component !== null) {
     const $$typeof = Component.$$typeof
@@ -2976,16 +2582,9 @@ function mountLazyComponent(
         : resolveDefaultPropsOnNonClassComponent(Component, props)
       workInProgress.tag = ForwardRef
       if (__DEV__) {
-        workInProgress.type = Component =
-          resolveForwardRefForHotReloading(Component)
+        workInProgress.type = Component = resolveForwardRefForHotReloading(Component)
       }
-      return updateForwardRef(
-        null,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateForwardRef(null, workInProgress, Component, resolvedProps, renderLanes)
     } else if ($$typeof === REACT_MEMO_TYPE) {
       const resolvedProps = disableDefaultPropsExceptForClasses
         ? props
@@ -2997,11 +2596,8 @@ function mountLazyComponent(
         Component,
         disableDefaultPropsExceptForClasses
           ? resolvedProps
-          : resolveDefaultPropsOnNonClassComponent(
-              Component.type,
-              resolvedProps
-            ), // The inner type can have defaults too
-        renderLanes
+          : resolveDefaultPropsOnNonClassComponent(Component.type, resolvedProps), // The inner type can have defaults too
+        renderLanes,
       )
     }
   }
@@ -3022,12 +2618,12 @@ function mountLazyComponent(
   // implementation detail.
   throw new Error(
     `Element type is invalid. Received a promise that resolves to: ${Component}. ` +
-      `Lazy element type must resolve to a class or function.${hint}`
+      `Lazy element type must resolve to a class or function.${hint}`,
   )
 }
 ```
 
-`lazyInitializer`函数如下，它的入参是`lazyComponent._payload`由 lazy API 构造，初始`_status`是`Uninitialized`，`_result`是用户传入的`ctor`函数。因为初始`_status`是`Uninitialized`所以会去调用`ctor`函数得到一个 `Promise` 对象或者是 `thenable` 对象，并为其添加 `then` 回调。并且最后抛出`throw payload._result;`就会被`trycatch`捕捉并进入`handleThrow`方法。接下来的流程就如 `Suspense` 组件中讲的了。
+`lazyInitializer`函数如下，它的入参是`lazyComponent._payload`由 lazy API 构造，初始`_status`是`Uninitialized`，`_result`是用户传入的`ctor`函数。因为初始`_status`是`Uninitialized`所以会去调用`ctor`函数得到一个 `Promise` 对象或者是 `thenable` 对象，并为其添加 `then` 回调。并且最后抛出`throw payload._result;`就会被`trycatch`捕捉并进入`handleError`方法。接下来的流程就如 `Suspense` 组件中讲的了。
 
 ```ts
 // 【packages/react/src/ReactLazy.js】
@@ -3114,19 +2710,269 @@ function lazyInitializer<T>(payload: Payload<T>): T {
 }
 ```
 
+## use 原理
+
+### use 介绍
+
+use is a React API that lets you read the value of a resource like a Promise or context.
+
+```ts
+const value = use(resource)
+```
+
+Unlike React Hooks, use can be called within loops and conditional statements like if. Like React Hooks, the function that calls use must be a Component or Hook.
+
+When called with a Promise, the use API integrates with Suspense and error boundaries. The component calling use suspends while the Promise passed to use is pending. If the component that calls use is wrapped in a Suspense boundary, the fallback will be displayed. Once the Promise is resolved, the Suspense fallback is replaced by the rendered components using the data returned by the use API. If the Promise passed to use is rejected, the fallback of the nearest Error Boundary will be displayed.
+
+### use 原理深入
+
+可以看到 use API 的入口如下，入参分为 `thenable` 方法或者 `context` 两种分别处理：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberHooks.js】
+function use<T>(usable: Usable<T>): T {
+  // 【use入参有两种可能性，一个是thenable方法，另一个是context】
+  if (usable !== null && typeof usable === 'object') {
+    // $FlowFixMe[method-unbinding]
+    if (typeof usable.then === 'function') {
+      // This is a thenable.
+      // 【传入的是thenable方法】
+      const thenable: Thenable<T> = (usable: any);
+      return useThenable(thenable);
+    } else if (usable.$$typeof === REACT_CONTEXT_TYPE) {
+      // 【如果传入context，那逻辑和useContext一样】
+      const context: ReactContext<T> = (usable: any);
+      return readContext(context);
+    }
+  }
+
+  // eslint-disable-next-line react-internal/safe-string-coercion
+  throw new Error('An unsupported type was passed to use(): ' + String(usable));
+}
+
+function useThenable<T>(thenable: Thenable<T>): T {
+  // Track the position of the thenable within this fiber.
+  const index = thenableIndexCounter;
+  thenableIndexCounter += 1;
+  if (thenableState === null) {
+    thenableState = createThenableState();
+  }
+  const result = trackUsedThenable(thenableState, thenable, index);
+
+  // When something suspends with `use`, we replay the component with the
+  // "re-render" dispatcher instead of the "mount" or "update" dispatcher.
+  //
+  // But if there are additional hooks that occur after the `use` invocation
+  // that suspended, they wouldn't have been processed during the previous
+  // attempt. So after we invoke `use` again, we may need to switch from the
+  // "re-render" dispatcher back to the "mount" or "update" dispatcher. That's
+  // what the following logic accounts for.
+  //
+  // TODO: Theoretically this logic only needs to go into the rerender
+  // dispatcher. Could optimize, but probably not be worth it.
+
+  // This is the same logic as in updateWorkInProgressHook.
+  const workInProgressFiber = currentlyRenderingFiber;
+  const nextWorkInProgressHook =
+    workInProgressHook === null
+      ? // We're at the beginning of the list, so read from the first hook from
+        // the fiber.
+        workInProgressFiber.memoizedState
+      : workInProgressHook.next;
+
+  if (nextWorkInProgressHook !== null) {
+    // There are still hooks remaining from the previous attempt.
+  } else {
+    // There are no remaining hooks from the previous attempt. We're no longer
+    // in "re-render" mode. Switch to the normal mount or update dispatcher.
+    //
+    // This is the same as the logic in renderWithHooks, except we don't bother
+    // to track the hook types debug information in this case (sufficient to
+    // only do that when nothing suspends).
+    const currentFiber = workInProgressFiber.alternate;
+    if (__DEV__) {
+      if (currentFiber !== null && currentFiber.memoizedState !== null) {
+        ReactSharedInternals.H = HooksDispatcherOnUpdateInDEV;
+      } else {
+        ReactSharedInternals.H = HooksDispatcherOnMountInDEV;
+      }
+    } else {
+      ReactSharedInternals.H =
+        currentFiber === null || currentFiber.memoizedState === null
+          ? HooksDispatcherOnMount
+          : HooksDispatcherOnUpdate;
+    }
+  }
+  return result;
+}
+
+// 【packages/react-reconciler/src/ReactFiberThenable.js】
+export function createThenableState(): ThenableState {
+  // The ThenableState is created the first time a component suspends. If it
+  // suspends again, we'll reuse the same state.
+  if (__DEV__) {
+    return {
+      didWarnAboutUncachedPromise: false,
+      thenables: [],
+    };
+  } else {
+    return [];
+  }
+}
+```
+
+在处理 `thenable` 方法中的关键函数 `trackUsedThenable` 如下，最终 use API 返回的就是 `trackUsedThenable` 函数返回的内容，实质上会根据不同的情况抛出 `SuspenseException` 或者 `rejectedError` 再去结合 `<Suspense>` 组件或 `<ErrorBoundary>` 组件使用：
+
+```ts
+// 【packages/react-reconciler/src/ReactFiberThenable.js】
+export function trackUsedThenable<T>(
+  thenableState: ThenableState,
+  thenable: Thenable<T>,
+  index: number,
+): T {
+  // 【省略代码...】
+
+  const trackedThenables = getThenablesFromState(thenableState);
+  const previous = trackedThenables[index];
+  if (previous === undefined) {
+    trackedThenables.push(thenable);
+  } else {
+    if (previous !== thenable) {
+      // Reuse the previous thenable, and drop the new one. We can assume
+      // they represent the same value, because components are idempotent.
+
+      // 【省略代码...】
+
+      // Avoid an unhandled rejection errors for the Promises that we'll
+      // intentionally ignore.
+      thenable.then(noop, noop);
+      thenable = previous;
+    }
+  }
+
+  // We use an expando to track the status and result of a thenable so that we
+  // can synchronously unwrap the value. Think of this as an extension of the
+  // Promise API, or a custom interface that is a superset of Thenable.
+  //
+  // If the thenable doesn't have a status, set it to "pending" and attach
+  // a listener that will update its status and result when it resolves.
+  switch (thenable.status) {
+    case 'fulfilled': {
+      const fulfilledValue: T = thenable.value;
+      return fulfilledValue;
+    }
+    case 'rejected': {
+      const rejectedError = thenable.reason;
+      checkIfUseWrappedInAsyncCatch(rejectedError);
+      throw rejectedError;
+    }
+    default: {
+      if (typeof thenable.status === 'string') {
+        // Only instrument the thenable if the status if not defined. If
+        // it's defined, but an unknown value, assume it's been instrumented by
+        // some custom userspace implementation. We treat it as "pending".
+        // Attach a dummy listener, to ensure that any lazy initialization can
+        // happen. Flight lazily parses JSON when the value is actually awaited.
+        thenable.then(noop, noop);
+      } else {
+        // This is an uncached thenable that we haven't seen before.
+
+        // Detect infinite ping loops caused by uncached promises.
+        const root = getWorkInProgressRoot();
+        if (root !== null && root.shellSuspendCounter > 100) {
+          // This root has suspended repeatedly in the shell without making any
+          // progress (i.e. committing something). This is highly suggestive of
+          // an infinite ping loop, often caused by an accidental Async Client
+          // Component.
+          //
+          // During a transition, we can suspend the work loop until the promise
+          // to resolve, but this is a sync render, so that's not an option. We
+          // also can't show a fallback, because none was provided. So our last
+          // resort is to throw an error.
+          //
+          // TODO: Remove this error in a future release. Other ways of handling
+          // this case include forcing a concurrent render, or putting the whole
+          // root into offscreen mode.
+          throw new Error(
+            'An unknown Component is an async Client Component. ' +
+              'Only Server Components can be async at the moment. ' +
+              'This error is often caused by accidentally ' +
+              "adding `'use client'` to a module that was originally written " +
+              'for the server.',
+          );
+        }
+
+        const pendingThenable: PendingThenable<T> = (thenable: any);
+        pendingThenable.status = 'pending';
+        pendingThenable.then(
+          fulfilledValue => {
+            if (thenable.status === 'pending') {
+              const fulfilledThenable: FulfilledThenable<T> = (thenable: any);
+              fulfilledThenable.status = 'fulfilled';
+              fulfilledThenable.value = fulfilledValue;
+            }
+          },
+          (error: mixed) => {
+            if (thenable.status === 'pending') {
+              const rejectedThenable: RejectedThenable<T> = (thenable: any);
+              rejectedThenable.status = 'rejected';
+              rejectedThenable.reason = error;
+            }
+          },
+        );
+      }
+
+      // Check one more time in case the thenable resolved synchronously.
+      switch ((thenable: Thenable<T>).status) {
+        case 'fulfilled': {
+          const fulfilledThenable: FulfilledThenable<T> = (thenable: any);
+          return fulfilledThenable.value;
+        }
+        case 'rejected': {
+          const rejectedThenable: RejectedThenable<T> = (thenable: any);
+          const rejectedError = rejectedThenable.reason;
+          checkIfUseWrappedInAsyncCatch(rejectedError);
+          throw rejectedError;
+        }
+      }
+
+      // Suspend.
+      //
+      // Throwing here is an implementation detail that allows us to unwind the
+      // call stack. But we shouldn't allow it to leak into userspace. Throw an
+      // opaque placeholder value instead of the actual thenable. If it doesn't
+      // get captured by the work loop, log a warning, because that means
+      // something in userspace must have caught it.
+      suspendedThenable = thenable;
+      if (__DEV__) {
+        needsToResetSuspendedThenableDEV = true;
+      }
+      throw SuspenseException;
+    }
+  }
+}
+```
+
 ## 总结
 
-`<Suspense>`组件：
+`<Suspense>` 组件：
 
-1. `fallback fiber`由`Fragment`包裹，`primaryChild fiber`由`Offscreen`包裹；
-2. 根据是否要显示`fallback fiber`还是直接显示`primaryChild fiber`，`primaryChildProps`的`mode`是`visible`或者`hidden`用于显示或者隐藏`primaryChild fiber`；
-3. 先显示`fallback fiber`的时候，给`fallback fiber`构造一个`Fragment`壳，并在`Fragment`壳上打上`Placement`标记，这个`Fragment`作为`Offscreen`的兄弟节点存在，`return`指向`Suspense fiber`，`Suspense fiber`会在`memoizedState`标记`SUSPENDED_MARKER`表明当前内容显示的是 fallback；
-4. 处理完`fallback fiber`的`beginWork`和`completeWork`阶段，回到`Suspense fiber`的`completeWork`阶段，此时会在`Suspense fiber`的`updateQueue`上会存储阻止我们显示`primaryChild fiber`的`Promise`实例，并且给`Suspense fiber`打上`Update`标记，完成一切后进入 commit 阶段；
-5. `commit`的第二阶段`commitMutationEffects`过程中完成 DOM 的构建，此时会调用一个方法`attachSuspenseRetryListeners`；
+1. `fallback fiber`由`<Fragment>`节点包裹，`primaryChild fiber`由`<OffscreenComponent>`节点包裹；
+2. 根据`showFallback`决定是否要显示`fallback fiber`还是直接显示`primaryChild fiber`，`primaryChildProps`的`mode`是`visible`或者`hidden`用于显示或者隐藏`primaryChild fiber`；
+3. React 默认假设你的应用是正常的，它会先尝试为 `primaryChild` 创建或更新 `Fiber` 节点，首先构造一个`offscreen fiber`然后进一步构造内部内容的fiber，此时就可能会抛出`Promise`。
+4. 遇到`Promise`抛出，此时策略是先显示`fallback fiber`的时候，给`primaryChild fiber`构造一个`Offscreen`壳，给`fallback fiber`构造一个`Fragment`壳，并在`Fragment`壳上打上`Placement`标记，这个`Fragment`作为`Offscreen`的兄弟节点存在，`return`指向`Suspense fiber`，`Suspense fiber`会在`memoizedState`标记`SUSPENDED_MARKER`表明当前内容显示的是 `fallback fiber`；
+5. 处理完`fallback fiber`的`beginWork`和`completeWork`阶段，回到`Suspense fiber`的`completeWork`阶段，此时会在`Suspense fiber`的`updateQueue`上会存储抛出的`Promise`实例，并且给`Suspense fiber`打上`Update`标记，完成一切后进入`commit`阶段；
+6. `commit`的第二阶段`commitMutationEffects`过程中完成 DOM 的构建，此时会调用一个方法 `attachSuspenseRetryListeners` 给之前的 `Promise`（从`fiber.updateQueue`中取出）绑定`then`回调方法`resolveRetryWakeable`；
+7. 一旦`Promise`被`resolve`之后就会进入回调`resolveRetryWakeable`方法，从而进入`retryTimedOutBoundary`方法，`retryTimedOutBoundary`方法会安排新的一次更新，这一次会构造和渲染`primaryChild fiber`，并移除`fallback fiber`，这样就完成了一次从 fallback UI 到正式内容 UI 的转换；
 
-`lazy`API：
+`lazy` API：
 
 1. `lazy` 可以结合`<Suspense>`组件使用；
-2. `lazy` 构造了`LazyComponent`，会手动进行 `throw Error`，继而进入`handleThrow`流程；
+2. `lazy` 构造了`LazyComponent`，会手动进行 `throw Error`，继而进入`handleError`流程；
 
-![react](./assets/Suspense/Suspense.png)
+`use` API:
+
+1. 接受 `thenable` 方法或者 `context` 作为参数;
+2. 对 `thenable` 方法进行处理并抛出相应的 `error`，可配合 `<Suspense>` 组件或 `<ErrorBoundary>` 组件使用;
+
+![react](./assets/Suspense/Suspense.svg)

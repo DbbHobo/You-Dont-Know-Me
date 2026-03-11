@@ -62,10 +62,7 @@ export function createElement(type, config, children) {
     source = config.__source === undefined ? null : config.__source
     // Remaining properties are added to a new props object
     for (propName in config) {
-      if (
-        hasOwnProperty.call(config, propName) &&
-        !RESERVED_PROPS.hasOwnProperty(propName)
-      ) {
+      if (hasOwnProperty.call(config, propName) && !RESERVED_PROPS.hasOwnProperty(propName)) {
         props[propName] = config[propName]
       }
     }
@@ -101,9 +98,7 @@ export function createElement(type, config, children) {
   if (__DEV__) {
     if (key || ref) {
       const displayName =
-        typeof type === "function"
-          ? type.displayName || type.name || "Unknown"
-          : type
+        typeof type === "function" ? type.displayName || type.name || "Unknown" : type
       if (key) {
         defineKeyPropWarningGetter(props, displayName)
       }
@@ -112,15 +107,7 @@ export function createElement(type, config, children) {
       }
     }
   }
-  return ReactElement(
-    type,
-    key,
-    ref,
-    self,
-    source,
-    ReactCurrentOwner.current,
-    props
-  )
+  return ReactElement(type, key, ref, self, source, ReactCurrentOwner.current, props)
 }
 /**
  * Factory method to create a new React element. This no longer adheres to
@@ -229,7 +216,7 @@ ReactDOM.render(<App />, document.getElementById("root"))
 export function render(
   element: React$Element<any>,
   container: Container,
-  callback: ?Function
+  callback: ?Function,
 ): React$Component<any, any> | PublicInstance | null {
   // 【省略代码...】
 
@@ -239,13 +226,7 @@ export function render(
 
   // 【省略代码...】
 
-  return legacyRenderSubtreeIntoContainer(
-    null,
-    element,
-    container,
-    false,
-    callback
-  )
+  return legacyRenderSubtreeIntoContainer(null, element, container, false, callback)
 }
 
 function legacyRenderSubtreeIntoContainer(
@@ -253,7 +234,7 @@ function legacyRenderSubtreeIntoContainer(
   children: ReactNodeList,
   container: Container,
   forceHydrate: boolean,
-  callback: ?Function
+  callback: ?Function,
 ): React$Component<any, any> | PublicInstance | null {
   // 【省略代码...】
 
@@ -268,7 +249,7 @@ function legacyRenderSubtreeIntoContainer(
       children,
       parentComponent,
       callback,
-      forceHydrate
+      forceHydrate,
     )
   } else {
     // 【更新挂载】
@@ -292,7 +273,7 @@ function legacyCreateRootFromDOMContainer(
   initialChildren: ReactNodeList,
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
-  isHydrationContainer: boolean
+  isHydrationContainer: boolean,
 ): FiberRoot {
   if (isHydrationContainer) {
     if (typeof callback === "function") {
@@ -314,7 +295,7 @@ function legacyCreateRootFromDOMContainer(
       "", // identifierPrefix
       noopOnRecoverableError,
       // TODO(luna) Support hydration later
-      null
+      null,
     )
     container._reactRootContainer = root
     markContainerAsRoot(root.current, container)
@@ -346,7 +327,7 @@ function legacyCreateRootFromDOMContainer(
       false, // concurrentUpdatesByDefaultOverride,
       "", // identifierPrefix
       noopOnRecoverableError, // onRecoverableError
-      null // transitionCallbacks
+      null, // transitionCallbacks
     )
     container._reactRootContainer = root
     markContainerAsRoot(root.current, container)
@@ -492,7 +473,7 @@ export function createContainer(
 }
 ```
 
-`createFiberRoot`首先调用 `new FiberRootNode` 创建一个全局根 `FiberRootNode` 实例，首次渲染所以需要调用 `createHostRootFiber` 创建一个 `FiberNode` 给 `FiberRootNode` 的 `current` 属性赋值，作为此次渲染树的根节点，它是一个`fiberNode`实例，`tag`为 3 表示`HostRoot`节点。
+`createFiberRoot`首先调用 `new FiberRootNode` 创建一个全局根 `FiberRootNode` 实例，首次渲染所以需要调用 `createHostRootFiber` 创建一个 `fiberNode` 给 `FiberRootNode` 的 `current` 属性赋值，作为此次渲染树的根节点，它是一个`fiberNode`实例，`tag`为 3 表示`HostRoot`节点。
 
 ```ts
 // 【packages/react-dom/src/client/ReactDOM.js】
@@ -585,7 +566,7 @@ function FiberRootNode(
   tag,
   hydrate: any,
   identifierPrefix: any,
-  onRecoverableError: any
+  onRecoverableError: any,
 ) {
   this.tag = tag
   this.containerInfo = containerInfo // 【全局根节点的DOM】
@@ -657,7 +638,7 @@ function FiberRootNode(
 
 export function createFiberRoot(
   containerInfo: Container,
-  tag: RootTag
+  tag: RootTag,
   // ...
 ) {}
 
@@ -667,7 +648,7 @@ export const LegacyRoot = 0
 export const ConcurrentRoot = 1
 ```
 
-总结就是在用户调用 `createRoot` 方法之后，会生成一个全局唯一的根 `FiberRootNode` 实例，并将它放在 `ReactDOMRoot` 实例的 `_internalRoot` 属性上。
+总结就是在用户调用 `createRoot` 方法之后，会生成一个全局唯一的根 `FiberRootNode` 实例，并将它放在 `ReactDOMRoot` 实例的 `_internalRoot` 属性上，此全局唯一的根结点会在 `current` 属性上挂载一个`tag`为 3 表示`HostRoot`节点的 `fiber` 节点，这就是后续首次渲染的 `render` 过程的起点。
 
 ```ts
 // 【1.用户调用createRoot，生成了FiberRootNode，返回一个】
@@ -703,7 +684,7 @@ ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
 2. 创建`update`任务，核心内容就是用户传入的需要渲染的组件(`<APP/>`)，后续`beginWork`/`completeWork`其实就是处理`update`任务形成`fiber`树的并挂载 `DOM` 的过程；
 3. （旧版`ReactDOM.render`）为`current fiber`树装载任务，其实就是往`updateQueue`添加`update`任务，`updateQueue`始终是一个闭环，`update`任务之间用`next`链接，如果就一个`update`任务那么它的`next`指向自己；
 
-目前为止，首次加载的情况下，目前仅有两个节点，一个是全局根节点`FiberRootNode`，一个`current`树根节点`FiberNode`，以上内容总结来说就是给`current`树根节点`FiberNode`创建了一个`update`任务用于首次挂载，接下来就是调用`scheduleUpdateOnFiber`方法去安排`update`任务的执行，后续其他类型的`update`任务都是类似步骤。
+目前为止，首次加载的情况下，目前仅有两个节点，一个是全局根节点`FiberRootNode`，一个`current`树根节点`fiberNode`，以上内容总结来说就是给`current`树根节点`fiberNode`创建了一个`update`任务用于首次挂载，接下来就是调用`scheduleUpdateOnFiber`方法去安排`update`任务的执行，后续其他类型的`update`任务都是类似步骤。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberReconciler.js】
@@ -837,16 +818,13 @@ export function scheduleUpdateOnFiber(
   root: FiberRoot,
   fiber: Fiber,
   lane: Lane,
-  eventTime: number
+  eventTime: number,
 ) {
   // 【省略代码...】
 
   // Check if the work loop is currently suspended and waiting for data to
   // finish loading.
-  if (
-    workInProgressSuspendedReason === SuspendedOnData &&
-    root === workInProgressRoot
-  ) {
+  if (workInProgressSuspendedReason === SuspendedOnData && root === workInProgressRoot) {
     // The incoming update might unblock the current render. Interrupt the
     // current attempt and restart from the top.
     prepareFreshStack(root, NoLanes)
@@ -856,10 +834,7 @@ export function scheduleUpdateOnFiber(
   // Mark that the root has a pending update.
   markRootUpdated(root, lane, eventTime)
 
-  if (
-    (executionContext & RenderContext) !== NoLanes &&
-    root === workInProgressRoot
-  ) {
+  if ((executionContext & RenderContext) !== NoLanes && root === workInProgressRoot) {
     // This update was dispatched during the render phase. This is a mistake
     // if the update originates from user space (with the exception of local
     // hook updates, which are handled differently and don't reach this
@@ -894,7 +869,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Determine the next lanes to work on, and their priority.
   const nextLanes = getNextLanes(
     root,
-    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   )
 
   if (nextLanes === NoLanes) {
@@ -910,10 +885,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // If this root is currently suspended and waiting for data to resolve, don't
   // schedule a task to render it. We'll either wait for a ping, or wait to
   // receive an update.
-  if (
-    workInProgressSuspendedReason === SuspendedOnData &&
-    workInProgressRoot === root
-  ) {
+  if (workInProgressSuspendedReason === SuspendedOnData && workInProgressRoot === root) {
     root.callbackPriority = NoLane
     root.callbackNode = null
     return
@@ -972,10 +944,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
           // https://github.com/facebook/react/issues/22459
           // We don't support running callbacks in the middle of render
           // or commit so we need to check against that.
-          if (
-            (executionContext & (RenderContext | CommitContext)) ===
-            NoContext
-          ) {
+          if ((executionContext & (RenderContext | CommitContext)) === NoContext) {
             // Note that this would still prematurely flush the callbacks
             // if this happens outside render or commit phase (e.g. in an event).
             flushSyncCallbacks()
@@ -1010,7 +979,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     // 【Concurrency版：-----安排performConcurrentWorkOnRoot任务-----】
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
-      performConcurrentWorkOnRoot.bind(null, root)
+      performConcurrentWorkOnRoot.bind(null, root),
     )
   }
 
@@ -1058,7 +1027,7 @@ function scheduleCallback(priorityLevel: any, callback) {
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
-  options?: { delay: number }
+  options?: { delay: number },
 ): Task {
   var currentTime = getCurrentTime()
 
@@ -1456,7 +1425,7 @@ function finishConcurrentRender(
 ```ts
 // 【packages/scheduler/src/forks/Scheduler.js】
 function requestHostCallback(
-  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean
+  callback: (hasTimeRemaining: boolean, initialTime: number) => boolean,
 ) {
   // 【scheduledHostCallback用于后续performWorkUntilDeadline方法中调用】
   scheduledHostCallback = callback
@@ -1466,11 +1435,9 @@ function requestHostCallback(
   }
 }
 
-const localSetImmediate =
-  typeof setImmediate !== "undefined" ? setImmediate : null // IE and Node.js + jsdom
+const localSetImmediate = typeof setImmediate !== "undefined" ? setImmediate : null // IE and Node.js + jsdom
 const localSetTimeout = typeof setTimeout === "function" ? setTimeout : null
-const localClearTimeout =
-  typeof clearTimeout === "function" ? clearTimeout : null
+const localClearTimeout = typeof clearTimeout === "function" ? clearTimeout : null
 let schedulePerformWorkUntilDeadline
 // 【setImmediate  MessageChannel  setTimeout三种方案顺序】
 if (typeof localSetImmediate === "function") {
@@ -1546,17 +1513,15 @@ const performWorkUntilDeadline = () => {
 ![react](./assets/mount/performConcurrentWorkOnRoot1.png)
 ![react](./assets/mount/performConcurrentWorkOnRoot2.png)
 
-### Render - 第二步：React-Element 转化为 fiber 过程
+### Render - 第二步：形成 fiber 树过程
 
 `performSyncWorkOnRoot` => `renderRootSync` => `prepareFreshStack`+`workLoopSync`：
 
 1. `prepareFreshStack`
-
    - `root.finishedWork`初始化为 null，直到`render`过程结束`finishedWork`就得到一棵完整的`fiber`树；
    - 根据当前全局根`FiberRootNode`的`current`节点去调用`createWorkInProgress`创建`workInProgress`；
 
 2. `workLoopSync`
-
    - 调用`workLoopSync`循环处理`workInProgress`生成完整的`fiber`树，这个方法是同步的不可打断的；
    - 调用`finishQueueingConcurrentUpdates`，为`current fiber`树装载任务；
 
@@ -1691,7 +1656,7 @@ function workLoopSync() {
 
 `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` => `prepareFreshStack` + `workLoopSync`/`workLoopConcurrent`：
 
-如果是`performConcurrentWorkOnRoot`可能会走向`renderRootConcurrent`继而走向`workLoopConcurrent`方法，可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是前文说的**可中断的**。
+如果是`performConcurrentWorkOnRoot`可能会走向`renderRootConcurrent`继而走向`workLoopConcurrent`方法，可以看到循环过程的判断条件多了一个`shouldYield`方法，这个方法控制当前的解析过程是否需要继续，也就是**可中断的**。
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
@@ -1954,12 +1919,7 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     // node that we're free to reuse. This is lazily created to avoid allocating
     // extra objects for things that are never updated. It also allow us to
     // reclaim the extra memory if needed.
-    workInProgress = createFiber(
-      current.tag,
-      pendingProps,
-      current.key,
-      current.mode
-    )
+    workInProgress = createFiber(current.tag, pendingProps, current.key, current.mode)
     workInProgress.elementType = current.elementType
     workInProgress.type = current.type
     workInProgress.stateNode = current.stateNode
@@ -2173,32 +2133,28 @@ function performUnitOfWork(unitOfWork: Fiber): void {
           <h1>Hello World!</h1>
           <h2>HOBO</h2>
         </div>,
-        document.getElementById("container")
+        document.getElementById("container"),
       )
     </script>
   </body>
 </html>
 ```
 
-#### `beginWork`生成 fiberNode 节点过程
+#### `beginWork` 生成 fiberNode 节点过程 并进行 flag 标记
 
 `beginWork`主要流程如下：
 
 1. 根据是否存在`current`节点，如果存在且符合一定的条件复用`current`节点，`current`节点不存在说明是首次挂载；
-2. 根据 `tag` 类型进入不同的方法，首次渲染会进入`updateHostRoot`方法处理根节点；
-3. 进入`reconcileChildren`方法，首次挂载会创建`fiber`节点否则就是更新，是更新多节点的话会进入常说的`diff`算法；
-4. 从`tag`为`HostRoot`的`fiber`根节点开始，进入它的`beginWork`、`updateHostRoot`、`reconcileChildren`过程解析出来`ƒ App()`对应的`fiber`节点，然后进入`ƒ App()`对应的`fiber`节点的`beginWork`、`mountIndeterminateComponent`、`reconcileChildren`过程解析出来`div`对应的`fiber`节点，直到解析完所有节点。首次挂载进入`mountIndeterminateComponent`进行判断后才确定到底是`ClassComponent`还是`FunctionComponent`；
-5. `ƒ App()`之后是`div`对应的`beginWork`、`updateHostComponent`、`reconcileChildren`，`div` 有两个子节点会进入`reconcileChildrenArray`，这个方法会逐一生成该层节点的`fiber`节点并用`sibling`属性串联起来，最后返回`first fiber`节点；
+2. 根据 `tag` 类型进入不同的方法，首次渲染第一个个节点会进入`updateHostRoot`方法处理根节点；
+3. 进入`reconcileChildren`方法，首次挂载会创建`fiber`节点否则就是更新，是多节点的话会进入常说的`diff`算法；
+4. 从`tag`为`HostRoot`的`fiber`根节点开始，进入它的`beginWork`、`updateHostRoot`、`reconcileChildren`过程创建下一层的`ƒ App()`对应的`fiber`节点，然后进入`ƒ App()`对应的`fiber`节点的`beginWork`、`mountIndeterminateComponent`、`reconcileChildren`过程创建下一层的`div`对应的`fiber`节点，直到解析完所有节点。首次挂载进入`mountIndeterminateComponent`进行判断后才确定到底是`ClassComponent`还是`FunctionComponent`；
+5. `ƒ App()`之后是`div`对应的`beginWork`、`updateHostComponent`、`reconcileChildren`，`div` 有两个子节点会进入`reconcileChildrenArray`，这个方法会逐一生成div下一层节点的`fiber`并用`sibling`属性串联起来，最后返回`first fiber`节点，用return串回div节点；
 
 `beginWork` => `updateHostRoot` => `reconcileChildren` => `mountChildFibers`/`reconcileChildFibers` => `createChildReconciler`
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
+function beginWork(current: Fiber | null, workInProgress: Fiber, renderLanes: Lanes): Fiber | null {
   // 【省略代码...】
 
   if (current !== null) {
@@ -2218,10 +2174,7 @@ function beginWork(
     } else {
       // Neither props nor legacy context changes. Check if there's a pending
       // update or context change.
-      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
-        current,
-        renderLanes
-      )
+      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(current, renderLanes)
       if (
         !hasScheduledUpdateOrContext &&
         // If this is the second pass of an error or suspense boundary, there
@@ -2231,11 +2184,7 @@ function beginWork(
         // No pending updates or context. Bail out now.
         didReceiveUpdate = false
         // 【复用current节点的内容】
-        return attemptEarlyBailoutIfNoScheduledUpdate(
-          current,
-          workInProgress,
-          renderLanes
-        )
+        return attemptEarlyBailoutIfNoScheduledUpdate(current, workInProgress, renderLanes)
       }
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
@@ -2266,12 +2215,7 @@ function beginWork(
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       // 【还没确定类型的组件-class或者function】
-      return mountIndeterminateComponent(
-        current,
-        workInProgress,
-        workInProgress.type,
-        renderLanes
-      )
+      return mountIndeterminateComponent(current, workInProgress, workInProgress.type, renderLanes)
     }
     case LazyComponent: {
       // 【省略代码...】
@@ -2284,13 +2228,7 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps)
-      return updateFunctionComponent(
-        current,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateFunctionComponent(current, workInProgress, Component, resolvedProps, renderLanes)
     }
     case ClassComponent: {
       // 【class组件】
@@ -2300,13 +2238,7 @@ function beginWork(
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps)
-      return updateClassComponent(
-        current,
-        workInProgress,
-        Component,
-        resolvedProps,
-        renderLanes
-      )
+      return updateClassComponent(current, workInProgress, Component, resolvedProps, renderLanes)
     }
     case HostRoot:
       // 【fiber树根节点（并非全局唯一根节点，而是可能存在的两棵fiber树的根节点）】
@@ -2371,14 +2303,14 @@ function beginWork(
 
   throw new Error(
     `Unknown unit of work tag (${workInProgress.tag}). This error is likely caused by a bug in ` +
-      "React. Please file an issue."
+      "React. Please file an issue.",
   )
 }
 ```
 
 ![react](./assets/mount/beginWork1.png)
 
-首次渲染根据 `workInProgress.tag` 会进入 `updateHostRoot` 方法：
+首次渲染根据 `workInProgress.tag` 第一个会进入 `updateHostRoot`(tag=>3) 方法：
 
 1. `cloneUpdateQueue(current, workInProgress)`将`current`上的`updateQueue`克隆给`workInProgress`；
 2. 处理`workInProgress`上的`updateQueue`得到新的`memoizedState`；
@@ -2387,11 +2319,7 @@ function beginWork(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
-function updateHostRoot(
-  current: null | Fiber,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-) {
+function updateHostRoot(current: null | Fiber, workInProgress: Fiber, renderLanes: Lanes) {
   pushHostRootContext(workInProgress)
 
   if (current === null) {
@@ -2433,7 +2361,7 @@ function updateHostRoot(
 
 ![react](./assets/mount/beginWork2.png)
 
-`updateHostRoot` 方法接下来进入`reconcileChildren`，根据 `current` 是否为 `null` 会进入 `mountChildFibers` 或 `reconcileChildFibers` 流程，得到的结果赋值给`workInProgress.child`：
+`updateHostRoot` 方法会进入`reconcileChildren`，根据 `current` 是否为 `null` 会进入 `mountChildFibers` 或 `reconcileChildFibers` 流程，得到的结果赋值给`workInProgress.child`，也就是此时生成了`HostRoot`的下一层节点对应`fiberNode`挂载到`HostRoot`的child属性上：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -2441,19 +2369,14 @@ export function reconcileChildren(
   current: Fiber | null,
   workInProgress: Fiber,
   nextChildren: any,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   if (current === null) {
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
-    workInProgress.child = mountChildFibers(
-      workInProgress,
-      null,
-      nextChildren,
-      renderLanes
-    )
+    workInProgress.child = mountChildFibers(workInProgress, null, nextChildren, renderLanes)
   } else {
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
@@ -2465,7 +2388,7 @@ export function reconcileChildren(
       workInProgress,
       current.child,
       nextChildren,
-      renderLanes
+      renderLanes,
     )
   }
 }
@@ -2487,7 +2410,7 @@ export const mountChildFibers: ChildReconciler = createChildReconciler(false)
 - `reconcileChildFibersImpl`根据`newChild`是对象、数组、thenable 的函数、字符串等等情况进行不同的处理，通常有两个步骤：
   1. 进入具体类型的不同处理如：`reconcileSingleElement`/`reconcileChildrenArray`/`reconcileSingleTextNode`等；
   2. `placeSingleChild`给节点打标记`Placement`；
-- 本例中`ƒ App()`的`$$typeof`属性是`REACT_ELEMENT_TYPE`，所以进入`reconcileSingleElement`方法，根据旧节点是否存在，可能会复用旧节点，首次渲染直接调用`createFiberFromElement`为其创建一个`fiber node`；
+- 本例中`ƒ App()`的`$$typeof`属性是`REACT_ELEMENT_TYPE`，所以进入`reconcileSingleElement`方法，根据旧节点是否存在，可能会复用旧节点，首次渲染直接调用`createFiberFromElement`为其创建一个`fiberNode`；
 
 ```ts
 // 【packages/react-reconciler/src/ReactChildFiber.js】
@@ -3075,28 +2998,21 @@ function updateSlot(
 
 ![react](./assets/mount/beginWork4.png)
 
-`createFiberFromElement`是其中一个构造 `fiber` 节点的方法，可以看到`fiberTag`由于还不确定类型所以暂定为`IndeterminateComponent`：
+`createFiberFromElement`是其中一个构造`fiber`节点的方法，可以看到`fiberTag`由于还不确定类型所以暂定为`IndeterminateComponent`：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiber.js】
 export function createFiberFromElement(
   element: ReactElement,
   mode: TypeOfMode,
-  lanes: Lanes
+  lanes: Lanes,
 ): Fiber {
   let owner = null
   // 【省略代码...】
   const type = element.type
   const key = element.key
   const pendingProps = element.props
-  const fiber = createFiberFromTypeAndProps(
-    type,
-    key,
-    pendingProps,
-    owner,
-    mode,
-    lanes
-  )
+  const fiber = createFiberFromTypeAndProps(type, key, pendingProps, owner, mode, lanes)
   // 【省略代码...】
   return fiber
 }
@@ -3107,7 +3023,7 @@ export function createFiberFromTypeAndProps(
   pendingProps: any,
   owner: null | Fiber,
   mode: TypeOfMode,
-  lanes: Lanes
+  lanes: Lanes,
 ): Fiber {
   // 【IndeterminateComponent，表明此时还不知道这个组件类型】
   let fiberTag = IndeterminateComponent
@@ -3125,7 +3041,7 @@ function createFiber(
   tag: WorkTag,
   pendingProps: mixed,
   key: null | string,
-  mode: TypeOfMode
+  mode: TypeOfMode,
 ): Fiber {
   // $FlowFixMe: the shapes are exact here but Flow doesn't like constructors
   return new FiberNode(tag, pendingProps, key, mode)
@@ -3136,7 +3052,7 @@ function createFiber(
 ![react](./assets/mount/beginWork6.png)
 ![react](./assets/mount/beginWork7.png)
 
-`fiber`节点的`tag`有以下类型值，通常 3 代表`HostRoot`，也就是 `fiber` 树的根节点，在后续调试过程中可以看到几次类型判断中从 3 开始又到 3 结束：
+`fiberNode`节点的`tag`有以下类型值，通常 3 代表`HostRoot`，也就是`fiber`树的根节点，在后续调试过程中可以看到几次类型判断中从 3 开始又到 3 结束：
 
 ```ts
 export const FunctionComponent = 0
@@ -3168,7 +3084,7 @@ export const HostHoistable = 26
 export const HostSingleton = 27
 ```
 
-#### `completeWork`通过 fiber 节点生成对应 DOM 并进行 flag 标记
+#### `completeWork` 通过 fiber 节点生成对应 DOM 并进行 flag 标记
 
 `beginWork`深入执行直到树底，此时再没有子节点，就会调用树底这个节点的`completeUnitOfWork`方法。然后`completeUnitOfWork`方法执行完成若有兄弟节点，就让`workInProgress`指向兄弟节点，继续去调用兄弟节点的`beginWork`，若无兄弟节点就回到上一层，直到回到树顶。
 
@@ -3191,10 +3107,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     if ((completedWork.flags & Incomplete) === NoFlags) {
       setCurrentDebugFiberInDEV(completedWork)
       let next
-      if (
-        !enableProfilerTimer ||
-        (completedWork.mode & ProfileMode) === NoMode
-      ) {
+      if (!enableProfilerTimer || (completedWork.mode & ProfileMode) === NoMode) {
         // 【completeWork处理当前节点】
         next = completeWork(current, completedWork, renderLanes)
       } else {
@@ -3229,10 +3142,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         return
       }
 
-      if (
-        enableProfilerTimer &&
-        (completedWork.mode & ProfileMode) !== NoMode
-      ) {
+      if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
         // Record the render duration for the fiber that errored.
         stopProfilerTimerIfRunningAndRecordDelta(completedWork, false)
 
@@ -3295,7 +3205,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ): Fiber | null {
   const newProps = workInProgress.pendingProps
   // Note: This intentionally doesn't check if we're hydrating because comparing
@@ -3352,7 +3262,7 @@ function completeWork(
           if (workInProgress.stateNode === null) {
             throw new Error(
               "We must have new props for new mounts. This error is likely " +
-                "caused by a bug in React. Please file an issue."
+                "caused by a bug in React. Please file an issue.",
             )
           }
 
@@ -3370,9 +3280,7 @@ function completeWork(
         if (wasHydrated) {
           // TODO: Move this and createInstance step into the beginPhase
           // to consolidate.
-          if (
-            prepareToHydrateHostInstance(workInProgress, currentHostContext)
-          ) {
+          if (prepareToHydrateHostInstance(workInProgress, currentHostContext)) {
             // If changes to the hydrated node need to be applied at the
             // commit-phase we mark this as such.
             markUpdate(workInProgress)
@@ -3385,7 +3293,7 @@ function completeWork(
             newProps,
             rootContainerInstance,
             currentHostContext,
-            workInProgress
+            workInProgress,
           )
           appendAllChildren(instance, workInProgress, false, false)
           workInProgress.stateNode = instance
@@ -3393,14 +3301,7 @@ function completeWork(
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
-          if (
-            finalizeInitialChildren(
-              instance,
-              type,
-              newProps,
-              currentHostContext
-            )
-          ) {
+          if (finalizeInitialChildren(instance, type, newProps, currentHostContext)) {
             markUpdate(workInProgress)
           }
         }
@@ -3425,7 +3326,7 @@ function completeWork(
           if (workInProgress.stateNode === null) {
             throw new Error(
               "We must have new props for new mounts. This error is likely " +
-                "caused by a bug in React. Please file an issue."
+                "caused by a bug in React. Please file an issue.",
             )
           }
           // This can happen when we abort work.
@@ -3442,7 +3343,7 @@ function completeWork(
             newText,
             rootContainerInstance,
             currentHostContext,
-            workInProgress
+            workInProgress,
           )
         }
       }
@@ -3493,7 +3394,7 @@ function updateHostComponent(
   workInProgress: Fiber,
   type: Type,
   newProps: Props,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ) {
   if (supportsMutation) {
     // If we have an alternate, that means this is an update and we need to
@@ -3529,7 +3430,7 @@ function updateHostComponent(
         newChildSet,
         workInProgress,
         /* needsVisibilityToggle */ false,
-        /* isHidden */ false
+        /* isHidden */ false,
       )
     }
 
@@ -3540,7 +3441,7 @@ function updateHostComponent(
       oldProps,
       newProps,
       !requiresClone,
-      newChildSet
+      newChildSet,
     )
     if (newInstance === currentInstance) {
       // No changes, just reuse the existing instance.
@@ -3554,9 +3455,7 @@ function updateHostComponent(
     // Certain renderers require commit-time effects for initial mount.
     // (eg DOM renderer supports auto-focus for certain elements).
     // Make sure such renderers get scheduled for later work.
-    if (
-      finalizeInitialChildren(newInstance, type, newProps, currentHostContext)
-    ) {
+    if (finalizeInitialChildren(newInstance, type, newProps, currentHostContext)) {
       markUpdate(workInProgress)
     }
     workInProgress.stateNode = newInstance
@@ -3574,7 +3473,7 @@ function updateHostComponent(
         newInstance,
         workInProgress,
         /* needsVisibilityToggle */ false,
-        /* isHidden */ false
+        /* isHidden */ false,
       )
     }
   }
@@ -3584,7 +3483,7 @@ function appendAllChildren(
   parent: Instance,
   workInProgress: Fiber,
   needsVisibilityToggle: boolean,
-  isHidden: boolean
+  isHidden: boolean,
 ) {
   if (supportsMutation) {
     // We only have the top Fiber that was created but we need recurse down its
@@ -3647,22 +3546,14 @@ function appendAllChildren(
         // If we have a portal child, then we don't want to traverse
         // down its children. Instead, we'll get insertions from each child in
         // the portal directly.
-      } else if (
-        node.tag === OffscreenComponent &&
-        node.memoizedState !== null
-      ) {
+      } else if (node.tag === OffscreenComponent && node.memoizedState !== null) {
         // The children in this boundary are hidden. Toggle their visibility
         // before appending.
         const child = node.child
         if (child !== null) {
           child.return = node
         }
-        appendAllChildren(
-          parent,
-          node,
-          /* needsVisibilityToggle */ true,
-          /* isHidden */ true
-        )
+        appendAllChildren(parent, node, /* needsVisibilityToggle */ true, /* isHidden */ true)
       } else if (node.child !== null) {
         node.child.return = node
         node = node.child
@@ -3819,7 +3710,7 @@ function bubbleProperties(completedWork: Fiber) {
 }
 ```
 
-最终遍历生成一个个的 `FiberNode` 对象和对应 DOM，然后通过`return`、`child`、`sibling`链接起来，形成了完整的`fiber`树和`DOM`树。
+最终遍历生成一个个的 `fiberNode` 对象和对应 DOM，然后通过`return`、`child`、`sibling`链接起来，形成了完整的`fiber`树和`DOM`树。
 
 ```ts
 function FiberNode(
@@ -3938,14 +3829,14 @@ export const HostSingleton = 27;
 
 `performConcurrentWorkOnRoot` => `renderRootSync`/`renderRootConcurrent` + `finishConcurrentRender` => `commitRoot`
 
-经历过`render`过程，我们此时已经有了一个完整的`fiber`树，树上的节点都会有`flags`属性表明后续`commit`需要进行的不同类型的操作，`workInProgress`目前就指向这棵树，然后进入`commitRoot`过程去把这棵树渲染到页面上：
+经历过`render`过程，我们此时已经有了一个完整的`fiber`树，树上的节点都会有`flags`属性表明后续`commit`需要进行的不同类型的操作，`workInProgress`目前就指向这棵树，然后进入`commitRoot`过程去把这棵树渲染到页面上并执行不同的副作用：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberWorkLoop.js】
 function commitRoot(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,
-  transitions: Array<Transition> | null
+  transitions: Array<Transition> | null,
 ) {
   // TODO: This no longer makes any sense. We already wrap the mutation and
   // layout phases. Should be able to remove.
@@ -3956,12 +3847,7 @@ function commitRoot(
     ReactCurrentBatchConfig.transition = null
     setCurrentUpdatePriority(DiscreteEventPriority)
     // 【commit三步入口】
-    commitRootImpl(
-      root,
-      recoverableErrors,
-      transitions,
-      previousUpdateLanePriority
-    )
+    commitRootImpl(root, recoverableErrors, transitions, previousUpdateLanePriority)
   } finally {
     ReactCurrentBatchConfig.transition = prevTransition
     setCurrentUpdatePriority(previousUpdateLanePriority)
@@ -3995,13 +3881,7 @@ export const BeforeMutationMask: number =
     : 0)
 
 export const MutationMask =
-  Placement |
-  Update |
-  ChildDeletion |
-  ContentReset |
-  Ref |
-  Hydrating |
-  Visibility
+  Placement | Update | ChildDeletion | ContentReset | Ref | Hydrating | Visibility
 export const LayoutMask = Update | Callback | Ref | Visibility
 
 // TODO: Split into PassiveMountMask and PassiveUnmountMask
@@ -4017,7 +3897,7 @@ function commitRootImpl(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,
   transitions: Array<Transition> | null,
-  renderPriorityLevel: EventPriority
+  renderPriorityLevel: EventPriority,
 ) {
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
@@ -4108,12 +3988,10 @@ function commitRootImpl(
   // only other reason this optimization exists is because it affects profiling.
   // Reconsider whether this is necessary.
   const subtreeHasEffects =
-    (finishedWork.subtreeFlags &
-      (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
+    (finishedWork.subtreeFlags & (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
     NoFlags
   const rootHasEffect =
-    (finishedWork.flags &
-      (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
+    (finishedWork.flags & (BeforeMutationMask | MutationMask | LayoutMask | PassiveMask)) !==
     NoFlags
 
   // 【fiber树上有effect就会进行commit三部曲】
@@ -4137,10 +4015,7 @@ function commitRootImpl(
     // state of the host tree right before we mutate it. This is where
     // getSnapshotBeforeUpdate is called.
     // 【第一步.-----调用前序effects，做mutation前的准备工作-----】
-    const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(
-      root,
-      finishedWork
-    )
+    const shouldFireAfterActiveInstanceBlur = commitBeforeMutationEffects(root, finishedWork)
 
     if (enableProfilerTimer) {
       // Mark the current commit time to be shared by all Profilers in this
@@ -4265,10 +4140,7 @@ function commitRootImpl(
     const onRecoverableError = root.onRecoverableError
     for (let i = 0; i < recoverableErrors.length; i++) {
       const recoverableError = recoverableErrors[i]
-      const errorInfo = makeErrorInfo(
-        recoverableError.digest,
-        recoverableError.stack
-      )
+      const errorInfo = makeErrorInfo(recoverableError.digest, recoverableError.stack)
       onRecoverableError(recoverableError.value, errorInfo)
     }
   }
@@ -4336,7 +4208,7 @@ function commitRootImpl(
             processTransitionCallbacks(
               prevPendingTransitionCallbacks,
               endTime,
-              prevRootTransitionCallbacks
+              prevRootTransitionCallbacks,
             )
           })
         } else {
@@ -4358,10 +4230,7 @@ function commitRootImpl(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberCommitWork.js】
-export function commitBeforeMutationEffects(
-  root: FiberRoot,
-  firstChild: Fiber
-): boolean {
+export function commitBeforeMutationEffects(root: FiberRoot, firstChild: Fiber): boolean {
   focusedInstanceHandle = prepareForCommit(root.containerInfo)
 
   nextEffect = firstChild
@@ -4393,10 +4262,7 @@ function commitBeforeMutationEffects_begin() {
     }
     // 【subtreeFlags判断是否有前置任务需要处理】
     const child = fiber.child
-    if (
-      (fiber.subtreeFlags & BeforeMutationMask) !== NoFlags &&
-      child !== null
-    ) {
+    if ((fiber.subtreeFlags & BeforeMutationMask) !== NoFlags && child !== null) {
       child.return = fiber
       nextEffect = child
     } else {
@@ -4478,7 +4344,7 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
             finishedWork.elementType === finishedWork.type
               ? prevProps
               : resolveDefaultProps(finishedWork.type, prevProps),
-            prevState
+            prevState,
           )
           // 【省略代码...】
           instance.__reactInternalSnapshotBeforeUpdate = snapshot
@@ -4507,7 +4373,7 @@ function commitBeforeMutationEffectsOnFiber(finishedWork: Fiber) {
       if ((flags & Snapshot) !== NoFlags) {
         throw new Error(
           "This unit of work tag should not have side-effects. This error is " +
-            "likely caused by a bug in React. Please file an issue."
+            "likely caused by a bug in React. Please file an issue.",
         )
       }
     }
@@ -5123,16 +4989,13 @@ function recursivelyTraverseLayoutEffects(
 ![react](./assets/mount/commitLayoutEffects2.png)
 
 1. `commitBeforeMutationEffects`
-
-   - `DOM` 变化之前。主要处理节点标记（`flags`）为`Snapshot`, `Deletion`等的`fiber`节点。
+   - `DOM` 变化之前。主要处理节点标记（`flags`）为`Snapshot`/ `Deletion`等的`fiber`节点。
 
 2. `commitMutationEffects`
-
-   - `DOM` 变化阶段。 主要处理节点标记（`flags`）为`Placement`, `Update`, `Deletion`, `Hydrating`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`destroy`。
+   - `DOM` 变化阶段。 主要处理节点标记（`flags`）为`Placement`/`Update`/`Deletion`/`Hydrating`/`Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`destroy`。
 
 3. `commitLayoutEffects`
-
-   - `DOM` 变化后。主要处理节点标记（`flags`）为`Update` , `Callback`, `Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`create`。
+   - `DOM` 变化后。主要处理节点标记（`flags`）为`Update`/`Callback`/`Ref`等的`fiber`节点。这个阶段会调用`useLayoutEffect`这个`hook`对应的`effect`实例的`create`。
 
 ## 总结
 
@@ -5140,10 +5003,10 @@ function recursivelyTraverseLayoutEffects(
 2. 创建完`fiberRootNode<FiberRoot>`和`fiber node<Fiber:HostRoot>`之后都会进入`updateContainer`方法，旧版在此时安排`update`任务到`current`树的`updateQueue`中，首次渲染`update`任务中包含的就是用户传入的例如`<App />`；
 3. `updateContainer`进入`scheduleUpdateOnFiber`进行任务以及优先级等安排工作，进入`scheduleSyncCallback`同步任务安排或者`scheduleCallback`的`Concurrency`任务安排，旧版最终会调用`performSyncWorkOnRoot.bind(null, root)`，新版会调用`performConcurrentWorkOnRoot.bind(null, root)`；
 4. `performSyncWorkOnRoot.bind(null, root)`/`performConcurrentWorkOnRoot.bind(null, root)`都会进入两个关键步骤，一个是**render 过程**`renderRootSync`/`renderRootConcurrent`，一个是**commit 过程**`commitRoot`；
-5. `render`过程（`renderRootSync`/`renderRootConcurrent`）主要是深度遍历节点调用`beginWork`生成`fiber`节点并且标识合适的`flags`，当到达底部节点时会去调用`completeUnitOfWork`生成`DOM`，然后检查是否存在`sibling`，存在就继续调用`beginWork`/`completeUnitOfWork`，不存在就回到上层节点继续调用`completeUnitOfWork`，在`completeUnitOfWork`过程中会调用`bubbleProperties`把 `flags` 往上传递用于后续 `commit` 过程中的判断，重复此过程，直到完成`fiber`树构建，此时`DOM`也已构建并标记了合适的`flags`；
+5. `render`过程（`renderRootSync`/`renderRootConcurrent`）主要是深度遍历节点调用`beginWork`生成`fiber`节点并且标识合适的`flags`，当到达底部节点时会去调用`completeUnitOfWork`生成`DOM`，然后检查是否存在`sibling`，存在就继续调用`beginWork`（创建下一层children的FiberNode并标记flag）/`completeUnitOfWork`（创建对应stateNode并把下层的stateNode插入正确位置），不存在就回到上层节点继续调用`completeUnitOfWork`，在`completeUnitOfWork`过程中会调用`bubbleProperties`把`flags`往上传递用于后续`commit`过程中的判断，重复此过程，直到完成`fiber`树构建，此时`DOM`也已构建并标记了合适的`flags`；
 6. `commit`过程（`commitRoot`）主要有三个过程`commitBeforeMutationEffects`、`commitMutationEffects`、`commitLayoutEffects`，`commitMutationEffects`是`mutation`过程也就是将`fiber`树进行`DOM`渲染的过程，另外两个方法分别是前置和后置的处理工作，`commit`阶段主要通过`fiber`节点的`flags`/`subtreeFlags`去判断是否需要处理；
 
-![react](./assets/mount/mount.png)
+![react](./assets/mount/mount.svg)
 ![react](./assets/mount/mount_fiber.png)
 
 ## 参考资料

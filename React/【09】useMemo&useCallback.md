@@ -93,10 +93,7 @@ useMemo<T>(create: () => T, deps: Array<mixed> | void | null): T {
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
-function mountMemo<T>(
-  nextCreate: () => T,
-  deps: Array<mixed> | void | null
-): T {
+function mountMemo<T>(nextCreate: () => T, deps: Array<mixed> | void | null): T {
   const hook = mountWorkInProgressHook()
   const nextDeps = deps === undefined ? null : deps
   if (shouldDoubleInvokeUserFnsInHooksDEV) {
@@ -118,10 +115,7 @@ function mountMemo<T>(
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberHooks.js】
-function updateMemo<T>(
-  nextCreate: () => T,
-  deps: Array<mixed> | void | null
-): T {
+function updateMemo<T>(nextCreate: () => T, deps: Array<mixed> | void | null): T {
   const hook = updateWorkInProgressHook()
   const nextDeps = deps === undefined ? null : deps
   const prevState = hook.memoizedState
@@ -142,10 +136,7 @@ function updateMemo<T>(
   return nextValue
 }
 
-function areHookInputsEqual(
-  nextDeps: Array<mixed>,
-  prevDeps: Array<mixed> | null
-): boolean {
+function areHookInputsEqual(nextDeps: Array<mixed>, prevDeps: Array<mixed> | null): boolean {
   // 【省略代码...】
   // 【循环遍历deps用Object.is对比新旧dep是否相同】
   // $FlowFixMe[incompatible-use] found when upgrading Flow
@@ -187,7 +178,7 @@ function areHookInputsEqual(
           (sonName) => {
             console.log(sonName)
           },
-          [id]
+          [id],
         )
         return (
           <div>
@@ -281,9 +272,10 @@ A React component should always have pure rendering logic. This means that it mu
 `React.memo()`入口如下，可以看到其实就是创建了一个`elementType`对象所以在 `beginWork` 和 `completeWork` 阶段会进入不同的分支进行处理：
 
 ```ts
+// 【packages/react/src/ReactMemo.js】
 export function memo<Props>(
   type: React$ElementType,
-  compare?: (oldProps: Props, newProps: Props) => boolean
+  compare?: (oldProps: Props, newProps: Props) => boolean,
 ) {
   // 【省略代码...】
   const elementType = {
@@ -296,7 +288,7 @@ export function memo<Props>(
 }
 ```
 
-后续在进行`fiber`构建的`beginWork`阶段，遇到`memo`包裹的组件就会进入`updateMemoComponent` 或者 `updateSimpleMemoComponent`方法：
+后续在进行`fiber`构建的`beginWork`阶段，遇到`memo`包裹的组件就会进入 `updateMemoComponent` 或者 `updateSimpleMemoComponent` 方法：
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -421,7 +413,7 @@ export function isSimpleFunctionComponent(type: any): boolean {
 
 可以看到`updateSimpleMemoComponent`会简单的根据新旧`props`以及节点上是否有更新任务进行判断，如果不需要`rerender`就会进入`bailoutOnAlreadyFinishedWork`，否则还是走正常的函数组件流程。
 
-**这个对比新旧`props`的方法`shallowEqual`不同于前文提到的`===`，如果前后两次`props`对象并非同一个对象但是所有的属性严格相同的情况下会判定为新旧`props`相同，因此就不会对组件进行`rerender`。**
+**这个对比新旧`props`的方法`shallowEqual`不同于前文中beginWork方法中对比新旧提到的`props`的方法`===`，如果前后两次`props`对象并非同一个对象但是所有的属性严格相同的情况下会判定为新旧`props`相同，因此就不会对组件进行`rerender`。**
 
 ```ts
 // 【packages/react-reconciler/src/ReactFiberBeginWork.js】
@@ -430,7 +422,7 @@ function updateSimpleMemoComponent(
   workInProgress: Fiber,
   Component: any,
   nextProps: any,
-  renderLanes: Lanes
+  renderLanes: Lanes,
 ): null | Fiber {
   // TODO: current can be non-null here even if the component
   // hasn't yet mounted. This happens when the inner render suspends.
@@ -479,11 +471,7 @@ function updateSimpleMemoComponent(
         // TODO: Move the reset at in beginWork out of the common path so that
         // this is no longer necessary.
         workInProgress.lanes = current.lanes
-        return bailoutOnAlreadyFinishedWork(
-          current,
-          workInProgress,
-          renderLanes
-        )
+        return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes)
       } else if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
         // This is a special case that only exists for legacy mode.
         // See https://github.com/facebook/react/pull/19216.
@@ -492,13 +480,7 @@ function updateSimpleMemoComponent(
     }
   }
   // 【否则还是走正常函数组件流程】
-  return updateFunctionComponent(
-    current,
-    workInProgress,
-    Component,
-    nextProps,
-    renderLanes
-  )
+  return updateFunctionComponent(current, workInProgress, Component, nextProps, renderLanes)
 }
 
 /**
@@ -511,12 +493,7 @@ function shallowEqual(objA: mixed, objB: mixed): boolean {
     return true
   }
 
-  if (
-    typeof objA !== "object" ||
-    objA === null ||
-    typeof objB !== "object" ||
-    objB === null
-  ) {
+  if (typeof objA !== "object" || objA === null || typeof objB !== "object" || objB === null) {
     return false
   }
 
@@ -527,6 +504,7 @@ function shallowEqual(objA: mixed, objB: mixed): boolean {
     return false
   }
 
+  // 【遍历对比新旧props的属性，新旧props如果是通过useMemo或者useCallback缓存的内容就不会引起不必要的更新】
   // Test for A's keys different from B.
   for (let i = 0; i < keysA.length; i++) {
     const currentKey = keysA[i]
@@ -540,6 +518,12 @@ function shallowEqual(objA: mixed, objB: mixed): boolean {
   }
 
   return true
+}
+
+function is(x: any, y: any) {
+  return (
+    (x === y && (x !== 0 || 1 / x === 1 / y)) || (x !== x && y !== y) // eslint-disable-line no-self-compare
+  )
 }
 ```
 
