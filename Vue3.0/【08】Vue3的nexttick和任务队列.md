@@ -16,18 +16,27 @@ const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 // 【如果当前正在执行Flush更新，则在currentFlushPromise执行resolve以后再执行用户Fn】
 // 【如果当前没有正在执行的内容，直接用Promise.resolve()执行then操作调用用户Fn】
-export function nextTick<T = void>(
-  this: T,
-  fn?: (this: T) => void
-): Promise<void> {
+export function nextTick<T = void>(this: T, fn?: (this: T) => void): Promise<void> {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
 ```
 
+Vue 的异步更新逻辑是由 `flushJobs` 驱动的。我们可以把一次数据修改到 DOM 更新的过程拆解为以下顺序：
+
+1. 同步代码执行：修改 `count.value = 1`
+2. 任务入队：渲染 `Job` 进入 `queue`，`queueFlush()` 启动 `Promise.resolve().then(flushJobs)`
+3. 调用 `nextTick(cb)`：此时手动调用了 `nextTick`
+4. 同步代码结束：JS 主线程空闲，开始处理微任务队列（Microtask Queue）
+5. 执行 `flushJobs`
+   1. 执行 `Pre` 队列
+   2. 执行 `Queue` 队列（关键：这里执行组件渲染/DOM 更新）。
+   3. 执行 `Post` 队列
+6. 执行下一个微任务`nextTick`注册的`cb`任务
+
 ## Vue3 中的任务队列执行机制
 
-前文中可以知道在实例化`ReactiveEffect`对象时，有两个至关重要的参数，第一个是`fn`回调，第二个是`scheduler`，这个`scheduler`通常是一个匿名函数，内部会调用`queueJob`、`queuePostRenderEffect`(其实也就是`queuePostFlushCb`)等方法去安排 job 在哪个阶段执行。
+前文中可以知道在实例化`ReactiveEffect`对象时，有两个至关重要的参数，第一个是`fn`回调，第二个是`scheduler`，这个`scheduler`通常是一个匿名函数，内部会调用`queueJob`、`queuePostRenderEffect`(其实也就是`queuePostFlushCb`)等方法去安排 job 在哪个阶段执行。除了首次挂载会直接调用`instance.update()`也就是`effect.run()`之外，其余如响应时对象状态变化要引起视图更新等情况都会调用`effect.sscheduler()`进行异步任务的调度。
 
 Vue3 中有三个任务队列：
 
@@ -37,7 +46,7 @@ Vue3 中有三个任务队列：
 
 从加入 job 队列到执行完整个过程如下：**queueJob/queuePostFlushCb -> queueFlush -> flushJobs -> flushPostFlushCbs -> nextTick 的 fn 回调**，每个队列中的任务有两种状态：等待执行任务、执行任务中。
 
-- `queueJob()`/`queuePostFlushCb()`方法把任务加进任务队列
+- `queueJob()`/`queuePostFlushCb()`方法把任务加进对应的任务队列
 - `queueFlush`是任务队列开始执行前的准备工作会把任务队列的执行放入`promise.then()`中
 - `flushJobs()`/`flushPostFlushCbs()`则是遍历执行`queue`/`pendingPostFlushCbs`任务队列
 
@@ -174,7 +183,7 @@ update.id = instance.uid //组件实例的uid作为job的id，用于后序排序
 const effect = (instance.effect = new ReactiveEffect(
   componentUpdateFn,
   () => queueJob(update),
-  instance.scope // track it in component's effect scope
+  instance.scope, // track it in component's effect scope
 ))
 ```
 
@@ -195,13 +204,9 @@ const job: SchedulerJob = () => {
       deep ||
       forceTrigger ||
       (isMultiSource
-        ? (newValue as any[]).some((v, i) =>
-            hasChanged(v, (oldValue as any[])[i])
-          )
+        ? (newValue as any[]).some((v, i) => hasChanged(v, (oldValue as any[])[i]))
         : hasChanged(newValue, oldValue)) ||
-      (__COMPAT__ &&
-        isArray(newValue) &&
-        isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+      (__COMPAT__ && isArray(newValue) && isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
     ) {
       // cleanup before running cb again
       if (cleanup) {
@@ -266,10 +271,7 @@ export function queueJob(job: SchedulerJob) {
   // 【当前job没有id直接加入队列，当前job有id则用splice方法替换相同id的job(更新这个job)】
   if (
     !queue.length ||
-    !queue.includes(
-      job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
-    )
+    !queue.includes(job, isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex)
   ) {
     if (job.id == null) {
       queue.push(job)
@@ -296,10 +298,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
     if (
       !activePostFlushCbs ||
-      !activePostFlushCbs.includes(
-        cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex
-      )
+      !activePostFlushCbs.includes(cb, cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex)
     ) {
       pendingPostFlushCbs.push(cb)
     }
@@ -337,7 +336,9 @@ function queueFlush() {
 
 ### 执行前置任务队列 `flushPreFlushCbs()`
 
-该方法负责处理执行前置队列任务，因为它按入`queue`任务队列的顺序进行遍历执行的，可以看到该方法在`render`/`updateComponentPreRender`中有调用。
+该方法负责处理执行前置队列任务，因为它按入`queue`任务队列的顺序进行遍历执行的，可以看到该方法在挂载入口`render`/组件更新之前`updateComponentPreRender`中有调用。
+
+可能的任务类型有：`watch` 回调（`flush: 'pre'`）和 `computed` 相关的副作用
 
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
@@ -346,7 +347,7 @@ export function flushPreFlushCbs(
   seen?: CountMap,
   // if currently flushing, skip the current job itself
   // 【当前正在执行任务队列的话，从正在执行的那个之后开始，否则从0开始】
-  i = isFlushing ? flushIndex + 1 : 0
+  i = isFlushing ? flushIndex + 1 : 0,
 ) {
   if (__DEV__) {
     seen = seen || new Map()
@@ -376,6 +377,8 @@ export function flushPreFlushCbs(
 4. 调用`flushPostFlushCbs`去执行后置队列任务
 5. 检查是否有在执行过程中加入主任务队列的任务，继续全部执行掉
 
+可能的任务类型有：组件的更新函数（`componentUpdateFn`）
+
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
 let isFlushing = false //flushJobs中
@@ -403,9 +406,7 @@ function flushJobs(seen?: CountMap) {
   // inside try-catch. This can leave all warning code unshaked. Although
   // they would get eventually shaken by a minifier like terser, some minifiers
   // would fail to do that (e.g. https://github.com/evanw/esbuild/issues/1610)
-  const check = __DEV__
-    ? (job: SchedulerJob) => checkRecursiveUpdates(seen!, job)
-    : NOOP
+  const check = __DEV__ ? (job: SchedulerJob) => checkRecursiveUpdates(seen!, job) : NOOP
 
   //【遍历执行job，放在try、catch中执行】
   try {
@@ -442,6 +443,8 @@ function flushJobs(seen?: CountMap) {
 
 该方法负责处理执行后置队列任务。
 
+任务类型：`watch` 回调（`flush: 'post'`）和 `Teleport` 的挂载逻辑
+
 ```ts
 // 【packages/runtime-core/src/scheduler.ts】
 // 【执行后置任务队列-pendingPostFlushCbs】
@@ -467,15 +470,8 @@ export function flushPostFlushCbs(seen?: CountMap) {
     activePostFlushCbs.sort((a, b) => getId(a) - getId(b))
 
     //【遍历执行job】
-    for (
-      postFlushIndex = 0;
-      postFlushIndex < activePostFlushCbs.length;
-      postFlushIndex++
-    ) {
-      if (
-        __DEV__ &&
-        checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])
-      ) {
+    for (postFlushIndex = 0; postFlushIndex < activePostFlushCbs.length; postFlushIndex++) {
+      if (__DEV__ && checkRecursiveUpdates(seen!, activePostFlushCbs[postFlushIndex])) {
         continue
       }
       activePostFlushCbs[postFlushIndex]()
@@ -489,7 +485,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 
 ## 总结
 
-![nextTick](./assets/nexttick.png)
+![nextTick](./assets/queue.svg)
 
 ## 参考资料
 

@@ -1,5 +1,7 @@
 # Pinia
 
+`Pinia` 的作用：它提供了一个固定的模式——`State`（数据）、`Getters`（修饰/计算）、`Actions`（业务逻辑）。它强制你把“改变数据的逻辑”写在 `actions` 里。这样，业务逻辑被集中管理，而不是散落在 UI 组件的 `click` 事件里。
+
 ## Pinia 的使用
 
 调用 `createPinia` 创建 `Pinia` 插件供 `app` 实例使用：
@@ -34,9 +36,7 @@ export function createPinia(): Pinia {
   const scope = effectScope(true)
   // NOTE: here we could check the window object for a state and directly set it
   // if there is anything like it with Vue 3 SSR
-  const state = scope.run<Ref<Record<string, StateTree>>>(() =>
-    ref<Record<string, StateTree>>({})
-  )!
+  const state = scope.run<Ref<Record<string, StateTree>>>(() => ref<Record<string, StateTree>>({}))!
 
   let _p: Pinia["_p"] = []
   // plugins added before calling app.use(pinia)
@@ -94,9 +94,9 @@ export function createPinia(): Pinia {
 
 首先通常我们会去调用 `defineStore` 创建一个 `store` 对象，上面包含 `state` 和一系列方法。要让 `pinia` 正确识别 `state`，你必须在 `setup` 中返回 `state` 的所有属性，最终 `defineStore` 返回 `useStore` 函数，供组件调用：
 
-- `ref()` 就是 `state`
-- `computed()` 就是 `getters`
-- `function()` 就是 `actions`
+- `ref()` => `state`
+- `computed()` => `getters`
+- `function()` => `actions`
 
 ```ts
 import { ref, computed } from "vue"
@@ -120,11 +120,11 @@ export const useCounterStore = defineStore("counter", () => {
 
 - `install` 在 `pinia` 作为插件使用时调用
 - `use` 使用相关插件，如 `DevTools`
-- `state` 一个 `ref` 对象，会存储所有创建的 `state` 对象，`<id,state对象>`
+- `state` 一个 `ref` 对象，会存储所有创建的 `state` 对象`<id,state对象>`（存储的是整个应用所有 `store` 的原始数据，把散落在各个 `store` 里的数据汇聚成一棵大树，使得 `Vue DevTools` 可以一键导出整个应用的状态）
 - `_p` 存储用到的相关插件
 - `_a` 对应的 `app` 实例
 - `_e` 对应的 `EffectScope`
-- `_s` 一个 `map`，存储所有创建的所有 `store` 对象，`<id,store对象>`
+- `_s` 一个 `map`，存储所有创建的所有 `store` 对象，`<id,store对象>`（存储的是所有已经实例化的 `store` 对象，多次调用 `useSomeStore()` 时，`Pinia` 会先去 `_s` 查找）
 
 ```ts
 /**
@@ -186,9 +186,11 @@ export interface Pinia {
 }
 ```
 
+总结来说，使用`pinia`的第一步是用 createPinia 方法创建`pinia`对象并挂载在 `app` 实例上。下一步就是使用`pinia`提供的`defineStore`方法创建`useXXXStore`供我们使用。
+
 ## store
 
-定义 `store` 的 `defineStore` 如下，入参是`id`、`setup`(可选)、`setupOptions`(可选)，返回 `useStore` 函数：
+第一步，`defineStore` 如下，入参是`id`、`setup`(可选)、`setupOptions`(可选)，返回 `useStore` 函数：
 
 1. `inject` 依赖注入 `piniaSymbol` 对象找到 `pinia` 实例；
 2. 在 `pinia._s` 上寻找对应 `id` 的 `store`，没有的话就根据是 `setup` 还是 `setupOptions` 类型去创建 `store` 对象；
@@ -202,21 +204,11 @@ export function defineStore(
   // TODO: add proper types from above
   id: any,
   setup?: any,
-  setupOptions?: any
+  setupOptions?: any,
 ): StoreDefinition {
   let options:
-    | DefineStoreOptions<
-        string,
-        StateTree,
-        _GettersTree<StateTree>,
-        _ActionsTree
-      >
-    | DefineSetupStoreOptions<
-        string,
-        StateTree,
-        _GettersTree<StateTree>,
-        _ActionsTree
-      >
+    | DefineStoreOptions<string, StateTree, _GettersTree<StateTree>, _ActionsTree>
+    | DefineSetupStoreOptions<string, StateTree, _GettersTree<StateTree>, _ActionsTree>
 
   const isSetupStore = typeof setup === "function"
   // the option store setup will contain the actual options in this case
@@ -236,12 +228,12 @@ export function defineStore(
       throw new Error(
         `[🍍]: "getActivePinia()" was called but there was no active Pinia. Are you trying to use a store before calling "app.use(pinia)"?\n` +
           `See https://pinia.vuejs.org/core-concepts/outside-component-usage.html for help.\n` +
-          `This will fail in production.`
+          `This will fail in production.`,
       )
     }
 
     pinia = activePinia!
-    // 【查找pinia._s是否有相应的store】
+    // 【查找pinia._s是否有相应的store，没有就创建并加入到pinia._s中】
     if (!pinia._s.has(id)) {
       // creating the store registers it in `pinia._s`
       if (isSetupStore) {
@@ -299,9 +291,9 @@ export function defineStore(
 
 ![pinia](./assets/pinia/pinia3.png)
 
-然后用户在组件中调用 `useStore` 函数使用 `store` 时就会进入 `createSetupStore` 创建（或寻找） `store` 对象的逻辑如下：
+第二步，然后用户在组件中调用 `useStore` 函数生成 `store` 实例时就会进入 `createSetupStore` 创建（或寻找） `store` 对象的逻辑如下：
 
-1. 先由 `reactive` 创建一个基础的 `store` 对象然后和 `partialSore` 合并，包含了 `$id`、`$patch`、`$reset`、`$subscribe` 等属性和方法；
+1. 先由 `reactive` 创建一个基础的 `store` 对象然后和 `partialSore` 合并，包含了 `$id`、`$patch`、`$reset`、`$subscribe`、`$dispose` 等属性和方法；
 2. 执行 `setup` 函数得到 `setupStore` 对象包含了 `setup` 函数返回的所有内容，并且遍历返回内容，针对 `state`、`getters`、`actions` 分别进行处理；
 3. 将基础 `store` 对象和 `setupStore` 对象结合形成完整的 `store` 对象，最后为其加入 `$state` 属性并返回这个完整的 `store` 对象；
 
@@ -314,22 +306,20 @@ function createSetupStore<
   SS extends Record<any, unknown>,
   S extends StateTree,
   G extends Record<string, _Method>,
-  A extends _ActionsTree
+  A extends _ActionsTree,
 >(
   $id: Id,
   setup: (helpers: SetupStoreHelpers) => SS,
-  options:
-    | DefineSetupStoreOptions<Id, S, G, A>
-    | DefineStoreOptions<Id, S, G, A> = {},
+  options: DefineSetupStoreOptions<Id, S, G, A> | DefineStoreOptions<Id, S, G, A> = {},
   pinia: Pinia,
   hot?: boolean,
-  isOptionsStore?: boolean
+  isOptionsStore?: boolean,
 ): Store<Id, S, G, A> {
   let scope!: EffectScope
 
   const optionsForPlugin: DefineStoreOptionsInPlugin<Id, S, G, A> = assign(
     { actions: {} as A },
-    options
+    options,
   )
 
   //【...省略】
@@ -345,6 +335,7 @@ function createSetupStore<
   let subscriptions: SubscriptionCallback<S>[] = []
   let actionSubscriptions: StoreOnActionListener<Id, S, G, A>[] = []
   let debuggerEvents: DebuggerEvent[] | DebuggerEvent
+  // 【在pinia.state上为当前store预留位置】
   const initialState = pinia.state.value[$id] as UnwrapRef<S> | undefined
 
   // avoid setting the state for option stores if it is set
@@ -358,13 +349,12 @@ function createSetupStore<
 
   // avoid triggering too many listeners
   // https://github.com/vuejs/pinia/issues/1129
+  // 【定义store的$patch/$reset/$dipose方法】
   let activeListener: Symbol | undefined
   function $patch(stateMutation: (state: UnwrapRef<S>) => void): void
   function $patch(partialState: _DeepPartial<UnwrapRef<S>>): void
   function $patch(
-    partialStateOrMutator:
-      | _DeepPartial<UnwrapRef<S>>
-      | ((state: UnwrapRef<S>) => void)
+    partialStateOrMutator: _DeepPartial<UnwrapRef<S>> | ((state: UnwrapRef<S>) => void),
   ): void {
     //【...省略】
   }
@@ -374,19 +364,16 @@ function createSetupStore<
         //【...省略】
       }
     : /* istanbul ignore next */
-    __DEV__
-    ? () => {
-        throw new Error(
-          `🍍: Store "${$id}" is built using the setup syntax and does not implement $reset().`
-        )
-      }
-    : noop
+      __DEV__
+      ? () => {
+          throw new Error(
+            `🍍: Store "${$id}" is built using the setup syntax and does not implement $reset().`,
+          )
+        }
+      : noop
 
   function $dispose() {
-    scope.stop()
-    subscriptions = []
-    actionSubscriptions = []
-    pinia._s.delete($id)
+    //【...省略】
   }
 
   /**
@@ -405,7 +392,7 @@ function createSetupStore<
     hotState,
   })
 
-  // 【创建初始的store，可以看到包含$patch、$reset、$subscribe()等方法】
+  // 【创建初始的store，可以看到包含$patch、$reset、$subscribe、$dispose等方法】
   const partialStore = {
     _p: pinia,
     // _s: scope,
@@ -427,11 +414,11 @@ function createSetupStore<
             _hmrPayload,
             _customProperties: markRaw(new Set<string>()), // devtools custom properties
           },
-          partialStore
+          partialStore,
           // must be added later
           // setupStore
         )
-      : partialStore
+      : partialStore,
   ) as unknown as Store<Id, S, G, A>
 
   // 【存储到pinia实例的_s这个map中和id一一对应】
@@ -439,13 +426,12 @@ function createSetupStore<
   // creating infinite loops.
   pinia._s.set($id, store as Store)
 
-  const runWithContext =
-    (pinia._a && pinia._a.runWithContext) || fallbackRunWithContext
+  const runWithContext = (pinia._a && pinia._a.runWithContext) || fallbackRunWithContext
 
   // 【执行store的setup获取返回具体的内容】
   // TODO: idea create skipSerialize that marks properties as non serializable and they are skipped
   const setupStore = runWithContext(() =>
-    pinia._e.run(() => (scope = effectScope()).run(() => setup({ action }))!)
+    pinia._e.run(() => (scope = effectScope()).run(() => setup({ action }))!),
   )!
 
   // 【遍历setup返回内容，一一处理，store值存储到pinia.state上，action和getter分别进行处理，包装action然后暴露给插件等】
@@ -454,6 +440,7 @@ function createSetupStore<
     const prop = setupStore[key]
 
     if ((isRef(prop) && !isComputed(prop)) || isReactive(prop)) {
+      // 【-----处理State-----】
       // mark it as a piece of state to be serialized
       if (__DEV__ && hot) {
         hotState.value[key] = toRef(setupStore, key)
@@ -470,6 +457,7 @@ function createSetupStore<
             mergeReactiveObjects(prop, initialState[key])
           }
         }
+        // 【存储到pinia.state，保证store里的响应式对象无论是在组件里修改还是全局修改都会引起组件重新渲染】
         // transfer the ref to the pinia state to keep everything in sync
         pinia.state.value[$id][key] = prop
       }
@@ -480,6 +468,8 @@ function createSetupStore<
       }
       // action
     } else if (typeof prop === "function") {
+      // 【-----处理Actions-----】
+      // 【用action包装，经过包装后的函数具备了 $onAction 订阅能力】
       const actionValue = __DEV__ && hot ? prop : action(prop as _Method, key)
       // this a hot module replacement store because the hotUpdate method needs
       // to do it with the right context
@@ -497,6 +487,7 @@ function createSetupStore<
     } else if (__DEV__) {
       // add getters for devtools
       if (isComputed(prop)) {
+        // 【-----处理Getters-----】
         _hmrPayload.getters[key] = isOptionsStore
           ? // @ts-expect-error
             options.getters[key]
@@ -659,23 +650,19 @@ function createSetupStore<
   SS extends Record<any, unknown>,
   S extends StateTree,
   G extends Record<string, _Method>,
-  A extends _ActionsTree
+  A extends _ActionsTree,
 >(
   $id: Id,
   setup: (helpers: SetupStoreHelpers) => SS,
-  options:
-    | DefineSetupStoreOptions<Id, S, G, A>
-    | DefineStoreOptions<Id, S, G, A> = {},
+  options: DefineSetupStoreOptions<Id, S, G, A> | DefineStoreOptions<Id, S, G, A> = {},
   pinia: Pinia,
   hot?: boolean,
-  isOptionsStore?: boolean
+  isOptionsStore?: boolean,
 ): Store<Id, S, G, A> {
   //【...省略】
 
   function $patch(
-    partialStateOrMutator:
-      | _DeepPartial<UnwrapRef<S>>
-      | ((state: UnwrapRef<S>) => void)
+    partialStateOrMutator: _DeepPartial<UnwrapRef<S>> | ((state: UnwrapRef<S>) => void),
   ): void {
     let subscriptionMutation: SubscriptionCallbackMutation<S>
     isListening = isSyncListening = false
@@ -714,7 +701,7 @@ function createSetupStore<
     triggerSubscriptions(
       subscriptions,
       subscriptionMutation,
-      pinia.state.value[$id] as UnwrapRef<S>
+      pinia.state.value[$id] as UnwrapRef<S>,
     )
   }
 
@@ -723,6 +710,10 @@ function createSetupStore<
   return store
 }
 ```
+
+## 总结
+
+![pinia](./assets/pinia/pinia.svg)
 
 ## 参考资料
 

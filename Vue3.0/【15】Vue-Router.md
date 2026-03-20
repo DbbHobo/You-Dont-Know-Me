@@ -88,10 +88,7 @@ const app: App = (context.app = {
       installedPlugins.add(plugin)
       plugin(app, ...options)
     } else if (__DEV__) {
-      warn(
-        `A plugin must either be a function or an object with an "install" ` +
-          `function.`
-      )
+      warn(`A plugin must either be a function or an object with an "install" ` + `function.`)
     }
     return app
   },
@@ -111,7 +108,7 @@ const app: App = (context.app = {
   mount(
     rootContainer: HostElement,
     isHydrate?: boolean,
-    namespace?: boolean | ElementNamespace
+    namespace?: boolean | ElementNamespace,
   ): any {
     //【...省略】
   },
@@ -297,7 +294,7 @@ export function useRouter(): Router {
  * templates.
  */
 export function useRoute<Name extends keyof RouteMap = keyof RouteMap>(
-  _name?: Name
+  _name?: Name,
 ): RouteLocationNormalizedLoaded<Name> {
   return inject(routeLocationKey)!
 }
@@ -309,7 +306,6 @@ export function useRoute<Name extends keyof RouteMap = keyof RouteMap>(
 ### 常用路由方法
 
 - `router`
-
   - `router.push()` 跳转到新路由（添加历史记录）
   - `router.replace()` 替换当前路由（不添加历史记录）
   - `router.go(n)` 在 history 记录中前进或后退 n 步
@@ -327,6 +323,293 @@ export function useRoute<Name extends keyof RouteMap = keyof RouteMap>(
   - `route.params` 动态参数
   - `route.query` URL 查询参数
   - `route.name` 路由名称
+
+## history 实例
+
+`createWebHistory` 方法创建了一个 `routerHistory` 对象，用于 `router` 对象的前进后退等方法中，其中有两个重要的方法 `useHistoryStateNavigation` 和 `useHistoryListeners`：
+
+```ts
+// 【packages/router/src/history/html5.ts】
+/**
+ * Creates an HTML5 history. Most common history for single page applications.
+ *
+ * @param base -
+ */
+export function createWebHistory(base?: string): RouterHistory {
+  base = normalizeBase(base)
+
+  // 【对history对象及其方法的包装】
+  const historyNavigation = useHistoryStateNavigation(base)
+  // 【对浏览器监听popState/pagehide/visibilitychange事件的包装】
+  const historyListeners = useHistoryListeners(
+    base,
+    historyNavigation.state,
+    historyNavigation.location,
+    historyNavigation.replace,
+  )
+
+  function go(delta: number, triggerListeners = true) {
+    if (!triggerListeners) historyListeners.pauseListeners()
+    history.go(delta)
+  }
+  // 【完善routerHistory对象】
+  const routerHistory: RouterHistory = assign(
+    {
+      // it's overridden right after
+      location: "",
+      base,
+      go,
+      createHref: createHref.bind(null, base),
+    },
+
+    historyNavigation,
+    historyListeners,
+  )
+
+  Object.defineProperty(routerHistory, "location", {
+    enumerable: true,
+    get: () => historyNavigation.location.value,
+  })
+
+  Object.defineProperty(routerHistory, "state", {
+    enumerable: true,
+    get: () => historyNavigation.state.value,
+  })
+
+  return routerHistory
+}
+```
+
+`useHistoryStateNavigation` 返回对象有 `location`、`state`、`push`、`replace`，前面两个属性其实取自浏览器`window`对象，后面两个方法实质上是调用了`window.history`的 API 进行处理：
+
+```ts
+// 【packages/router/src/history/html5.ts】
+function useHistoryStateNavigation(base: string) {
+  // 【获取浏览器中的history和location对象】
+  const { history, location } = window
+
+  // private variables
+  const currentLocation: ValueContainer<HistoryLocation> = {
+    value: createCurrentLocation(base, location),
+  }
+  const historyState: ValueContainer<StateEntry> = { value: history.state }
+  // build current history entry as this is a fresh navigation
+  if (!historyState.value) {
+    changeLocation(
+      currentLocation.value,
+      {
+        back: null,
+        current: currentLocation.value,
+        forward: null,
+        // the length is off by one, we need to decrease it
+        position: history.length - 1,
+        replaced: true,
+        // don't add a scroll as the user may have an anchor, and we want
+        // scrollBehavior to be triggered without a saved position
+        scroll: null,
+      },
+      true,
+    )
+  }
+
+  function changeLocation(to: HistoryLocation, state: StateEntry, replace: boolean): void {
+    /**
+     * if a base tag is provided, and we are on a normal domain, we have to
+     * respect the provided `base` attribute because pushState() will use it and
+     * potentially erase anything before the `#` like at
+     * https://github.com/vuejs/router/issues/685 where a base of
+     * `/folder/#` but a base of `/` would erase the `/folder/` section. If
+     * there is no host, the `<base>` tag makes no sense and if there isn't a
+     * base tag we can just use everything after the `#`.
+     */
+    const hashIndex = base.indexOf("#")
+    const url =
+      hashIndex > -1
+        ? (location.host && document.querySelector("base") ? base : base.slice(hashIndex)) + to
+        : createBaseLocation() + base + to
+    try {
+      // BROWSER QUIRK
+      // NOTE: Safari throws a SecurityError when calling this function 100 times in 30 seconds
+      history[replace ? "replaceState" : "pushState"](state, "", url)
+      historyState.value = state
+    } catch (err) {
+      if (__DEV__) {
+        warn("Error with push/replace State", err)
+      } else {
+        console.error(err)
+      }
+      // Force the navigation, this also resets the call count
+      location[replace ? "replace" : "assign"](url)
+    }
+  }
+
+  // 【包装history.replaceState()方法】
+  function replace(to: HistoryLocation, data?: HistoryState) {
+    const state: StateEntry = assign(
+      {},
+      history.state,
+      buildState(
+        historyState.value.back,
+        // keep back and forward entries but override current position
+        to,
+        historyState.value.forward,
+        true,
+      ),
+      data,
+      { position: historyState.value.position },
+    )
+
+    changeLocation(to, state, true)
+    currentLocation.value = to
+  }
+
+  // 【包装history.pushState()方法】
+  function push(to: HistoryLocation, data?: HistoryState) {
+    // Add to current entry the information of where we are going
+    // as well as saving the current position
+    const currentState = assign(
+      {},
+      // use current history state to gracefully handle a wrong call to
+      // history.replaceState
+      // https://github.com/vuejs/router/issues/366
+      historyState.value,
+      history.state as Partial<StateEntry> | null,
+      {
+        forward: to,
+        scroll: computeScrollPosition(),
+      },
+    )
+
+    if (__DEV__ && !history.state) {
+      warn(
+        `history.state seems to have been manually replaced without preserving the necessary values. Make sure to preserve existing history state if you are manually calling history.replaceState:\n\n` +
+          `history.replaceState(history.state, '', url)\n\n` +
+          `You can find more information at https://router.vuejs.org/guide/migration/#Usage-of-history-state`,
+      )
+    }
+
+    changeLocation(currentState.current, currentState, true)
+
+    const state: StateEntry = assign(
+      {},
+      buildState(currentLocation.value, to, null),
+      { position: currentState.position + 1 },
+      data,
+    )
+
+    changeLocation(to, state, false)
+    currentLocation.value = to
+  }
+
+  return {
+    location: currentLocation,
+    state: historyState,
+
+    push,
+    replace,
+  }
+}
+```
+
+`useHistoryListeners` 返回对象有 `pauseListeners`、`listen`、`destroy`
+
+```ts
+// 【packages/router/src/history/html5.ts】
+function useHistoryListeners(
+  base: string,
+  historyState: ValueContainer<StateEntry>,
+  currentLocation: ValueContainer<HistoryLocation>,
+  replace: RouterHistory["replace"],
+) {
+  let listeners: NavigationCallback[] = []
+  let teardowns: Array<() => void> = []
+  // TODO: should it be a stack? a Dict. Check if the popstate listener
+  // can trigger twice
+  let pauseState: HistoryLocation | null = null
+
+  const popStateHandler: PopStateListener = ({ state }: { state: StateEntry | null }) => {
+    const to = createCurrentLocation(base, location)
+    const from: HistoryLocation = currentLocation.value
+    const fromState: StateEntry = historyState.value
+    let delta = 0
+
+    if (state) {
+      currentLocation.value = to
+      historyState.value = state
+
+      // ignore the popstate and reset the pauseState
+      if (pauseState && pauseState === from) {
+        pauseState = null
+        return
+      }
+      delta = fromState ? state.position - fromState.position : 0
+    } else {
+      replace(to)
+    }
+
+    // Here we could also revert the navigation by calling history.go(-delta)
+    // this listener will have to be adapted to not trigger again and to wait for the url
+    // to be updated before triggering the listeners. Some kind of validation function would also
+    // need to be passed to the listeners so the navigation can be accepted
+    // call all listeners
+    listeners.forEach((listener) => {
+      listener(currentLocation.value, from, {
+        delta,
+        type: NavigationType.pop,
+        direction: delta
+          ? delta > 0
+            ? NavigationDirection.forward
+            : NavigationDirection.back
+          : NavigationDirection.unknown,
+      })
+    })
+  }
+
+  function pauseListeners() {
+    pauseState = currentLocation.value
+  }
+
+  function listen(callback: NavigationCallback) {
+    // set up the listener and prepare teardown callbacks
+    listeners.push(callback)
+
+    const teardown = () => {
+      const index = listeners.indexOf(callback)
+      if (index > -1) listeners.splice(index, 1)
+    }
+
+    teardowns.push(teardown)
+    return teardown
+  }
+
+  function beforeUnloadListener() {
+    const { history } = window
+    if (!history.state) return
+    history.replaceState(assign({}, history.state, { scroll: computeScrollPosition() }), "")
+  }
+
+  function destroy() {
+    for (const teardown of teardowns) teardown()
+    teardowns = []
+    window.removeEventListener("popstate", popStateHandler)
+    window.removeEventListener("beforeunload", beforeUnloadListener)
+  }
+
+  // set up the listeners and prepare teardown callbacks
+  window.addEventListener("popstate", popStateHandler)
+  // TODO: could we use 'pagehide' or 'visibilitychange' instead?
+  // https://developer.chrome.com/blog/page-lifecycle-api/
+  window.addEventListener("beforeunload", beforeUnloadListener, {
+    passive: true,
+  })
+
+  return {
+    pauseListeners,
+    listen,
+    destroy,
+  }
+}
+```
 
 ## router 实例
 
@@ -358,7 +641,7 @@ const router = createRouter({
 export default router
 ```
 
-`router` 实例是由 `createRouter` 创建的，其中 `currentRoute` 属性就是对应的当前路由 `route` 实例，还包括了 `addRoute`/`removeRoute`/`getRoutes`/`push`/`replace`/`go`/`back` 等等一系列方法提供给用户去调用并进行导航的切换等功能：
+`router` 实例由 `createRouter` 创建的，其中 `currentRoute` 属性就是对应的**当前路由** `route` 实例，还包括了 `addRoute`/`removeRoute`/`getRoutes`/`push`/`replace`/`go`/`back` 等等一系列方法提供给用户去调用并进行导航的切换等功能：
 
 ```ts
 // 【packages/router/src/router.ts】
@@ -368,6 +651,7 @@ export default router
  * @param options - {@link RouterOptions}
  */
 export function createRouter(options: RouterOptions): Router {
+  // 【创建matcher对象】
   const matcher = createRouterMatcher(options.routes, options)
   const parseQuery = options.parseQuery || originalParseQuery
   const stringifyQuery = options.stringifyQuery || originalStringifyQuery
@@ -375,15 +659,13 @@ export function createRouter(options: RouterOptions): Router {
   if (__DEV__ && !routerHistory)
     throw new Error(
       'Provide the "history" option when calling "createRouter()":' +
-        " https://router.vuejs.org/api/interfaces/RouterOptions.html#history"
+        " https://router.vuejs.org/api/interfaces/RouterOptions.html#history",
     )
 
   const beforeGuards = useCallbacks<NavigationGuardWithThis<undefined>>()
   const beforeResolveGuards = useCallbacks<NavigationGuardWithThis<undefined>>()
   const afterGuards = useCallbacks<NavigationHookAfter>()
-  const currentRoute = shallowRef<RouteLocationNormalizedLoaded>(
-    START_LOCATION_NORMALIZED
-  )
+  const currentRoute = shallowRef<RouteLocationNormalizedLoaded>(START_LOCATION_NORMALIZED)
   let pendingLocation: RouteLocation = START_LOCATION_NORMALIZED
 
   // leave the scrollRestoration if no scrollBehavior is provided
@@ -391,10 +673,7 @@ export function createRouter(options: RouterOptions): Router {
     history.scrollRestoration = "manual"
   }
 
-  const normalizeParams = applyToParams.bind(
-    null,
-    (paramValue) => "" + paramValue
-  )
+  const normalizeParams = applyToParams.bind(null, (paramValue) => "" + paramValue)
   const encodeParams = applyToParams.bind(null, encodeParam)
   const decodeParams: (params: RouteParams | undefined) => RouteParams =
     // @ts-expect-error: intentionally avoid the type check
@@ -402,7 +681,7 @@ export function createRouter(options: RouterOptions): Router {
 
   function addRoute(
     parentOrRoute: NonNullable<RouteRecordNameGeneric> | RouteRecordRaw,
-    route?: RouteRecordRaw
+    route?: RouteRecordRaw,
   ) {
     //【...省略】
   }
@@ -421,13 +700,13 @@ export function createRouter(options: RouterOptions): Router {
 
   function resolve(
     rawLocation: RouteLocationRaw,
-    currentLocation?: RouteLocationNormalizedLoaded
+    currentLocation?: RouteLocationNormalizedLoaded,
   ): RouteLocationResolved {
     //【...省略】
   }
 
   function locationAsObject(
-    to: RouteLocationRaw | RouteLocationNormalized
+    to: RouteLocationRaw | RouteLocationNormalized,
   ): Exclude<RouteLocationRaw, string> | RouteLocationNormalized {
     return typeof to === "string"
       ? parseURL(parseQuery, to, currentRoute.value.path)
@@ -436,16 +715,13 @@ export function createRouter(options: RouterOptions): Router {
 
   function checkCanceledNavigation(
     to: RouteLocationNormalized,
-    from: RouteLocationNormalized
+    from: RouteLocationNormalized,
   ): NavigationFailure | void {
     if (pendingLocation !== to) {
-      return createRouterError<NavigationFailure>(
-        ErrorTypes.NAVIGATION_CANCELLED,
-        {
-          from,
-          to,
-        }
-      )
+      return createRouterError<NavigationFailure>(ErrorTypes.NAVIGATION_CANCELLED, {
+        from,
+        to,
+      })
     }
   }
 
@@ -463,7 +739,7 @@ export function createRouter(options: RouterOptions): Router {
 
   function pushWithRedirect(
     to: RouteLocationRaw | RouteLocation,
-    redirectedFrom?: RouteLocation
+    redirectedFrom?: RouteLocation,
   ): Promise<NavigationFailure | void | undefined> {
     //【...省略】
   }
@@ -475,7 +751,7 @@ export function createRouter(options: RouterOptions): Router {
    */
   function checkCanceledNavigationAndReject(
     to: RouteLocationNormalized,
-    from: RouteLocationNormalized
+    from: RouteLocationNormalized,
   ): Promise<void> {
     const error = checkCanceledNavigation(to, from)
     return error ? Promise.reject(error) : Promise.resolve()
@@ -484,16 +760,14 @@ export function createRouter(options: RouterOptions): Router {
   function runWithContext<T>(fn: () => T): T {
     const app: App | undefined = installedApps.values().next().value
     // support Vue < 3.3
-    return app && typeof app.runWithContext === "function"
-      ? app.runWithContext(fn)
-      : fn()
+    return app && typeof app.runWithContext === "function" ? app.runWithContext(fn) : fn()
   }
 
   // TODO: refactor the whole before guards by internally using router.beforeEach
 
   function navigate(
     to: RouteLocationNormalized,
-    from: RouteLocationNormalizedLoaded
+    from: RouteLocationNormalizedLoaded,
   ): Promise<any> {
     //【...省略】
   }
@@ -501,13 +775,11 @@ export function createRouter(options: RouterOptions): Router {
   function triggerAfterEach(
     to: RouteLocationNormalizedLoaded,
     from: RouteLocationNormalizedLoaded,
-    failure?: NavigationFailure | void
+    failure?: NavigationFailure | void,
   ): void {
     // navigation is confirmed, call afterGuards
     // TODO: wrap with error handlers
-    afterGuards
-      .list()
-      .forEach((guard) => runWithContext(() => guard(to, from, failure)))
+    afterGuards.list().forEach((guard) => runWithContext(() => guard(to, from, failure)))
   }
 
   /**
@@ -520,7 +792,7 @@ export function createRouter(options: RouterOptions): Router {
     from: RouteLocationNormalizedLoaded,
     isPush: boolean,
     replace?: boolean,
-    data?: HistoryState
+    data?: HistoryState,
   ): NavigationFailure | void {
     //【...省略】
   }
@@ -548,14 +820,13 @@ export function createRouter(options: RouterOptions): Router {
   function triggerError(
     error: any,
     to: RouteLocationNormalized,
-    from: RouteLocationNormalizedLoaded
+    from: RouteLocationNormalizedLoaded,
   ): Promise<unknown> {
     //【...省略】
   }
 
   function isReady(): Promise<void> {
-    if (ready && currentRoute.value !== START_LOCATION_NORMALIZED)
-      return Promise.resolve()
+    if (ready && currentRoute.value !== START_LOCATION_NORMALIZED) return Promise.resolve()
     return new Promise((resolve, reject) => {
       readyHandlers.add([resolve, reject])
     })
@@ -573,9 +844,7 @@ export function createRouter(options: RouterOptions): Router {
       // still not ready if an error happened
       ready = !err
       setupListeners()
-      readyHandlers
-        .list()
-        .forEach(([resolve, reject]) => (err ? reject(err) : resolve()))
+      readyHandlers.list().forEach(([resolve, reject]) => (err ? reject(err) : resolve()))
       readyHandlers.reset()
     }
     return err
@@ -586,7 +855,7 @@ export function createRouter(options: RouterOptions): Router {
     to: RouteLocationNormalizedLoaded,
     from: RouteLocationNormalizedLoaded,
     isPush: boolean,
-    isFirstNavigation: boolean
+    isFirstNavigation: boolean,
   ): // the return is not meant to be used
   Promise<unknown> {
     const { scrollBehavior } = options
@@ -594,9 +863,7 @@ export function createRouter(options: RouterOptions): Router {
 
     const scrollPosition: _ScrollPositionNormalized | null =
       (!isPush && getSavedScrollPosition(getScrollKey(to.fullPath, 0))) ||
-      ((isFirstNavigation || !isPush) &&
-        (history.state as HistoryState) &&
-        history.state.scroll) ||
+      ((isFirstNavigation || !isPush) && (history.state as HistoryState) && history.state.scroll) ||
       null
 
     return nextTick()
@@ -703,7 +970,7 @@ export function createRouter(options: RouterOptions): Router {
   function runGuardQueue(guards: Lazy<any>[]): Promise<any> {
     return guards.reduce(
       (promise, guard) => promise.then(() => runWithContext(guard)),
-      Promise.resolve()
+      Promise.resolve(),
     )
   }
 
@@ -711,7 +978,7 @@ export function createRouter(options: RouterOptions): Router {
 }
 ```
 
-接下来分为三块去看 `router` 实例的 API，分别是，其中一个最重要的对象 `routerHistory` 数据结构如下：
+接下来分为三块去看 `router` 实例的 API，分别是，它提供的方法实质调用了前面我们说的创建的 `routerHistory` 对象的方法，数据结构如下：
 
 1. 跳转相关的方法：`router.go() & router.back() & router.forward() & router.push() & router.replace()`
 2. 全局路由守卫：`router.beforeEach() & router.afterEach() & router.beforeResolve()`
@@ -719,6 +986,214 @@ export function createRouter(options: RouterOptions): Router {
 
 ````ts
 // 【packages/router/src/history/common.ts】
+/**
+ * Router instance.
+ */
+export interface Router extends EXPERIMENTAL_Router_Base<RouteRecordNormalized> {
+  /**
+   * Original options object passed to create the Router
+   */
+  readonly options: RouterOptions
+
+  /**
+   * Add a new {@link RouteRecordRaw | route record} as the child of an existing route.
+   *
+   * @param parentName - Parent Route Record where `route` should be appended at
+   * @param route - Route Record to add
+   */
+  addRoute(
+    // NOTE: it could be `keyof RouteMap` but the point of dynamic routes is not knowing the routes at build
+    parentName: NonNullable<RouteRecordNameGeneric>,
+    route: RouteRecordRaw,
+  ): () => void
+  /**
+   * Add a new {@link RouteRecordRaw | route record} to the router.
+   *
+   * @param route - Route Record to add
+   */
+  addRoute(route: RouteRecordRaw): () => void
+
+  /**
+   * Remove an existing route by its name.
+   *
+   * @param name - Name of the route to remove
+   */
+  removeRoute(name: NonNullable<RouteRecordNameGeneric>): void
+
+  /**
+   * Delete all routes from the router.
+   */
+  clearRoutes(): void
+}
+
+/**
+ * Router base instance.
+ *
+ * @experimental This version is not stable, it's meant to replace {@link Router} in the future.
+ */
+export interface EXPERIMENTAL_Router_Base<TRecord> {
+  // NOTE: for dynamic routing we need this
+  // <TRouteRecordRaw, TRouteRecord>
+  /**
+   * Current {@link RouteLocationNormalized}
+   */
+  readonly currentRoute: ShallowRef<RouteLocationNormalizedLoaded>
+
+  /**
+   * Allows turning off the listening of history events. This is a low level api for micro-frontend.
+   */
+  listening: boolean
+
+  // TODO: deprecate in favor of getRoute(name) and add it
+  /**
+   * Checks if a route with a given name exists
+   *
+   * @param name - Name of the route to check
+   */
+  hasRoute(name: NonNullable<RouteRecordNameGeneric>): boolean
+
+  /**
+   * Get a full list of all the {@link RouteRecord | route records}.
+   */
+  getRoutes(): TRecord[]
+
+  /**
+   * Returns the {@link RouteLocation | normalized version} of a
+   * {@link RouteLocationRaw | route location}. Also includes an `href` property
+   * that includes any existing `base`. By default, the `currentLocation` used is
+   * `router.currentRoute` and should only be overridden in advanced use cases.
+   *
+   * @param to - Raw route location to resolve
+   * @param currentLocation - Optional current location to resolve against
+   */
+  resolve<Name extends keyof RouteMap = keyof RouteMap>(
+    to: RouteLocationAsRelativeTyped<RouteMap, Name>,
+    // NOTE: This version doesn't work probably because it infers the type too early
+    // | RouteLocationAsRelative<Name>
+    currentLocation?: RouteLocationNormalizedLoaded,
+  ): RouteLocationResolved<Name>
+  resolve(
+    // not having the overload produces errors in RouterLink calls to router.resolve()
+    to: RouteLocationAsString | RouteLocationAsRelative | RouteLocationAsPath,
+    currentLocation?: RouteLocationNormalizedLoaded,
+  ): RouteLocationResolved
+
+  /**
+   * Programmatically navigate to a new URL by pushing an entry in the history
+   * stack.
+   *
+   * @param to - Route location to navigate to
+   */
+  push(to: RouteLocationRaw): Promise<NavigationFailure | void | undefined>
+
+  /**
+   * Programmatically navigate to a new URL by replacing the current entry in
+   * the history stack.
+   *
+   * @param to - Route location to navigate to
+   */
+  replace(to: RouteLocationRaw): Promise<NavigationFailure | void | undefined>
+
+  /**
+   * Go back in history if possible by calling `history.back()`. Equivalent to
+   * `router.go(-1)`.
+   */
+  back(): void
+
+  /**
+   * Go forward in history if possible by calling `history.forward()`.
+   * Equivalent to `router.go(1)`.
+   */
+  forward(): void
+
+  /**
+   * Allows you to move forward or backward through the history. Calls
+   * `history.go()`.
+   *
+   * @param delta - The position in the history to which you want to move,
+   * relative to the current page
+   */
+  go(delta: number): void
+
+  /**
+   * Add a navigation guard that executes before any navigation. Returns a
+   * function that removes the registered guard.
+   *
+   * @param guard - navigation guard to add
+   */
+  beforeEach(guard: NavigationGuardWithThis<undefined>): () => void
+
+  /**
+   * Add a navigation guard that executes before navigation is about to be
+   * resolved. At this state all component have been fetched and other
+   * navigation guards have been successful. Returns a function that removes the
+   * registered guard.
+   *
+   * @param guard - navigation guard to add
+   * @returns a function that removes the registered guard
+   *
+   * @example
+   * ```js
+   * router.beforeResolve(to => {
+   *   if (to.meta.requiresAuth && !isAuthenticated) return false
+   * })
+   * ```
+   *
+   */
+  beforeResolve(guard: _NavigationGuardResolved): () => void
+
+  /**
+   * Add a navigation hook that is executed after every navigation. Returns a
+   * function that removes the registered hook.
+   *
+   * @param guard - navigation hook to add
+   * @returns a function that removes the registered hook
+   *
+   * @example
+   * ```js
+   * router.afterEach((to, from, failure) => {
+   *   if (isNavigationFailure(failure)) {
+   *     console.log('failed navigation', failure)
+   *   }
+   * })
+   * ```
+   */
+  afterEach(guard: NavigationHookAfter): () => void
+
+  /**
+   * Adds an error handler that is called every time a non caught error happens
+   * during navigation. This includes errors thrown synchronously and
+   * asynchronously, errors returned or passed to `next` in any navigation
+   * guard, and errors occurred when trying to resolve an async component that
+   * is required to render a route.
+   *
+   * @param handler - error handler to register
+   */
+  onError(handler: _ErrorListener): () => void
+
+  /**
+   * Returns a Promise that resolves when the router has completed the initial
+   * navigation, which means it has resolved all async enter hooks and async
+   * components that are associated with the initial route. If the initial
+   * navigation already happened, the promise resolves immediately.
+   *
+   * This is useful in server-side rendering to ensure consistent output on both
+   * the server and the client. Note that on server side, you need to manually
+   * push the initial location while on client side, the router automatically
+   * picks it up from the URL.
+   */
+  isReady(): Promise<void>
+
+  /**
+   * Called automatically by `app.use(router)`. Should not be called manually by
+   * the user. This will trigger the initial navigation when on client side.
+   *
+   * @internal
+   * @param app - Application that uses the router
+   */
+  install(app: App): void
+}
+
 /**
  * Interface implemented by History implementations that can be passed to the
  * router as {@link Router.history}
@@ -807,6 +1282,123 @@ export interface RouterHistory {
 ![router](./assets/router/router3.png)
 ![router](./assets/router/router4.png)
 
+那创建了这个`router`实例，如何暴露在我们的`vue`应用中呢，可以回忆前面的内容，全局唯一的`app`实例有一个`use`方法注册插件如下：
+
+```ts
+// 【注册插件，调用插件的install方法】
+use(plugin: Plugin, ...options: any[]) {
+  if (installedPlugins.has(plugin)) {
+    __DEV__ && warn(`Plugin has already been applied to target app.`)
+  } else if (plugin && isFunction(plugin.install)) {
+    installedPlugins.add(plugin)
+    plugin.install(app, ...options)
+  } else if (isFunction(plugin)) {
+    installedPlugins.add(plugin)
+    plugin(app, ...options)
+  } else if (__DEV__) {
+    warn(
+      `A plugin must either be a function or an object with an "install" ` +
+        `function.`,
+    )
+  }
+  return app
+}
+
+const router = {
+  // ...,
+  install(app: App) {
+    // 【注册全局组件RouterLink/RouterView】
+    app.component('RouterLink', RouterLink)
+    app.component('RouterView', RouterView)
+
+    // 【router注入全局属性-$router】
+    app.config.globalProperties.$router = router as Router
+    // 【currentRoute注入全局属性-$route】
+    Object.defineProperty(app.config.globalProperties, '$route', {
+      enumerable: true,
+      get: () => unref(currentRoute),
+    })
+
+    // this initial navigation is only necessary on client, on server it doesn't
+    // make sense because it will create an extra unnecessary navigation and could
+    // lead to problems
+    if (
+      isBrowser &&
+      // used for the initial navigation client side to avoid pushing
+      // multiple times when the router is used in multiple apps
+      !started &&
+      currentRoute.value === START_LOCATION_NORMALIZED
+    ) {
+      // see above
+      started = true
+      push(routerHistory.location).catch(err => {
+        if (__DEV__) warn('Unexpected error when starting the router:', err)
+      })
+    }
+
+    const reactiveRoute = {} as RouteLocationNormalizedLoaded
+    for (const key in START_LOCATION_NORMALIZED) {
+      Object.defineProperty(reactiveRoute, key, {
+        get: () => currentRoute.value[key as keyof RouteLocationNormalized],
+        enumerable: true,
+      })
+    }
+
+    // 【依赖注入router和route对象，这样就可以通过useRouter/useRoute访问router和route对象】
+    app.provide(routerKey, router as Router)
+    app.provide(routeLocationKey, shallowReactive(reactiveRoute))
+    app.provide(routerViewLocationKey, currentRoute)
+
+    const unmountApp = app.unmount
+    installedApps.add(app)
+    // 【应用注销之前先注销router插件】
+    app.unmount = function () {
+      installedApps.delete(app)
+      // the router is not attached to an app anymore
+      if (installedApps.size < 1) {
+        // invalidate the current navigation
+        pendingLocation = START_LOCATION_NORMALIZED
+        removeHistoryListener && removeHistoryListener()
+        removeHistoryListener = null
+        currentRoute.value = START_LOCATION_NORMALIZED
+        started = false
+        ready = false
+      }
+      unmountApp()
+    }
+
+    // TODO: this probably needs to be updated so it can be used by vue-termui
+    if (
+      (__DEV__ || __FEATURE_PROD_DEVTOOLS__) &&
+      isBrowser &&
+      !__STRIP_DEVTOOLS__
+    ) {
+      addDevtools(app, router as Router, matcher)
+    }
+  }
+}
+
+/**
+ * Returns the router instance. Equivalent to using `$router` inside
+ * templates.
+ */
+export function useRouter(): Router {
+  return inject(routerKey)!
+}
+
+/**
+ * Returns the current route location. Equivalent to using `$route` inside
+ * templates.
+ */
+export function useRoute<Name extends keyof RouteMap = keyof RouteMap>(
+  _name?: Name
+) {
+  return inject(routeLocationKey) as RouteLocationNormalizedLoaded<
+    Name | RouteMap[Name]['childrenNames']
+  >
+}
+```
+
 ### router.go() & router.back() & router.forward() & router.push() & router.replace()
 
 可以看到这几个路由跳转方法最终进入了`pushWithRedirect`方法，本质会去调用 `routerHistory`(由`createWebHistory`、`createWebHashHistory`创建) 的方法，追溯到底就是调用 `window.history` 对象上的方法 `pushState`/`replaceState`：
@@ -849,7 +1441,7 @@ export function createRouter(options: RouterOptions): Router {
 
   function pushWithRedirect(
     to: RouteLocationRaw | RouteLocation,
-    redirectedFrom?: RouteLocation
+    redirectedFrom?: RouteLocation,
   ): Promise<NavigationFailure | void | undefined> {
     const targetLocation: RouteLocation = (pendingLocation = resolve(to))
     const from = currentRoute.value
@@ -863,15 +1455,12 @@ export function createRouter(options: RouterOptions): Router {
     if (shouldRedirect)
       return pushWithRedirect(
         assign(locationAsObject(shouldRedirect), {
-          state:
-            typeof shouldRedirect === "object"
-              ? assign({}, data, shouldRedirect.state)
-              : data,
+          state: typeof shouldRedirect === "object" ? assign({}, data, shouldRedirect.state) : data,
           force,
           replace,
         }),
         // keep original redirectedFrom if it exists
-        redirectedFrom || targetLocation
+        redirectedFrom || targetLocation,
       )
 
     // if it was a redirect we already called `pushWithRedirect` above
@@ -881,10 +1470,10 @@ export function createRouter(options: RouterOptions): Router {
     let failure: NavigationFailure | void | undefined
 
     if (!force && isSameRouteLocation(stringifyQuery, from, targetLocation)) {
-      failure = createRouterError<NavigationFailure>(
-        ErrorTypes.NAVIGATION_DUPLICATED,
-        { to: toLocation, from }
-      )
+      failure = createRouterError<NavigationFailure>(ErrorTypes.NAVIGATION_DUPLICATED, {
+        to: toLocation,
+        from,
+      })
       // trigger scroll to allow scrolling to the same anchor
       handleScroll(
         from,
@@ -894,7 +1483,7 @@ export function createRouter(options: RouterOptions): Router {
         true,
         // This cannot be the first navigation because the initial location
         // cannot be manually navigated to
-        false
+        false,
       )
     }
 
@@ -906,21 +1495,15 @@ export function createRouter(options: RouterOptions): Router {
             ? error
             : markAsReady(error) // also returns the error
           : // reject any unknown error
-            triggerError(error, toLocation, from)
+            triggerError(error, toLocation, from),
       )
       .then((failure: NavigationFailure | NavigationRedirectError | void) => {
         if (failure) {
-          if (
-            isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
-          ) {
+          if (isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)) {
             if (
               __DEV__ &&
               // we are redirecting to the same location we were already at
-              isSameRouteLocation(
-                stringifyQuery,
-                resolve(failure.to),
-                toLocation
-              ) &&
+              isSameRouteLocation(stringifyQuery, resolve(failure.to), toLocation) &&
               // and we have done it a couple of times
               redirectedFrom &&
               // @ts-expect-error: added only in dev
@@ -930,11 +1513,9 @@ export function createRouter(options: RouterOptions): Router {
                 : 1) > 30
             ) {
               warn(
-                `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`
+                `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`,
               )
-              return Promise.reject(
-                new Error("Infinite redirect in navigation guard")
-              )
+              return Promise.reject(new Error("Infinite redirect in navigation guard"))
             }
 
             return pushWithRedirect(
@@ -946,15 +1527,12 @@ export function createRouter(options: RouterOptions): Router {
                 },
                 locationAsObject(failure.to),
                 {
-                  state:
-                    typeof failure.to === "object"
-                      ? assign({}, data, failure.to.state)
-                      : data,
+                  state: typeof failure.to === "object" ? assign({}, data, failure.to.state) : data,
                   force,
-                }
+                },
               ),
               // preserve the original redirectedFrom if any
-              redirectedFrom || toLocation
+              redirectedFrom || toLocation,
             )
           }
         } else {
@@ -964,14 +1542,10 @@ export function createRouter(options: RouterOptions): Router {
             from,
             true,
             replace,
-            data
+            data,
           )
         }
-        triggerAfterEach(
-          toLocation as RouteLocationNormalizedLoaded,
-          from,
-          failure
-        )
+        triggerAfterEach(toLocation as RouteLocationNormalizedLoaded, from, failure)
         return failure
       })
   }
@@ -986,7 +1560,7 @@ export function createRouter(options: RouterOptions): Router {
     from: RouteLocationNormalizedLoaded,
     isPush: boolean,
     replace?: boolean,
-    data?: HistoryState
+    data?: HistoryState,
   ): NavigationFailure | void {
     // a more recent navigation took place
     const error = checkCanceledNavigation(toLocation, from)
@@ -1008,8 +1582,8 @@ export function createRouter(options: RouterOptions): Router {
             {
               scroll: isFirstNavigation && state && state.scroll,
             },
-            data
-          )
+            data,
+          ),
         )
       else routerHistory.push(toLocation.fullPath, data)
     }
@@ -1076,7 +1650,7 @@ export function useCallbacks<T>() {
 // 【packages/router/src/router.ts】
 function pushWithRedirect(
   to: RouteLocationRaw | RouteLocation,
-  redirectedFrom?: RouteLocation
+  redirectedFrom?: RouteLocation,
 ): Promise<NavigationFailure | void | undefined> {
   const targetLocation: RouteLocation = (pendingLocation = resolve(to))
   const from = currentRoute.value
@@ -1090,15 +1664,12 @@ function pushWithRedirect(
   if (shouldRedirect)
     return pushWithRedirect(
       assign(locationAsObject(shouldRedirect), {
-        state:
-          typeof shouldRedirect === "object"
-            ? assign({}, data, shouldRedirect.state)
-            : data,
+        state: typeof shouldRedirect === "object" ? assign({}, data, shouldRedirect.state) : data,
         force,
         replace,
       }),
       // keep original redirectedFrom if it exists
-      redirectedFrom || targetLocation
+      redirectedFrom || targetLocation,
     )
 
   // if it was a redirect we already called `pushWithRedirect` above
@@ -1108,10 +1679,10 @@ function pushWithRedirect(
   let failure: NavigationFailure | void | undefined
 
   if (!force && isSameRouteLocation(stringifyQuery, from, targetLocation)) {
-    failure = createRouterError<NavigationFailure>(
-      ErrorTypes.NAVIGATION_DUPLICATED,
-      { to: toLocation, from }
-    )
+    failure = createRouterError<NavigationFailure>(ErrorTypes.NAVIGATION_DUPLICATED, {
+      to: toLocation,
+      from,
+    })
     // trigger scroll to allow scrolling to the same anchor
     handleScroll(
       from,
@@ -1121,7 +1692,7 @@ function pushWithRedirect(
       true,
       // This cannot be the first navigation because the initial location
       // cannot be manually navigated to
-      false
+      false,
     )
   }
 
@@ -1133,21 +1704,15 @@ function pushWithRedirect(
           ? error
           : markAsReady(error) // also returns the error
         : // reject any unknown error
-          triggerError(error, toLocation, from)
+          triggerError(error, toLocation, from),
     )
     .then((failure: NavigationFailure | NavigationRedirectError | void) => {
       if (failure) {
-        if (
-          isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)
-        ) {
+        if (isNavigationFailure(failure, ErrorTypes.NAVIGATION_GUARD_REDIRECT)) {
           if (
             __DEV__ &&
             // we are redirecting to the same location we were already at
-            isSameRouteLocation(
-              stringifyQuery,
-              resolve(failure.to),
-              toLocation
-            ) &&
+            isSameRouteLocation(stringifyQuery, resolve(failure.to), toLocation) &&
             // and we have done it a couple of times
             redirectedFrom &&
             // @ts-expect-error: added only in dev
@@ -1157,11 +1722,9 @@ function pushWithRedirect(
               : 1) > 30
           ) {
             warn(
-              `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`
+              `Detected a possibly infinite redirection in a navigation guard when going from "${from.fullPath}" to "${toLocation.fullPath}". Aborting to avoid a Stack Overflow.\n Are you always returning a new location within a navigation guard? That would lead to this error. Only return when redirecting or aborting, that should fix this. This might break in production if not fixed.`,
             )
-            return Promise.reject(
-              new Error("Infinite redirect in navigation guard")
-            )
+            return Promise.reject(new Error("Infinite redirect in navigation guard"))
           }
 
           return pushWithRedirect(
@@ -1173,15 +1736,12 @@ function pushWithRedirect(
               },
               locationAsObject(failure.to),
               {
-                state:
-                  typeof failure.to === "object"
-                    ? assign({}, data, failure.to.state)
-                    : data,
+                state: typeof failure.to === "object" ? assign({}, data, failure.to.state) : data,
                 force,
-              }
+              },
             ),
             // preserve the original redirectedFrom if any
-            redirectedFrom || toLocation
+            redirectedFrom || toLocation,
           )
         }
       } else {
@@ -1191,14 +1751,10 @@ function pushWithRedirect(
           from,
           true,
           replace,
-          data
+          data,
         )
       }
-      triggerAfterEach(
-        toLocation as RouteLocationNormalizedLoaded,
-        from,
-        failure
-      )
+      triggerAfterEach(toLocation as RouteLocationNormalizedLoaded, from, failure)
       return failure
     })
 }
@@ -1210,22 +1766,13 @@ function pushWithRedirect(
 
 ```ts
 // 【packages/router/src/router.ts】
-function navigate(
-  to: RouteLocationNormalized,
-  from: RouteLocationNormalizedLoaded
-): Promise<any> {
+function navigate(to: RouteLocationNormalized, from: RouteLocationNormalizedLoaded): Promise<any> {
   let guards: Lazy<any>[]
 
-  const [leavingRecords, updatingRecords, enteringRecords] =
-    extractChangingRecords(to, from)
+  const [leavingRecords, updatingRecords, enteringRecords] = extractChangingRecords(to, from)
 
   // all components here have been resolved once because we are leaving
-  guards = extractComponentsGuards(
-    leavingRecords.reverse(),
-    "beforeRouteLeave",
-    to,
-    from
-  )
+  guards = extractComponentsGuards(leavingRecords.reverse(), "beforeRouteLeave", to, from)
 
   // leavingRecords is already reversed
   for (const record of leavingRecords) {
@@ -1234,11 +1781,7 @@ function navigate(
     })
   }
 
-  const canceledNavigationCheck = checkCanceledNavigationAndReject.bind(
-    null,
-    to,
-    from
-  )
+  const canceledNavigationCheck = checkCanceledNavigationAndReject.bind(null, to, from)
 
   guards.push(canceledNavigationCheck)
 
@@ -1258,12 +1801,7 @@ function navigate(
       })
       .then(() => {
         // check in components beforeRouteUpdate
-        guards = extractComponentsGuards(
-          updatingRecords,
-          "beforeRouteUpdate",
-          to,
-          from
-        )
+        guards = extractComponentsGuards(updatingRecords, "beforeRouteUpdate", to, from)
 
         for (const record of updatingRecords) {
           record.updateGuards.forEach((guard) => {
@@ -1306,7 +1844,7 @@ function navigate(
           "beforeRouteEnter",
           to,
           from,
-          runWithContext
+          runWithContext,
         )
         guards.push(canceledNavigationCheck)
 
@@ -1326,9 +1864,7 @@ function navigate(
       })
       // catch any navigation canceled
       .catch((err) =>
-        isNavigationFailure(err, ErrorTypes.NAVIGATION_CANCELLED)
-          ? err
-          : Promise.reject(err)
+        isNavigationFailure(err, ErrorTypes.NAVIGATION_CANCELLED) ? err : Promise.reject(err),
       )
   )
 }
@@ -1341,14 +1877,12 @@ function navigate(
 function triggerAfterEach(
   to: RouteLocationNormalizedLoaded,
   from: RouteLocationNormalizedLoaded,
-  failure?: NavigationFailure | void
+  failure?: NavigationFailure | void,
 ): void {
   // navigation is confirmed, call afterGuards
   // TODO: wrap with error handlers
   // 【-----router.afterEach()全局导航守卫-----】
-  afterGuards
-    .list()
-    .forEach((guard) => runWithContext(() => guard(to, from, failure)))
+  afterGuards.list().forEach((guard) => runWithContext(() => guard(to, from, failure)))
 }
 ```
 
@@ -1360,7 +1894,7 @@ function triggerAfterEach(
 function runGuardQueue(guards: Lazy<any>[]): Promise<any> {
   return guards.reduce(
     (promise, guard) => promise.then(() => runWithContext(guard)),
-    Promise.resolve()
+    Promise.resolve(),
   )
 }
 
@@ -1368,9 +1902,7 @@ function runWithContext<T>(fn: () => T): T {
   const app: App | undefined = installedApps.values().next().value
   // support Vue < 3.3
   // 【app.runWithContext】
-  return app && typeof app.runWithContext === "function"
-    ? app.runWithContext(fn)
-    : fn()
+  return app && typeof app.runWithContext === "function" ? app.runWithContext(fn) : fn()
 }
 ```
 
@@ -1428,17 +1960,14 @@ export function createRouter(options: RouterOptions): Router {
  */
 export function createRouterMatcher(
   routes: Readonly<RouteRecordRaw[]>,
-  globalOptions: PathParserOptions
+  globalOptions: PathParserOptions,
 ): RouterMatcher {
   // normalized ordered array of matchers
   const matchers: RouteRecordMatcher[] = []
-  const matcherMap = new Map<
-    NonNullable<RouteRecordNameGeneric>,
-    RouteRecordMatcher
-  >()
+  const matcherMap = new Map<NonNullable<RouteRecordNameGeneric>, RouteRecordMatcher>()
   globalOptions = mergeOptions(
     { strict: false, end: true, sensitive: false } as PathParserOptions,
-    globalOptions
+    globalOptions,
   )
 
   function getRecordMatcher(name: NonNullable<RouteRecordNameGeneric>) {
@@ -1448,7 +1977,7 @@ export function createRouterMatcher(
   function addRoute(
     record: RouteRecordRaw,
     parent?: RouteRecordMatcher,
-    originalRecord?: RouteRecordMatcher
+    originalRecord?: RouteRecordMatcher,
   ) {
     // used later on to remove by name
     const isRootAdd = !originalRecord
@@ -1462,8 +1991,7 @@ export function createRouterMatcher(
     // generate an array of records to correctly handle aliases
     const normalizedRecords: RouteRecordNormalized[] = [mainNormalizedRecord]
     if ("alias" in record) {
-      const aliases =
-        typeof record.alias === "string" ? [record.alias] : record.alias!
+      const aliases = typeof record.alias === "string" ? [record.alias] : record.alias!
       for (const alias of aliases) {
         normalizedRecords.push(
           // we need to normalize again to ensure the `mods` property
@@ -1477,13 +2005,11 @@ export function createRouterMatcher(
                 : mainNormalizedRecord.components,
               path: alias,
               // we might be the child of an alias
-              aliasOf: originalRecord
-                ? originalRecord.record
-                : mainNormalizedRecord,
+              aliasOf: originalRecord ? originalRecord.record : mainNormalizedRecord,
               // the aliases are always of the same kind as the original since they
               // are defined on the same record
-            })
-          )
+            }),
+          ),
         )
       }
     }
@@ -1498,24 +2024,21 @@ export function createRouterMatcher(
       // parent path doesn't have a trailing slash
       if (parent && path[0] !== "/") {
         const parentPath = parent.record.path
-        const connectingSlash =
-          parentPath[parentPath.length - 1] === "/" ? "" : "/"
-        normalizedRecord.path =
-          parent.record.path + (path && connectingSlash + path)
+        const connectingSlash = parentPath[parentPath.length - 1] === "/" ? "" : "/"
+        normalizedRecord.path = parent.record.path + (path && connectingSlash + path)
       }
 
       if (__DEV__ && normalizedRecord.path === "*") {
         throw new Error(
           'Catch all routes ("*") must now be defined using a param with a custom regexp.\n' +
-            "See more at https://router.vuejs.org/guide/migration/#Removed-star-or-catch-all-routes."
+            "See more at https://router.vuejs.org/guide/migration/#Removed-star-or-catch-all-routes.",
         )
       }
 
       // create the object beforehand, so it can be passed to children
       matcher = createRouteRecordMatcher(normalizedRecord, parent, options)
 
-      if (__DEV__ && parent && path[0] === "/")
-        checkMissingParamsInAbsolutePath(matcher, parent)
+      if (__DEV__ && parent && path[0] === "/") checkMissingParamsInAbsolutePath(matcher, parent)
 
       // if we are an alias we must tell the original record that we exist,
       // so we can be removed
@@ -1548,11 +2071,7 @@ export function createRouterMatcher(
       if (mainNormalizedRecord.children) {
         const children = mainNormalizedRecord.children
         for (let i = 0; i < children.length; i++) {
-          addRoute(
-            children[i],
-            matcher,
-            originalRecord && originalRecord.children[i]
-          )
+          addRoute(children[i], matcher, originalRecord && originalRecord.children[i])
         }
       }
 
@@ -1574,9 +2093,7 @@ export function createRouterMatcher(
       : noop
   }
 
-  function removeRoute(
-    matcherRef: NonNullable<RouteRecordNameGeneric> | RouteRecordMatcher
-  ) {
+  function removeRoute(matcherRef: NonNullable<RouteRecordNameGeneric> | RouteRecordMatcher) {
     if (isRouteName(matcherRef)) {
       const matcher = matcherMap.get(matcherRef)
       if (matcher) {
@@ -1604,13 +2121,12 @@ export function createRouterMatcher(
     const index = findInsertionIndex(matcher, matchers)
     matchers.splice(index, 0, matcher)
     // only add the original record to the name map
-    if (matcher.record.name && !isAliasRecord(matcher))
-      matcherMap.set(matcher.record.name, matcher)
+    if (matcher.record.name && !isAliasRecord(matcher)) matcherMap.set(matcher.record.name, matcher)
   }
 
   function resolve(
     location: Readonly<MatcherLocationRaw>,
-    currentLocation: Readonly<MatcherLocation>
+    currentLocation: Readonly<MatcherLocation>,
   ): MatcherLocation {
     let matcher: RouteRecordMatcher | undefined
     let params: PathParams = {}
@@ -1627,17 +2143,15 @@ export function createRouterMatcher(
 
       // warn if the user is passing invalid params so they can debug it better when they get removed
       if (__DEV__) {
-        const invalidParams: string[] = Object.keys(
-          location.params || {}
-        ).filter(
-          (paramName) => !matcher!.keys.find((k) => k.name === paramName)
+        const invalidParams: string[] = Object.keys(location.params || {}).filter(
+          (paramName) => !matcher!.keys.find((k) => k.name === paramName),
         )
 
         if (invalidParams.length) {
           warn(
             `Discarded invalid param(s) "${invalidParams.join(
-              '", "'
-            )}" when navigating. See https://github.com/vuejs/router/blob/main/packages/router/CHANGELOG.md#414-2022-08-22 for more details.`
+              '", "',
+            )}" when navigating. See https://github.com/vuejs/router/blob/main/packages/router/CHANGELOG.md#414-2022-08-22 for more details.`,
           )
         }
       }
@@ -1651,20 +2165,16 @@ export function createRouterMatcher(
           // only keep optional params coming from a parent record
           matcher.keys
             .filter((k) => !k.optional)
-            .concat(
-              matcher.parent
-                ? matcher.parent.keys.filter((k) => k.optional)
-                : []
-            )
-            .map((k) => k.name)
+            .concat(matcher.parent ? matcher.parent.keys.filter((k) => k.optional) : [])
+            .map((k) => k.name),
         ),
         // discard any existing params in the current location that do not exist here
         // #1497 this ensures better active/exact matching
         location.params &&
           paramsFromLocation(
             location.params,
-            matcher.keys.map((k) => k.name)
-          )
+            matcher.keys.map((k) => k.name),
+          ),
       )
       // throws if cannot be stringified
       path = matcher.stringify(params)
@@ -1675,7 +2185,7 @@ export function createRouterMatcher(
 
       if (__DEV__ && !path.startsWith("/")) {
         warn(
-          `The Matcher cannot resolve relative paths but received "${path}". Unless you directly called \`matcher.resolve("${path}")\`, this is probably a bug in vue-router. Please open an issue at https://github.com/vuejs/router/issues/new/choose.`
+          `The Matcher cannot resolve relative paths but received "${path}". Unless you directly called \`matcher.resolve("${path}")\`, this is probably a bug in vue-router. Please open an issue at https://github.com/vuejs/router/issues/new/choose.`,
         )
       }
 
@@ -1768,19 +2278,14 @@ export function createRouter(options: RouterOptions): Router {
 
   function addRoute(
     parentOrRoute: NonNullable<RouteRecordNameGeneric> | RouteRecordRaw,
-    route?: RouteRecordRaw
+    route?: RouteRecordRaw,
   ) {
     let parent: Parameters<(typeof matcher)["addRoute"]>[1] | undefined
     let record: RouteRecordRaw
     if (isRouteName(parentOrRoute)) {
       parent = matcher.getRecordMatcher(parentOrRoute)
       if (__DEV__ && !parent) {
-        warn(
-          `Parent route "${String(
-            parentOrRoute
-          )}" not found when adding child route`,
-          route
-        )
+        warn(`Parent route "${String(parentOrRoute)}" not found when adding child route`, route)
       }
       record = route!
     } else {
@@ -1818,9 +2323,7 @@ export function createRouter(options: RouterOptions): Router {
 
 ````ts
 // 【packages/router/src/router.ts】
-const currentRoute = shallowRef<RouteLocationNormalizedLoaded>(
-  START_LOCATION_NORMALIZED
-)
+const currentRoute = shallowRef<RouteLocationNormalizedLoaded>(START_LOCATION_NORMALIZED)
 // 【packages/router/src/location.ts】
 /**
  * Initial route location where the router is. Can be used in navigation guards
@@ -1883,11 +2386,8 @@ export const RouterLinkImpl = /*#__PURE__*/ defineComponent({
     const { options } = inject(routerKey)!
 
     const elClass = computed(() => ({
-      [getLinkClass(
-        props.activeClass,
-        options.linkActiveClass,
-        "router-link-active"
-      )]: link.isActive,
+      [getLinkClass(props.activeClass, options.linkActiveClass, "router-link-active")]:
+        link.isActive,
       // [getLinkClass(
       //   props.inactiveClass,
       //   options.linkInactiveClass,
@@ -1896,7 +2396,7 @@ export const RouterLinkImpl = /*#__PURE__*/ defineComponent({
       [getLinkClass(
         props.exactActiveClass,
         options.linkExactActiveClass,
-        "router-link-exact-active"
+        "router-link-exact-active",
       )]: link.isExactActive,
     }))
 
@@ -1908,16 +2408,14 @@ export const RouterLinkImpl = /*#__PURE__*/ defineComponent({
         : h(
             "a",
             {
-              "aria-current": link.isExactActive
-                ? props.ariaCurrentValue
-                : null,
+              "aria-current": link.isExactActive ? props.ariaCurrentValue : null,
               href: link.href,
               // this would override user added attrs but Vue will still add
               // the listener, so we end up triggering both
               onClick: link.navigate,
               class: elClass.value,
             },
-            children
+            children,
           )
     }
   },
@@ -1936,7 +2434,7 @@ export const RouterLinkImpl = /*#__PURE__*/ defineComponent({
  * @param props - a `to` location and an optional `replace` flag
  */
 export function useLink<Name extends keyof RouteMap = keyof RouteMap>(
-  props: UseLinkOptions<Name>
+  props: UseLinkOptions<Name>,
 ): UseLinkReturn<Name> {
   const router = inject(routerKey)!
   const currentRoute = inject(routeLocationKey)!
@@ -1956,15 +2454,10 @@ export function useLink<Name extends keyof RouteMap = keyof RouteMap>(
             `\n- previous to:`,
             previousTo,
             `\n- props:`,
-            props
+            props,
           )
         } else {
-          warn(
-            `Invalid value for prop "to" in useLink()\n- to:`,
-            to,
-            `\n- props:`,
-            props
-          )
+          warn(`Invalid value for prop "to" in useLink()\n- to:`, to, `\n- props:`, props)
         }
       }
 
@@ -1981,14 +2474,10 @@ export function useLink<Name extends keyof RouteMap = keyof RouteMap>(
     const routeMatched: RouteRecord | undefined = matched[length - 1]
     const currentMatched = currentRoute.matched
     if (!routeMatched || !currentMatched.length) return -1
-    const index = currentMatched.findIndex(
-      isSameRouteRecord.bind(null, routeMatched)
-    )
+    const index = currentMatched.findIndex(isSameRouteRecord.bind(null, routeMatched))
     if (index > -1) return index
     // possible parent record
-    const parentRecordPath = getOriginalPath(
-      matched[length - 2] as RouteRecord | undefined
-    )
+    const parentRecordPath = getOriginalPath(matched[length - 2] as RouteRecord | undefined)
     return (
       // we are dealing with nested routes
       length > 1 &&
@@ -1998,31 +2487,25 @@ export function useLink<Name extends keyof RouteMap = keyof RouteMap>(
         getOriginalPath(routeMatched) === parentRecordPath &&
         // avoid comparing the child with its parent
         currentMatched[currentMatched.length - 1].path !== parentRecordPath
-        ? currentMatched.findIndex(
-            isSameRouteRecord.bind(null, matched[length - 2])
-          )
+        ? currentMatched.findIndex(isSameRouteRecord.bind(null, matched[length - 2]))
         : index
     )
   })
 
   const isActive = computed<boolean>(
-    () =>
-      activeRecordIndex.value > -1 &&
-      includesParams(currentRoute.params, route.value.params)
+    () => activeRecordIndex.value > -1 && includesParams(currentRoute.params, route.value.params),
   )
   const isExactActive = computed<boolean>(
     () =>
       activeRecordIndex.value > -1 &&
       activeRecordIndex.value === currentRoute.matched.length - 1 &&
-      isSameRouteLocationParams(currentRoute.params, route.value.params)
+      isSameRouteLocationParams(currentRoute.params, route.value.params),
   )
 
-  function navigate(
-    e: MouseEvent = {} as MouseEvent
-  ): Promise<void | NavigationFailure> {
+  function navigate(e: MouseEvent = {} as MouseEvent): Promise<void | NavigationFailure> {
     if (guardEvent(e)) {
       const p = router[unref(props.replace) ? "replace" : "push"](
-        unref(props.to)
+        unref(props.to),
         // avoid uncaught errors are they are logged anyway
       ).catch(noop)
       if (
@@ -2057,11 +2540,9 @@ export function useLink<Name extends keyof RouteMap = keyof RouteMap>(
           linkContextDevtools.route = route.value
           linkContextDevtools.isActive = isActive.value
           linkContextDevtools.isExactActive = isExactActive.value
-          linkContextDevtools.error = isRouteLocation(unref(props.to))
-            ? null
-            : 'Invalid "to" value'
+          linkContextDevtools.error = isRouteLocation(unref(props.to)) ? null : 'Invalid "to" value'
         },
-        { flush: "post" }
+        { flush: "post" },
       )
     }
   }
@@ -2108,7 +2589,7 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
     // 【获取当前路由route对象】
     const injectedRoute = inject(routerViewLocationKey)!
     const routeToDisplay = computed<RouteLocationNormalizedLoaded>(
-      () => props.route || injectedRoute.value
+      () => props.route || injectedRoute.value,
     )
     const injectedDepth = inject(viewDepthKey, 0)
     // The depth changes based on empty components option, which allows passthrough routes e.g. routes with children
@@ -2117,21 +2598,18 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
       let initialDepth = unref(injectedDepth)
       const { matched } = routeToDisplay.value
       let matchedRoute: RouteLocationMatched | undefined
-      while (
-        (matchedRoute = matched[initialDepth]) &&
-        !matchedRoute.components
-      ) {
+      while ((matchedRoute = matched[initialDepth]) && !matchedRoute.components) {
         initialDepth++
       }
       return initialDepth
     })
     const matchedRouteRef = computed<RouteLocationMatched | undefined>(
-      () => routeToDisplay.value.matched[depth.value]
+      () => routeToDisplay.value.matched[depth.value],
     )
 
     provide(
       viewDepthKey,
-      computed(() => depth.value + 1)
+      computed(() => depth.value + 1),
     )
     provide(matchedRouteKey, matchedRouteRef)
     provide(routerViewLocationKey, routeToDisplay)
@@ -2172,12 +2650,10 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
           // the first visit
           (!from || !isSameRouteRecord(to, from) || !oldInstance)
         ) {
-          ;(to.enterCallbacks[name] || []).forEach((callback) =>
-            callback(instance)
-          )
+          ;(to.enterCallbacks[name] || []).forEach((callback) => callback(instance))
         }
       },
-      { flush: "post" }
+      { flush: "post" },
     )
 
     return () => {
@@ -2187,8 +2663,7 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
       const currentName = props.name
       const matchedRoute = matchedRouteRef.value
       // 【根据路径匹配到的路由对应的组件】
-      const ViewComponent =
-        matchedRoute && matchedRoute.components![currentName]
+      const ViewComponent = matchedRoute && matchedRoute.components![currentName]
 
       if (!ViewComponent) {
         return normalizeSlot(slots.default, { Component: ViewComponent, route })
@@ -2200,8 +2675,8 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
         ? routePropsOption === true
           ? route.params
           : typeof routePropsOption === "function"
-          ? routePropsOption(route)
-          : routePropsOption
+            ? routePropsOption(route)
+            : routePropsOption
         : null
 
       const onVnodeUnmounted: VNodeProps["onVnodeUnmounted"] = (vnode) => {
@@ -2216,14 +2691,10 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
         assign({}, routeProps, attrs, {
           onVnodeUnmounted,
           ref: viewRef,
-        })
+        }),
       )
 
-      if (
-        (__DEV__ || __FEATURE_PROD_DEVTOOLS__) &&
-        isBrowser &&
-        component.ref
-      ) {
+      if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && isBrowser && component.ref) {
         // TODO: can display if it's an alias, its props
         const info: RouterViewDevtoolsContext = {
           depth: depth.value,
@@ -2245,8 +2716,7 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
       return (
         // pass the vnode to the slot as a prop.
         // h and <component :is="..."> both accept vnodes
-        normalizeSlot(slots.default, { Component: component, route }) ||
-        component
+        normalizeSlot(slots.default, { Component: component, route }) || component
       )
     }
   },
@@ -2256,303 +2726,9 @@ export const RouterViewImpl = /*#__PURE__*/ defineComponent({
 ![router](./assets/router/router8.png)
 ![router](./assets/router/router9.png)
 
-## History
-
-`createWebHistory` 方法创建了一个 `routerHistory` 对象，用于 `router` 对象的前进后退等方法中，其中有两个重要的方法 `useHistoryStateNavigation` 和 `useHistoryListeners`：
-
-```ts
-// 【packages/router/src/history/html5.ts】
-/**
- * Creates an HTML5 history. Most common history for single page applications.
- *
- * @param base -
- */
-export function createWebHistory(base?: string): RouterHistory {
-  base = normalizeBase(base)
-
-  const historyNavigation = useHistoryStateNavigation(base)
-  const historyListeners = useHistoryListeners(
-    base,
-    historyNavigation.state,
-    historyNavigation.location,
-    historyNavigation.replace
-  )
-  function go(delta: number, triggerListeners = true) {
-    if (!triggerListeners) historyListeners.pauseListeners()
-    history.go(delta)
-  }
-  // 【routerHistory提供本质的路由跳转相关方法】
-  const routerHistory: RouterHistory = assign(
-    {
-      // it's overridden right after
-      location: "",
-      base,
-      go,
-      createHref: createHref.bind(null, base),
-    },
-
-    historyNavigation,
-    historyListeners
-  )
-
-  Object.defineProperty(routerHistory, "location", {
-    enumerable: true,
-    get: () => historyNavigation.location.value,
-  })
-
-  Object.defineProperty(routerHistory, "state", {
-    enumerable: true,
-    get: () => historyNavigation.state.value,
-  })
-
-  return routerHistory
-}
-```
-
-`useHistoryStateNavigation` 返回对象有 `location`、`state`、`push`、`replace`，前面两个属性其实取自浏览器`window`对象，后面两个方法实质上是调用了`window.history`的 API 进行处理：
-
-```ts
-// 【packages/router/src/history/html5.ts】
-function useHistoryStateNavigation(base: string) {
-  const { history, location } = window
-
-  // private variables
-  const currentLocation: ValueContainer<HistoryLocation> = {
-    value: createCurrentLocation(base, location),
-  }
-  const historyState: ValueContainer<StateEntry> = { value: history.state }
-  // build current history entry as this is a fresh navigation
-  if (!historyState.value) {
-    changeLocation(
-      currentLocation.value,
-      {
-        back: null,
-        current: currentLocation.value,
-        forward: null,
-        // the length is off by one, we need to decrease it
-        position: history.length - 1,
-        replaced: true,
-        // don't add a scroll as the user may have an anchor, and we want
-        // scrollBehavior to be triggered without a saved position
-        scroll: null,
-      },
-      true
-    )
-  }
-
-  function changeLocation(
-    to: HistoryLocation,
-    state: StateEntry,
-    replace: boolean
-  ): void {
-    /**
-     * if a base tag is provided, and we are on a normal domain, we have to
-     * respect the provided `base` attribute because pushState() will use it and
-     * potentially erase anything before the `#` like at
-     * https://github.com/vuejs/router/issues/685 where a base of
-     * `/folder/#` but a base of `/` would erase the `/folder/` section. If
-     * there is no host, the `<base>` tag makes no sense and if there isn't a
-     * base tag we can just use everything after the `#`.
-     */
-    const hashIndex = base.indexOf("#")
-    const url =
-      hashIndex > -1
-        ? (location.host && document.querySelector("base")
-            ? base
-            : base.slice(hashIndex)) + to
-        : createBaseLocation() + base + to
-    try {
-      // BROWSER QUIRK
-      // NOTE: Safari throws a SecurityError when calling this function 100 times in 30 seconds
-      history[replace ? "replaceState" : "pushState"](state, "", url)
-      historyState.value = state
-    } catch (err) {
-      if (__DEV__) {
-        warn("Error with push/replace State", err)
-      } else {
-        console.error(err)
-      }
-      // Force the navigation, this also resets the call count
-      location[replace ? "replace" : "assign"](url)
-    }
-  }
-
-  function replace(to: HistoryLocation, data?: HistoryState) {
-    const state: StateEntry = assign(
-      {},
-      history.state,
-      buildState(
-        historyState.value.back,
-        // keep back and forward entries but override current position
-        to,
-        historyState.value.forward,
-        true
-      ),
-      data,
-      { position: historyState.value.position }
-    )
-
-    changeLocation(to, state, true)
-    currentLocation.value = to
-  }
-
-  function push(to: HistoryLocation, data?: HistoryState) {
-    // Add to current entry the information of where we are going
-    // as well as saving the current position
-    const currentState = assign(
-      {},
-      // use current history state to gracefully handle a wrong call to
-      // history.replaceState
-      // https://github.com/vuejs/router/issues/366
-      historyState.value,
-      history.state as Partial<StateEntry> | null,
-      {
-        forward: to,
-        scroll: computeScrollPosition(),
-      }
-    )
-
-    if (__DEV__ && !history.state) {
-      warn(
-        `history.state seems to have been manually replaced without preserving the necessary values. Make sure to preserve existing history state if you are manually calling history.replaceState:\n\n` +
-          `history.replaceState(history.state, '', url)\n\n` +
-          `You can find more information at https://router.vuejs.org/guide/migration/#Usage-of-history-state`
-      )
-    }
-
-    changeLocation(currentState.current, currentState, true)
-
-    const state: StateEntry = assign(
-      {},
-      buildState(currentLocation.value, to, null),
-      { position: currentState.position + 1 },
-      data
-    )
-
-    changeLocation(to, state, false)
-    currentLocation.value = to
-  }
-
-  return {
-    location: currentLocation,
-    state: historyState,
-
-    push,
-    replace,
-  }
-}
-```
-
-`useHistoryListeners` 返回对象有 `pauseListeners`、`listen`、`destroy`
-
-```ts
-// 【packages/router/src/history/html5.ts】
-function useHistoryListeners(
-  base: string,
-  historyState: ValueContainer<StateEntry>,
-  currentLocation: ValueContainer<HistoryLocation>,
-  replace: RouterHistory["replace"]
-) {
-  let listeners: NavigationCallback[] = []
-  let teardowns: Array<() => void> = []
-  // TODO: should it be a stack? a Dict. Check if the popstate listener
-  // can trigger twice
-  let pauseState: HistoryLocation | null = null
-
-  const popStateHandler: PopStateListener = ({
-    state,
-  }: {
-    state: StateEntry | null
-  }) => {
-    const to = createCurrentLocation(base, location)
-    const from: HistoryLocation = currentLocation.value
-    const fromState: StateEntry = historyState.value
-    let delta = 0
-
-    if (state) {
-      currentLocation.value = to
-      historyState.value = state
-
-      // ignore the popstate and reset the pauseState
-      if (pauseState && pauseState === from) {
-        pauseState = null
-        return
-      }
-      delta = fromState ? state.position - fromState.position : 0
-    } else {
-      replace(to)
-    }
-
-    // Here we could also revert the navigation by calling history.go(-delta)
-    // this listener will have to be adapted to not trigger again and to wait for the url
-    // to be updated before triggering the listeners. Some kind of validation function would also
-    // need to be passed to the listeners so the navigation can be accepted
-    // call all listeners
-    listeners.forEach((listener) => {
-      listener(currentLocation.value, from, {
-        delta,
-        type: NavigationType.pop,
-        direction: delta
-          ? delta > 0
-            ? NavigationDirection.forward
-            : NavigationDirection.back
-          : NavigationDirection.unknown,
-      })
-    })
-  }
-
-  function pauseListeners() {
-    pauseState = currentLocation.value
-  }
-
-  function listen(callback: NavigationCallback) {
-    // set up the listener and prepare teardown callbacks
-    listeners.push(callback)
-
-    const teardown = () => {
-      const index = listeners.indexOf(callback)
-      if (index > -1) listeners.splice(index, 1)
-    }
-
-    teardowns.push(teardown)
-    return teardown
-  }
-
-  function beforeUnloadListener() {
-    const { history } = window
-    if (!history.state) return
-    history.replaceState(
-      assign({}, history.state, { scroll: computeScrollPosition() }),
-      ""
-    )
-  }
-
-  function destroy() {
-    for (const teardown of teardowns) teardown()
-    teardowns = []
-    window.removeEventListener("popstate", popStateHandler)
-    window.removeEventListener("beforeunload", beforeUnloadListener)
-  }
-
-  // set up the listeners and prepare teardown callbacks
-  window.addEventListener("popstate", popStateHandler)
-  // TODO: could we use 'pagehide' or 'visibilitychange' instead?
-  // https://developer.chrome.com/blog/page-lifecycle-api/
-  window.addEventListener("beforeunload", beforeUnloadListener, {
-    passive: true,
-  })
-
-  return {
-    pauseListeners,
-    listen,
-    destroy,
-  }
-}
-```
-
 ## Hash
 
-`createWebHashHistory` 在处理完 `base` 之后同样进入 `createWebHistory` 方法：
+`createWebHashHistory` 在处理完 `base` 之后同样进入 `createWebHistory` 方法。通过将 `Base` 路径强制设置为包含 `#` 的格式（如代码中所示的 `base += "#"`），底层逻辑就可以统一调用 `history.pushState` 而不需要关心当前是在哪个模式下。
 
 ````ts
 // 【packages/router/src/history/hash.ts】
@@ -2589,12 +2765,7 @@ export function createWebHashHistory(base?: string): RouterHistory {
   if (!base.includes("#")) base += "#"
 
   if (__DEV__ && !base.endsWith("#/") && !base.endsWith("#")) {
-    warn(
-      `A hash base must end with a "#":\n"${base}" should be "${base.replace(
-        /#.*$/,
-        "#"
-      )}".`
-    )
+    warn(`A hash base must end with a "#":\n"${base}" should be "${base.replace(/#.*$/, "#")}".`)
   }
   return createWebHistory(base)
 }
@@ -2603,7 +2774,6 @@ export function createWebHashHistory(base?: string): RouterHistory {
 ## 路由守卫
 
 - 全局守卫
-
   - `beforeEach` 全局权限校验、埋点统计
   - `beforeResolve` 最终路由确认前的全局逻辑
   - `afterEach` 页面访问日志记录
@@ -2698,6 +2868,10 @@ router.beforeEach(检查登录状态)
 router.beforeResolve(确认支付状态)
 component.beforeRouteLeave(检查订单锁定状态)
 ```
+
+## 总结
+
+![router](./assets/router/router.svg)
 
 ## 参考资料
 

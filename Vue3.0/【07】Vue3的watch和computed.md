@@ -37,7 +37,7 @@ export const computed = ((getterOrOptions: any, debugOptions?: any) => {
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
-  isSSR = false
+  isSSR = false,
 ) {
   // 【第一步获取getter/setter】
   let getter: ComputedGetter<T>
@@ -90,7 +90,7 @@ export class ComputedRefImpl<T> {
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
-    isSSR: boolean
+    isSSR: boolean,
   ) {
     // 【实例化一个computed effect，并把用户传入的getter作为回调传入】
     // 【_dirty控制着是否需要重新计算也就是执行effect.run()】
@@ -144,95 +144,13 @@ export class ComputedRefImpl<T> {
 
 为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 `list`，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 `list`。没有缓存的话，我们会重复执行非常多次 `list` 的 `getter`，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。从计算属性返回的值是派生状态。可以把它看作是一个“临时快照”，每当源状态发生变化时，就会创建一个新的快照。更改快照是没有意义的，因此计算属性的返回值应该被视为只读的，并且永远不应该被更改——应该更新它所依赖的源状态以触发新的计算。
 
-<!-- 【TODO：3.4.27版本对这块有更新】 -->
-
-构造`ComputedRefImpl`实例的入参`trigger`函数实际调用了`triggerRefValue`方法，和`ref`走的是一个派发更新的方法。然后在进入`triggerRefValue`方法时，`_dirtyLevel`可能是 2 或 3。而入参`fn`回调函数则是调用`getter`也就是用户传入的`getter`函数。
-
-比如计算属性依赖一个 `ref` 值，`ref` 值改变引起派发更新，就会引起这个计算属性的 `trigger` 函数调用，从而进入这个计算属性的派发更新过程。`ref` 引起计算属性改变(`dirtyLevel` 为 4)，计算属性引起它对应的后续改变(比如视图改变，`dirtyLevel` 为 3)。如果 ref 和影响到的计算属性都会引起同一个视图的改变，一旦`dirtyLevel`非 0，不会再安排`scheduler`入队，所以不会有重复性的任务入队。
-
-```ts
-// 【packages/reactivity/src/computed.ts】
-export class ComputedRefImpl<T> {
-  public dep?: Dep = undefined
-
-  private _value!: T
-  public readonly effect: ReactiveEffect<T>
-
-  public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
-
-  public _cacheable: boolean
-
-  /**
-   * Dev only
-   */
-  _warnRecursive?: boolean
-
-  constructor(
-    private getter: ComputedGetter<T>,
-    private readonly _setter: ComputedSetter<T>,
-    isReadonly: boolean,
-    isSSR: boolean
-  ) {
-    this.effect = new ReactiveEffect(
-      () => getter(this._value),
-      () =>
-        triggerRefValue(
-          this,
-          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
-            ? DirtyLevels.MaybeDirty_ComputedSideEffect
-            : DirtyLevels.MaybeDirty
-        )
-    )
-    this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
-    this[ReactiveFlags.IS_READONLY] = isReadonly
-  }
-
-  get value() {
-    // the computed ref may get wrapped by other proxies e.g. readonly() #3376
-    const self = toRaw(this)
-    if (
-      (!self._cacheable || self.effect.dirty) &&
-      hasChanged(self._value, (self._value = self.effect.run()!))
-    ) {
-      triggerRefValue(self, DirtyLevels.Dirty)
-    }
-    trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      if (__DEV__ && (__TEST__ || this._warnRecursive)) {
-        warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
-      }
-      triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
-    }
-    return self._value
-  }
-
-  set value(newValue: T) {
-    this._setter(newValue)
-  }
-
-  // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
-  get _dirty() {
-    return this.effect.dirty
-  }
-
-  set _dirty(v) {
-    this.effect.dirty = v
-  }
-  // #endregion
-}
-```
-
 ## watch()
 
 ### watch API
 
 1. **watch()**
    `watch()` 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
-
    1. 第一个参数是侦听器的源。这个来源可以是以下几种：
-
       - 一个函数，返回一个值
       - 一个 ref
       - 一个响应式对象
@@ -241,7 +159,6 @@ export class ComputedRefImpl<T> {
    2. 第二个参数是在发生变化时要调用的回调函数。这个回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。该回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用，例如等待中的异步请求。当侦听多个来源时，回调函数接受两个数组，分别对应来源数组中的新值和旧值。
 
    3. 第三个可选的参数是一个对象，支持以下这些选项：
-
       - `immediate`：在侦听器创建时立即触发回调。第一次调用时旧值是 undefined。
       - `deep`：如果源是对象，强制深度遍历，以便在深层级变更时触发回调。参考深层侦听器。
       - `flush`：调整回调函数的刷新时机。参考回调的刷新时机及 `watchEffect()`。
@@ -322,13 +239,10 @@ watchEffect(() => {
 ```ts
 // 【packages/runtime-core/src/apiWatch.ts】
 // overload: array of multiple sources + cb
-export function watch<
-  T extends MultiWatchSources,
-  Immediate extends Readonly<boolean> = false
->(
+export function watch<T extends MultiWatchSources, Immediate extends Readonly<boolean> = false>(
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: multiple sources w/ `as const`
@@ -336,77 +250,61 @@ export function watch<
 // somehow [...T] breaks when the type is readonly
 export function watch<
   T extends Readonly<MultiWatchSources>,
-  Immediate extends Readonly<boolean> = false
+  Immediate extends Readonly<boolean> = false,
 >(
   source: T,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: watching reactive object w/ cb
-export function watch<
-  T extends object,
-  Immediate extends Readonly<boolean> = false
->(
+export function watch<T extends object, Immediate extends Readonly<boolean> = false>(
   source: T,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
         `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
-        `supports \`watch(source, cb, options?) signature.`
+        `supports \`watch(source, cb, options?) signature.`,
     )
   }
   return doWatch(source as any, cb, options)
 }
 
 // Simple effect.
-export function watchEffect(
-  effect: WatchEffect,
-  options?: WatchOptionsBase
-): WatchStopHandle {
+export function watchEffect(effect: WatchEffect, options?: WatchOptionsBase): WatchStopHandle {
   return doWatch(effect, null, options)
 }
 
-export function watchPostEffect(
-  effect: WatchEffect,
-  options?: DebuggerOptions
-) {
+export function watchPostEffect(effect: WatchEffect, options?: DebuggerOptions) {
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: "post" }
-      : { flush: "post" }) as WatchOptionsBase
+    (__DEV__ ? { ...options, flush: "post" } : { flush: "post" }) as WatchOptionsBase,
   )
 }
 
-export function watchSyncEffect(
-  effect: WatchEffect,
-  options?: DebuggerOptions
-) {
+export function watchSyncEffect(effect: WatchEffect, options?: DebuggerOptions) {
   return doWatch(
     effect,
     null,
-    (__DEV__
-      ? { ...options, flush: "sync" }
-      : { flush: "sync" }) as WatchOptionsBase
+    (__DEV__ ? { ...options, flush: "sync" } : { flush: "sync" }) as WatchOptionsBase,
   )
 }
 ```
@@ -427,11 +325,7 @@ export type WatchEffect = (onCleanup: OnCleanup) => void
 
 export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 
-export type WatchCallback<V = any, OV = any> = (
-  value: V,
-  oldValue: OV,
-  onCleanup: OnCleanup
-) => any
+export type WatchCallback<V = any, OV = any> = (value: V, oldValue: OV, onCleanup: OnCleanup) => any
 
 type MultiWatchSources = (WatchSource<unknown> | object)[]
 
@@ -439,19 +333,19 @@ type MultiWatchSources = (WatchSource<unknown> | object)[]
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
+          `watch(source, callback, options?) signature.`,
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
+          `watch(source, callback, options?) signature.`,
       )
     }
   }
@@ -461,7 +355,7 @@ function doWatch(
       `Invalid watch source: `,
       s,
       `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`
+        `a reactive object, or an array of these types.`,
     )
   }
 
@@ -500,8 +394,7 @@ function doWatch(
     if (cb) {
       // getter with cb
       //【有cb回调，执行source方法】
-      getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+      getter = () => callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
     } else {
       //【未传cb回调，说明是watchEffect，执行source方法】
       // no cb -> simple effect
@@ -513,12 +406,7 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
-        return callWithAsyncErrorHandling(
-          source,
-          instance,
-          ErrorCodes.WATCH_CALLBACK,
-          [onCleanup]
-        )
+        return callWithAsyncErrorHandling(source, instance, ErrorCodes.WATCH_CALLBACK, [onCleanup])
       }
     }
   } else {
@@ -531,10 +419,7 @@ function doWatch(
     const baseGetter = getter
     getter = () => {
       const val = baseGetter()
-      if (
-        isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-      ) {
+      if (isArray(val) && checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)) {
         traverse(val)
       }
       return val
@@ -591,13 +476,9 @@ function doWatch(
         deep ||
         forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
-            )
+          ? (newValue as any[]).some((v, i) => hasChanged(v, (oldValue as any[])[i]))
           : hasChanged(newValue, oldValue)) ||
-        (__COMPAT__ &&
-          isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+        (__COMPAT__ && isArray(newValue) && isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
       ) {
         // cleanup before running cb again
         if (cleanup) {
@@ -660,10 +541,7 @@ function doWatch(
       oldValue = effect.run()
     }
   } else if (flush === "post") {
-    queuePostRenderEffect(
-      effect.run.bind(effect),
-      instance && instance.suspense
-    )
+    queuePostRenderEffect(effect.run.bind(effect), instance && instance.suspense)
   } else {
     //【无回调函数-watchEffect】
     effect.run()
@@ -684,267 +562,13 @@ function doWatch(
 ![watch](./assets/watch&computed/watch2.png)
 ![watch](./assets/watch&computed/watch3.png)
 
-<!-- 【TODO：3.4.27版本对这块有更新】 -->
-
-`watch`和之前版本类似，仍旧是构造`job`并根据入参`flush`到底是加入前置任务队列还是后置，`job`根据是否有回调函数 cb 进行不同处理。还有构造对应`watch effect`。
-
-```ts
-// 【packages/runtime-core/src/apiWatch.ts】
-function doWatch(
-  source: WatchSource | WatchSource[] | WatchEffect | object,
-  cb: WatchCallback | null,
-  { immediate, deep, flush, once, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
-): WatchStopHandle {
-  if (cb && once) {
-    const _cb = cb
-    cb = (...args) => {
-      _cb(...args)
-      unwatch()
-    }
-  }
-
-  // TODO remove in 3.5
-  if (__DEV__ && deep !== void 0 && typeof deep === "number") {
-    warn(
-      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-        `Please use a boolean instead to avoid potential breakage.`
-    )
-  }
-
-  if (__DEV__ && !cb) {
-    if (immediate !== undefined) {
-      warn(
-        `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
-      )
-    }
-    if (deep !== undefined) {
-      warn(
-        `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
-      )
-    }
-    if (once !== undefined) {
-      warn(
-        `watch() "once" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
-      )
-    }
-  }
-
-  const warnInvalidSource = (s: unknown) => {
-    warn(
-      `Invalid watch source: `,
-      s,
-      `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`
-    )
-  }
-
-  const instance = currentInstance
-  const reactiveGetter = (source: object) =>
-    deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
-        traverse(source, deep === false ? 1 : undefined)
-
-  let getter: () => any
-  let forceTrigger = false
-  let isMultiSource = false
-
-  if (isRef(source)) {
-    getter = () => source.value
-    forceTrigger = isShallow(source)
-  } else if (isReactive(source)) {
-    getter = () => reactiveGetter(source)
-    forceTrigger = true
-  } else if (isArray(source)) {
-    isMultiSource = true
-    forceTrigger = source.some((s) => isReactive(s) || isShallow(s))
-    getter = () =>
-      source.map((s) => {
-        if (isRef(s)) {
-          return s.value
-        } else if (isReactive(s)) {
-          return reactiveGetter(s)
-        } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
-        } else {
-          __DEV__ && warnInvalidSource(s)
-        }
-      })
-  } else if (isFunction(source)) {
-    if (cb) {
-      // getter with cb
-      getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
-    } else {
-      // no cb -> simple effect
-      getter = () => {
-        if (cleanup) {
-          cleanup()
-        }
-        return callWithAsyncErrorHandling(
-          source,
-          instance,
-          ErrorCodes.WATCH_CALLBACK,
-          [onCleanup]
-        )
-      }
-    }
-  } else {
-    getter = NOOP
-    __DEV__ && warnInvalidSource(source)
-  }
-
-  // 2.x array mutation watch compat
-  if (__COMPAT__ && cb && !deep) {
-    const baseGetter = getter
-    getter = () => {
-      const val = baseGetter()
-      if (
-        isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
-      ) {
-        traverse(val)
-      }
-      return val
-    }
-  }
-
-  if (cb && deep) {
-    const baseGetter = getter
-    getter = () => traverse(baseGetter())
-  }
-
-  let cleanup: (() => void) | undefined
-  let onCleanup: OnCleanup = (fn: () => void) => {
-    cleanup = effect.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
-      cleanup = effect.onStop = undefined
-    }
-  }
-
-  // in SSR there is no need to setup an actual effect, and it should be noop
-  // unless it's eager or sync flush
-  let ssrCleanup: (() => void)[] | undefined
-  if (__SSR__ && isInSSRComponentSetup) {
-    // we will also not call the invalidate callback (+ runner is not set up)
-    onCleanup = NOOP
-    if (!cb) {
-      getter()
-    } else if (immediate) {
-      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-        getter(),
-        isMultiSource ? [] : undefined,
-        onCleanup,
-      ])
-    }
-    if (flush === "sync") {
-      const ctx = useSSRContext()!
-      ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
-    } else {
-      return NOOP
-    }
-  }
-
-  let oldValue: any = isMultiSource
-    ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
-    : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
-      return
-    }
-    if (cb) {
-      // watch(source, cb)
-      const newValue = effect.run()
-      if (
-        deep ||
-        forceTrigger ||
-        (isMultiSource
-          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
-          : hasChanged(newValue, oldValue)) ||
-        (__COMPAT__ &&
-          isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
-      ) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
-        }
-        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-          newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE
-            ? undefined
-            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-            ? []
-            : oldValue,
-          onCleanup,
-        ])
-        oldValue = newValue
-      }
-    } else {
-      // watchEffect
-      effect.run()
-    }
-  }
-
-  // important: mark the job as a watcher callback so that scheduler knows
-  // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
-
-  let scheduler: EffectScheduler
-  if (flush === "sync") {
-    scheduler = job as any // the scheduler function gets called directly
-  } else if (flush === "post") {
-    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
-  } else {
-    // default: 'pre'
-    job.pre = true
-    if (instance) job.id = instance.uid
-    scheduler = () => queueJob(job)
-  }
-
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
-
-  const scope = getCurrentScope()
-  const unwatch = () => {
-    effect.stop()
-    if (scope) {
-      remove(scope.effects, effect)
-    }
-  }
-
-  if (__DEV__) {
-    effect.onTrack = onTrack
-    effect.onTrigger = onTrigger
-  }
-
-  // initial run
-  if (cb) {
-    if (immediate) {
-      job()
-    } else {
-      oldValue = effect.run()
-    }
-  } else if (flush === "post") {
-    queuePostRenderEffect(
-      effect.run.bind(effect),
-      instance && instance.suspense
-    )
-  } else {
-    effect.run()
-  }
-
-  if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
-}
-```
-
 ## computed() 和 watch() 异同
 
 1. 实例化 `ReactiveEffect` 时，`watch`会根据用户的配置去构造 `scheduler` 方法然后放入合适的任务队列，而 `computed` 则是相当于构造一个类`ref`对象直接包装 `triggerRefValue` 这个依赖收集方法。
 2. `computed`用`_dirty`参数（默认 true）判断是否需要执行对应`effect`实例的`run`方法去获取最新值，而`watch`默认懒执行，除非用户指定`immediate`配置。
 
 ![watch、computed](./assets/watch&computed/watch&computed.png)
+
+## 3.5版本更新
+
+<!-- TODO -->
