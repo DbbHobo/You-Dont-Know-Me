@@ -5,20 +5,18 @@
 `IntersectionObserver`则可以观察元素和浏览器视窗相交的情况。
 
 ```js
-const observer = new IntersectionObserver(callback[, options])
-
-const callback = (entries, observer) => {
-  entries.forEach(entry => {
+const observer = new IntersectionObserver((entries, observer) => {
+  entries.forEach((entry) => {
     // Do something with the intersection entry
   })
-}
+})
 
-const target = document.querySelector('#target')
+const target = document.querySelector("#target")
 
-observer.observe(target,{
+observer.observe(target, {
   root: null, // 默认是浏览器视口
-  rootMargin: '0px',
-  threshold: 0.1 // 当至少10%的图片进入视口时触发回调
+  rootMargin: "0px",
+  threshold: 0.1, // 当至少10%的图片进入视口时触发回调
 })
 ```
 
@@ -72,18 +70,10 @@ observer.observe(target,{
   </head>
   <body>
     <div class="image-container">
-      <img
-        data-src="https://via.placeholder.com/400"
-        class="lazy-image"
-        alt="Lazy Loaded Image"
-      />
+      <img data-src="https://via.placeholder.com/400" class="lazy-image" alt="Lazy Loaded Image" />
     </div>
     <div class="image-container">
-      <img
-        data-src="https://via.placeholder.com/400"
-        class="lazy-image"
-        alt="Lazy Loaded Image"
-      />
+      <img data-src="https://via.placeholder.com/400" class="lazy-image" alt="Lazy Loaded Image" />
     </div>
     <!-- More image containers as needed -->
     <script src="script.js"></script>

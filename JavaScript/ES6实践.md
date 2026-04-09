@@ -1091,8 +1091,7 @@ if (user.name === null || user.name === undefined) {
 user.name = user.name || "Anonymous" // Replaces '', 0, false too
 
 // Using ternary - gets messy with longer expressions
-user.name =
-  user.name === null || user.name === undefined ? "Anonymous" : user.name
+user.name = user.name === null || user.name === undefined ? "Anonymous" : user.name
 
 // Using ??= - clean and precise
 user.name ??= "Anonymous"
@@ -1265,3 +1264,5 @@ double(increment(double(5))) // 22
 [Mastering default values in JavaScript with the nullish coalescing (??) operator](https://allthingssmitty.com/2025/04/10/mastering-default-values-in-javascript-with-the-nullish-coalescing-operator/)
 
 [Write more reliable JavaScript with optional chaining](https://allthingssmitty.com/2025/06/02/write-more-reliable-javascript-with-optional-chaining/)
+
+[logical-assignment-operators-in-javascript-small-syntax-big-wins](https://allthingssmitty.com/2025/07/28/logical-assignment-operators-in-javascript-small-syntax-big-wins/)

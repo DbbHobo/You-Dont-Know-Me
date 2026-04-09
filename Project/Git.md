@@ -1,4 +1,4 @@
-# Git常用命令
+# Git 常用命令
 
 ## Git 基本使用流程
 
@@ -25,7 +25,7 @@ git add <file>
 ```zsh
 git commit -m <message>
 
-# 修改最近提交的便捷方法。 它让您将暂存的变更与先前的提交合并，而不是创建一个全新的提交。 
+# 修改最近提交的便捷方法。 它让您将暂存的变更与先前的提交合并，而不是创建一个全新的提交。
 git add <file_name>
 git commit --amend
 
@@ -101,7 +101,7 @@ git reset HEAD^
 git reset --hard HEAD^
 
 # 消除某个commit提交的内容并形成一个新的commit，原commit并不会消失
-git revert <commit-hash> 
+git revert <commit-hash>
 ```
 
 ### 恢复到之前的某次提交
@@ -250,11 +250,11 @@ git branch -r -v
 ```zsh
 # 形成一个新的提交，和主分支上的提交先合并再提交
 # git merge 是将两个分支的历史合并在一起，它会创建一个新的合并提交（merge commit）。在执行 git merge 时，Git 会自动寻找两个分支的共同祖先（merge base），然后将两个分支的内容合并。 git merge 会保留所有的提交历史，包括分支的分叉点和合并点。也就是说，合并后的提交历史中会包含原来分支的所有提交。
-git merge 
+git merge
 
 # 和主分支上的提交还是线性关系提交，顺序清晰
 #  git rebase 是将一个分支的更改“转移”到另一个分支的顶部，它通过重新应用每一个提交（commit）来调整历史。Rebase 会将目标分支的提交应用到当前分支的上面，仿佛这些提交是从当前分支的最新提交之后产生的一样。 rebase 会修改提交历史（产生新的提交哈希），而不是创建合并提交，因此它的历史看起来像是一个线性的进展。
-git rebase 
+git rebase
 ```
 
 ### 合并时禁用 Fast forward(--no-ff)
@@ -318,7 +318,7 @@ git rev-parse --short HEAD
 
 - `master`分支应该是非常稳定的，也就是仅用来发布新版本，平时不能在上面干活；
 
-- 干活都在`dev`分支上，也就是说，`dev`分支是不稳定的，到某个时候，比如1.0版本发布时，再把`dev`分支合并到`master`上，在`master`分支发布1.0版本；
+- 干活都在`dev`分支上，也就是说，`dev`分支是不稳定的，到某个时候，比如 1.0 版本发布时，再把`dev`分支合并到`master`上，在`master`分支发布 1.0 版本；
 
 - 你和你的小伙伴们每个人都在`dev`分支上干活，每个人都有自己的分支，时不时地往`dev`分支上合并就可以了；
 
@@ -334,7 +334,7 @@ git rev-parse --short HEAD
 
 如果 `git pull` 提示 no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令 `git branch --set-upstream-to <branch-name> origin/<branch-name>`。
 
-## Git标签
+## Git 标签
 
 Git 的 tag 可以（在某种程度上 —— 因为标签可以被删除后重新在另外一个位置创建同名的标签）永久地将某个特定的提交命名为里程碑，然后就可以像分支一样引用了。
 
@@ -405,6 +405,92 @@ git push origin :refs/tags/<tagname>
 - `style`: 代码格式修改，注意不是 css 修改
 - `test`: 测试用例修改
 - `chore`: 其他修改，比如构建流程，依赖管理
+
+## Git 多人协作完整流程
+
+### 项目初始化与代码获取
+
+```zsh
+git clone <repo-url>
+cd <project>
+
+git checkout master
+git pull origin master
+```
+
+### 创建开发分支（本地、远程）
+
+```zsh
+# 本地创建分支
+git checkout -b feature/xxx
+
+# 推送到远程并创建分支，-u 代表设置默认的 upstream，这样以后 git push / git pull 就不用写远程分支名了
+git push -u origin feature/xxx
+```
+
+### 开发与提交代码
+
+```zsh
+git add .
+git commit -m "feat: xxx"
+git push origin feature/xxx
+```
+
+### 保持分支更新
+
+```zsh
+# 保持线性历史
+git fetch origin
+git rebase origin/master
+# 或者
+git pull --rebase origin master
+
+# 保留分支合并点
+git fetch origin
+git merge origin/master
+# 或者
+git pull origin master
+```
+
+### 将开发分支合并到主分支
+
+```zsh
+# Merge commit （保留分支历史）
+git checkout master
+git pull origin master
+
+git merge feature/xxx
+git push origin master
+
+# Squash merge （压缩成一个提交）
+git checkout master
+git pull origin master
+
+git merge --squash feature/xxx
+git commit -m "feat: 登录页面开发完成"
+git push origin master
+
+# Rebase merge （线性历史）
+git checkout feature/xxx
+git fetch origin
+git rebase origin/master
+
+git checkout master
+git pull origin master
+
+git merge feature/xxx --ff-only
+git push origin master
+```
+
+### 合并完成删除开发分支
+
+```zsh
+# 删除远程分支
+git push origin --delete feature/xxx
+
+# 删除本地分支
+git branch -d feature/xxx
+```
 
 ## cheatsheet
 

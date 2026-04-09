@@ -1,16 +1,20 @@
 # ArrayBuffer TypedArray DataView
 
-## ArrayBuffer
+`ArrayBuffer`对象作为**内存区域**，可以存放多种类型的数据。同一段内存，不同数据有不同的解读方式，这就叫做“视图”（view）。`ArrayBuffer`有两种视图，一种是`TypedArray`视图，另一种是`DataView`视图。前者的数组成员都是同一个数据类型，后者的数组成员可以是不同的数据类型。
+
+## **ArrayBuffer**
 
 `ArrayBuffer` 对象、`TypedArray` 视图和 `DataView` 视图是 `JavaScript` 操作二进制数据的一个接口。它们都是以数组的语法处理二进制数据，所以统称为二进制数组。
 
-`ArrayBuffer` 对象代表储存二进制数据的一段内存，它不能直接读写，只能通过`TypedArray` 视图或者 `DataView` 视图来读写，视图的作用是以指定格式解读二进制数据。
+`ArrayBuffer` 是一个可转移对象。不是所有对象都能转移。像普通的 `Object`、`Array` 或 `String` 是不能转移的，因为它们由 JavaScript 引擎高度管理。`ArrayBuffer` 之所以能转移，是因为它本质上就是一段连续的物理内存地址。转移它只需要在底层把指针的指向从线程 A 改到 线程 B，操作极其轻量。在浏览器中，主线程和 Worker 拥有独立的堆内存（Isolated Heap）。当把一个普通 `Object` 传给 `Worker` 时，浏览器内部执行的是结构化克隆算法 (Structured Clone Algorithm)。它会在 `Worker` 的堆里重新画一张一模一样的饼，而不是把原来的饼递过去。
 
-- `ArrayBuffer` 对象用来表示通用的原始二进制数据缓冲区
-- `TypedArray` 视图用来读写简单类型的二进制数据
-- `DataView` 视图用来读写复杂类型的二进制数据
+`ArrayBuffer` 对象代表**储存二进制数据的一段内存**，它不能直接读写，只能通过 `TypedArray` 视图或者 `DataView` 视图来读写，视图的作用是**以指定格式解读二进制数据**。
 
-Javascript 中有两种类型的缓冲：`ArrayBuffer` 和 `SharedArrayBuffer`。它们都是内存块的低级表示。缓冲支持以下操作：
+- `ArrayBuffer` 对象用来表示通用的**原始二进制数据缓冲区**
+- `TypedArray` 视图用来读写**简单类型的二进制数据**
+- `DataView` 视图用来读写**复杂类型的二进制数据**
+
+Javascript 中有两种类型的缓冲：`ArrayBuffer` 和 `SharedArrayBuffer`，它们都是内存块的低级表示。缓冲支持以下操作：
 
 - 分配：创建一个新的缓冲时，会分配一个新的内存块，并且初始化为 0。
 - 复制：使用 `slice()` 方法，你可以高效地复制缓冲中的一部分数据，而不需要创建视图来手动复制每一个字节。
@@ -186,7 +190,7 @@ console.log(view2[1]) // 2
 console.log(view2[7]) // 4
 ```
 
-## TypedArray
+## **TypedArray**
 
 `TypedArray` 视图提供了多种类型，用于以不同的格式操作二进制数据。以下是所有 `TypedArray` 类型及其特性：
 
@@ -218,7 +222,7 @@ const v3 = new Int16Array(b, 2, 2)
 
 ### TypedArray 的静态属性和方法
 
-### TypedArray.BYTES_PER_ELEMENT
+- `TypedArray.BYTES_PER_ELEMENT`
 
 `TypedArray.BYTES_PER_ELEMENT` 是一个只读属性，表示 `TypedArray` 数组中每个元素所占用的字节数。
 
@@ -228,7 +232,7 @@ console.log(Uint16Array.BYTES_PER_ELEMENT) // 2
 console.log(Float32Array.BYTES_PER_ELEMENT) // 4
 ```
 
-### TypedArray[Symbol.species]
+- `TypedArray[Symbol.species]`
 
 `TypedArray[Symbol.species]` 是一个访问器属性，返回构造函数，用于创建派生对象。
 
@@ -246,7 +250,7 @@ console.log(mappedArray instanceof MyInt8Array) // false
 console.log(mappedArray instanceof Int8Array) // true
 ```
 
-### TypedArray.from()
+- `TypedArray.from()`
 
 `TypedArray.from()` 方法从一个类似数组或可迭代对象创建一个新的 `TypedArray` 实例。
 
@@ -262,7 +266,7 @@ const arr = Uint8Array.from([1, 2, 3], (x) => x * 2)
 console.log(arr) // Uint8Array [2, 4, 6]
 ```
 
-### TypedArray.of()
+- `TypedArray.of()`
 
 `TypedArray.of()` 方法创建一个新的 `TypedArray` 实例，参数是元素的值。
 
@@ -271,7 +275,16 @@ const arr = Float32Array.of(1.1, 2.2, 3.3)
 console.log(arr) // Float32Array [1.1, 2.2, 3.3]
 ```
 
-### TypedArray 的实例方法
+### TypedArray 的实例属性和方法
+
+- `TypedArray.prototype.buffer`
+  TypedArray实例的buffer属性，返回整段内存区域对应的ArrayBuffer对象。该属性为只读属性。
+
+- `TypedArray.prototype.byteLength` / `TypedArray.prototype.byteOffset`
+  byteLength属性返回 TypedArray 数组占据的内存长度，单位为字节。byteOffset属性返回 TypedArray 数组从底层ArrayBuffer对象的哪个字节开始。这两个属性都是只读属性。
+
+- `TypedArray.prototype.length`
+  length属性表示 TypedArray 数组含有多少个成员。注意将 length 属性和 byteLength 属性区分，前者是成员长度，后者是字节长度。
 
 以下是 `TypedArray` 的实例方法，这些方法与普通数组的方法类似，但专为操作二进制数据设计：
 
@@ -341,9 +354,13 @@ console.log(arr) // Float32Array [1.1, 2.2, 3.3]
 - **TypedArray.prototype.values()**  
   返回一个新的数组迭代器对象，该对象包含数组中每个索引的值。
 
-TypedArray.prototype.set()
+- **TypedArray.prototype.set()**
 
-## DataView
+## **DataView**
+
+如果一段数据包括多种类型（比如服务器传来的 HTTP 数据），这时除了建立`ArrayBuffer`对象的复合视图以外，还可以通过`DataView`视图进行操作。`DataView`视图本身也是构造函数，接受一个`ArrayBuffer`对象作为参数，生成视图。
+
+如果一次读取两个或两个以上字节，就必须明确数据的存储方式，到底是**小端字节序**还是**大端字节序**。默认情况下，`DataView`的`get`方法使用大端字节序解读数据，如果需要使用小端字节序解读，必须在`get`方法的第二个参数指定`true`。
 
 ### DataView 的实例属性和方法
 
@@ -659,7 +676,7 @@ console.log(view.getUint8(0))
 // Expected output: 255
 ```
 
-## ArrayBuffer TypedArray DataView 实例
+## 使用实例
 
 ```js
 const socket = new WebSocket("wss://xxx.com/audio");

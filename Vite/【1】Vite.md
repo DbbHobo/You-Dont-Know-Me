@@ -11,16 +11,16 @@
 原生 `ES` 导入不支持下面这样的裸模块导入：
 
 ```js
-import { someMethod } from 'my-dep'
+import { someMethod } from "my-dep"
 ```
 
 上面的代码会在浏览器中抛出一个错误。`Vite` 将会检测到所有被加载的源文件中的此类裸模块导入，并执行以下操作:
 
-  1. 预构建 它们可以提高页面加载速度，并将 `CommonJS` / `UMD` 转换为 `ESM` 格式。预构建这一步由 `esbuild` 执行，这使得 `Vite` 的冷启动时间比任何基于 `JavaScript` 的打包器都要快得多。
+1. 预构建 它们可以提高页面加载速度，并将 `CommonJS` / `UMD` 转换为 `ESM` 格式。预构建这一步由 `esbuild` 执行，这使得 `Vite` 的冷启动时间比任何基于 `JavaScript` 的打包器都要快得多。
 
-  2. 重写导入为合法的 `URL`，例如 `/node_modules/.vite/deps/my-dep.js?v=f3sf2ebd` 以便浏览器能够正确导入它们。
+2. 重写导入为合法的 `URL`，例如 `/node_modules/.vite/deps/my-dep.js?v=f3sf2ebd` 以便浏览器能够正确导入它们。
 
-**依赖是强缓存的**，`Vite` 通过 `HTTP` 头来缓存请求得到的依赖。
+这些预构建的文件会带有“强缓存”请求头，**依赖是强缓存的**，`Vite` 通过 `HTTP` 头来缓存请求得到的依赖。
 
 以上两点在实际项目中印证如下：
 
@@ -29,9 +29,11 @@ import { someMethod } from 'my-dep'
 
 可以看到`vue.js`是被强制缓存的，设置为`max-age=31536000,immutable`，并且引入路径都已经编译成了相对路径。
 
+一旦预构建完成，`Vite` 会把这些处理过的文件缓存在 `node_modules/.vite` 目录下。`Vite` 会把你代码里的 `import { debounce } from 'lodash'` 转换成 i`mport { debounce } from '/node_modules/.vite/deps/lodash.js?v=12345'`。
+
 ## 模块热替换
 
-`Vite` 提供了一套原生 `ESM` 的 `HMR API`。 具有 `HMR` 功能的框架可以利用该 `API` 提供即时、准确的更新，而无需重新加载页面或清除应用程序状态。`Vite` 内置了 `HMR` 到 `Vue` 单文件组件（`SFC`） 和 `React Fast Refresh` 中。也通过` @prefresh/vite` 对 `Preact` 实现了官方集成。
+`Vite` 提供了一套原生 `ESM` 的 `HMR API`。 具有 `HMR` 功能的框架可以利用该 `API` 提供即时、准确的更新，而无需重新加载页面或清除应用程序状态。`Vite` 内置了 `HMR` 到 `Vue` 单文件组件（`SFC`） 和 `React Fast Refresh` 中。也通过 `@prefresh/vite` 对 `Preact` 实现了官方集成。
 
 可以观察项目中的热替换如下：
 
@@ -86,6 +88,16 @@ import { someMethod } from 'my-dep'
 
 ![vite](./assets/vite6.png)
 
+## 生产环境
+
+`esbuild` 为了快，它放弃了一些复杂的优化功能。而在生产环境下，我们对代码的要求是“极致的小”和“极致的稳”，所以生产环境仍旧使用 `Rollup` 进行打包：
+
+- `Tree Shaking`（摇树优化）：虽然 `esbuild` 也有 `Tree Shaking`，但 `Rollup` 的分析更加彻底和精准。它能识别出更多复杂的无效代码并剔除，从而让最终的 JS 文件更小。
+- `Code Splitting`（代码分割）的控制力：`Rollup` 对如何拆分 `Chunk`、如何处理共享依赖（`Vendor`）有着非常成熟且精细的配置。
+- 插件生态：`Rollup` 拥有极其丰富的插件体系（比如处理 CSS 抽离、图片压缩、多语言支持等）。`esbuild` 的插件系统相对年轻，很多高级的打包功能还没完全对齐。
+
+此外 `esbuild` 在处理 CSS 代码分割、复杂的代码转换（降级到 ES5）方面，目前还不如 `Rollup` 稳定。
+
 ## 参考资料
 
 [Vite 官方中文文档](https://cn.vitejs.dev/guide/)
@@ -93,3 +105,5 @@ import { someMethod } from 'my-dep'
 [Rollup 中文文档](https://cn.rollupjs.org/)
 
 [What is Vite? & Vite vs Webpack](https://refine.dev/blog/what-is-vite-vs-webpack/#vite-vs-webpack)
+
+[Build tools:- Vite ~ Webpack & Deploy the Dist Folder](https://dev.to/ashutoshsarangi/build-tools-vite-webpack-deploy-the-dist-folder-50kb?context=digest)

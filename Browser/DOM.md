@@ -4,7 +4,7 @@ In the document node is the DOM (Document Object Model), the document object mod
 
 `DOM`为`JavaScript`提供了一种访问和操作 HTML 元素的"方法"。`DOM`（文档对象模型）是针对 `HTML` 和 `XML` 文档的一个 API（应用程序编程接口）。 `DOM` 描绘了一个层次化的**DOM 节点树**，允许开发人员添加、移除和修改页面的某一部分。
 
-HTML 元素通过**元素节点**表示，特性（attribute）通过**特性节点**表示，文档类型通过**文档类型节点**表示，而注释则通过**注释节点**表示。总共有 12 种节点类型，这些类型都继承自一个基类型。每个节点都有一个 **`childNodes`** 属性，其中保存着一个 `NodeList` 对象。 `NodeList` 是一种**类数组对象**，用于保存一组有序的节点，可以通过位置来访问这些节点。包含在 `childNodes` 列表中的每个节点相互之间都是同胞节点。通过使用列表中每个节点的 `previousSibling` 和 `nextSibling` 属性，可以访问同一列表中的其他节点。父节点的 `firstChild` 和 `lastChild` 属性分别指向其 `childNodes` 列表中的第一个和最后一个节点。
+HTML 元素通过**元素节点**表示，特性（attribute）通过**特性节点**表示，文档类型通过**文档类型节点**表示，而注释则通过**注释节点**表示。总共有 12 种节点类型，这些类型都继承自一个基类型**HTMLElement**。每个节点都有一个 **`childNodes`** 属性，其中保存着一个 `NodeList` 对象。 `NodeList` 是一种**类数组对象**，用于保存一组有序的节点，可以通过位置来访问这些节点。包含在 `childNodes` 列表中的每个节点相互之间都是同胞节点。通过使用列表中每个节点的 `previousSibling` 和 `nextSibling` 属性，可以访问同一列表中的其他节点。祖先节点的 `firstChild` 和 `lastChild` 属性分别指向其 `childNodes` 列表中的第一个和最后一个节点。
 
 一个 DOM 元素的原型链是这样的：
 
@@ -18,22 +18,16 @@ HTML 元素类的总体继承关系如下：
 
 ![browser](./assets/dom-hierarchy.svg)
 
-因此，元素继承其所有祖先的属性和方法。例如，考虑 `<a>` 元素，在 `DOM` 中由类型为 `HTMLAnchorElement` 的对象表示。元素包括了该类文档中，`Anchor` 特定的属性和方法。但也包括 `HTMLElement`、`Element` 以及 `Node` 定义的内容，最后是 `EventTarget` 定义的内容。
+因此，元素继承其所有祖先的属性和方法。例如， `<a>` 元素，在 `DOM` 中由类型为 `HTMLAnchorElement` 的对象表示。元素包括了该类文档中，`Anchor` 特定的属性和方法。但也包括 `HTMLElement`、`Element` 以及 `Node` 定义的内容，最后是 `EventTarget` 定义的内容。
 
-每一层级都定义了元素实用性的一个关键方面。从 `Node` 开始，该元素继承了有关该元素能否被另一个元素包含，以及自身包含其他元素的概念。特别重要的是从 `EventTarget` 继承的接收和处理事件（如鼠标点击、播放和暂停事件等）的能力。
+每一层级都定义了元素实用性的一个关键方面。从 `Node` 开始，该元素继承了有关该元素能否被另一个元素包含，以及自身包含其他元素的概念。其中，特别重要的是从 `EventTarget` 继承的接收和处理事件（如鼠标点击、播放和暂停事件等）的能力。
 
 ## HTMLElement
 
-`HTMLElement` 接口表示所有的 `HTML` 元素。一些 `HTML` 元素直接实现了 `HTMLElement` 接口，其他的间接实现 `HTMLElement` 接口。
+`HTMLElement` 接口表示所有的 `HTML` 元素。一些 `HTML` 元素直接实现了 `HTMLElement` 接口，其他的元素继承自 `HTMLElement` 接口。
 
 - `HTMLElement.offsetTop`
-
-只读属性，它返回当前元素相对于其 `offsetParent` 元素的顶部内边距的距离。
-
 - `HTMLElement.offsetLeft`
-
-只读属性，返回当前元素左上角相对于 `HTMLElement.offsetParent` 节点的左边界偏移的像素值。
-
 - `HTMLElement.blur()`
 - `HTMLElement.click()`
 - `HTMLElement.focus()`
@@ -96,7 +90,7 @@ HTML 元素类的总体继承关系如下：
 
 以下接口都从 `Node` 继承其方法和属性：
 
-`Document`, `Element`, `Attr`, `CharacterData` (which Text, Comment, and CDATASection inherit), `ProcessingInstruction`, `DocumentFragment`, `DocumentType`等
+`Document`, `Element`, `Attr`, `CharacterData`, `ProcessingInstruction`, `DocumentFragment`, `DocumentType`等
 
 ## EventTarget
 
@@ -106,12 +100,7 @@ HTML 元素类的总体继承关系如下：
 
 - `EventTarget.prototype.addEventListener()`
 
-在 `EventTarget` 上注册特定事件类型的事件处理程序。常见监听事件有：
-
-1. `DOMContentLoaded`
-2. `scroll`
-3. `paste`
-4. `fullscreenchange`
+在 `EventTarget` 上注册特定事件类型的事件处理程序。
 
 - `EventTarget.prototype.removeEventListener()`
 
@@ -125,9 +114,9 @@ HTML 元素类的总体继承关系如下：
 
 事件触发有三个阶段
 
-- `document` 往事件触发处传播，遇到注册的**捕获**事件会触发
-- 传播到事件触发处时**触发**注册的事件
-- 从事件触发处往 `document` 传播，遇到注册的**冒泡**事件会触发
+- `document` 往事件触发处传播，遇到注册的<u>**捕获**</u>事件会触发
+- 传播到事件触发处时<u>**触发**</u>注册的事件
+- 从事件触发处往 `document` 传播，遇到注册的<u>**冒泡**</u>事件会触发
 
 事件触发一般来说会按照上面的顺序进行，但也有特例，如果给一个目标节点同时注册冒泡和捕获事件，事件触发会按照注册的顺序执行
 
@@ -138,14 +127,14 @@ node.addEventListener(
   (event) => {
     console.log("冒泡")
   },
-  false
+  false,
 )
 node.addEventListener(
   "click",
   (event) => {
     console.log("捕获")
   },
-  true
+  true,
 )
 ```
 
@@ -232,15 +221,15 @@ bindEvent(div1, "click", function (e) {
 
 ```js
 <body>
-  <div id="div1">
-    <p id="p1">激活</p>
-    <p id="p2">取消</p>
-    <p id="p3">取消</p>
-    <p id="p4">取消</p>
+  <div id='div1'>
+    <p id='p1'>激活</p>
+    <p id='p2'>取消</p>
+    <p id='p3'>取消</p>
+    <p id='p4'>取消</p>
   </div>
-  <div id="div2">
-    <p id="p5">取消</p>
-    <p id="p6">取消</p>
+  <div id='div2'>
+    <p id='p5'>取消</p>
+    <p id='p6'>取消</p>
   </div>
 </body>
 ```
@@ -440,8 +429,6 @@ div1.removeChild(child[0])
 onabort、onautocomplete、onautocompleteerror、onblur、oncancel、oncanplay、oncanplaythrough、onchange、onclick、onclose、oncontextmenu、oncuechange、ondblclick、ondrag、ondragend、ondragenter、ondragleave、ondragover、ondragstart、ondrop、ondurationchange、onemptied、onended、onerror、onfocus、oninput、oninvalid、onkeydown、onkeypress、onkeyup、onload、onloadeddata、onloadedmetadata、onloadstart、onmousedown、onmouseenter、onmouseleave、onmousemove、onmouseout、onmouseover、onmouseup、onmousewheel、onpause、onplay、onplaying、onprogress、onratechange、onreset、onresize、onscroll、onseeked、onseeking、onselect、onshow、onsort、onstalled、onsubmit、onsuspend、ontimeupdate、ontoggle、onvolumechange、onwaiting
 
 ## 总结
-
-几个常见 DOM 元素原型链如下：
 
 `<div></div>` => `HTMLDivElement` => `HTMLElement` => `Element` => `Node` => `EventTarget` => `Object`
 

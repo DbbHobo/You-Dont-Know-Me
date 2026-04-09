@@ -5,13 +5,11 @@
 `MutationObserver` 可以用来观察 `DOM` 元素的变化。
 
 ```js
-const mutationObserver = new MutationObserver(callback[, options])
-
-const callback = function (mutationsList, observer) {
+const mutationObserver = new MutationObserver((mutationsList, observer) {
   for (let mutation of mutationsList) {
     // Do something with the mutationObserver mutation
   }
-}
+})
 
 const target = document.querySelector('#target')
 

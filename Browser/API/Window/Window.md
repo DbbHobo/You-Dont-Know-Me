@@ -1,16 +1,24 @@
 # BOM（Browser Object Model）浏览器对象模型
 
-The BOM (Browser Object Model) consists of the objects navigator, history, screen, location and document which are children of window.
+The BOM (Browser Object Model) consists of the objects `navigator`, `history`, `screen`, `location` and `document` which are children of `window`.
 
 `BOM` 为 JavaScript 提供了一种控制浏览器行为的"方法"。从根本上讲， `BOM` 只处理浏览器窗口和框架，但人们习惯上也把所有针对浏览器的 `JavaScript` 扩展算作 `BOM` 的一部分。
 
-BOM（浏览器对象模型）是浏览器本身的一些信息的设置和获取，例如获取浏览器的宽度、高度，设置让浏览器跳转到哪个地址等等。
+`BOM`（浏览器对象模型）是浏览器本身的一些信息的设置和获取，例如获取浏览器的宽度、高度，设置让浏览器跳转到哪个地址等等。
 
 - window
 - window.navigator
 - window.screen
 - window.location
 - window.history
+
+## window
+
+`window` 对象表示一个包含 `DOM` 文档的窗口，其 `document` 属性指向窗口中载入的 `DOM` 文档。代表了脚本正在运行的窗口的 `window` 全局变量，被暴露给 `Javascript` 代码。
+
+本接口从 `EventTarget` 接口继承属性。
+
+`window` => `Window` => `EventTarget`
 
 ## window.navigator
 
@@ -48,9 +56,7 @@ console.log(screen.height)
 function isInViewPortOfOne(el) {
   // viewPortHeight 兼容所有浏览器写法
   const viewPortHeight =
-    window.innerHeight ||
-    document.documentElement.clientHeight ||
-    document.body.clientHeight
+    window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight
   const offsetTop = el.offsetTop
   const scrollTop = document.documentElement.scrollTop
   const top = offsetTop - scrollTop
@@ -169,14 +175,6 @@ requestAnimationFrame(callback)
 requestIdleCallback(callback)
 requestIdleCallback(callback, options)
 ```
-
-## window
-
-`window` 对象表示一个包含 `DOM` 文档的窗口，其 `document` 属性指向窗口中载入的 `DOM` 文档。代表了脚本正在运行的窗口的 `window` 全局变量，被暴露给 `Javascript` 代码。
-
-本接口从 `EventTarget` 接口继承属性。
-
-`window` => `Window` => `EventTarget`
 
 ## 参考资料
 

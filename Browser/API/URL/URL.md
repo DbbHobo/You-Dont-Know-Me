@@ -132,7 +132,7 @@ const worker = new Worker(new URL("./worker.js", import.meta.url))
 ## URL 的静态方法
 
 - `URL.canParse()`: 检查给定的字符串是否可以被解析为有效的 `URL`。
-- `URL.createObjectURL()`: 为 `Blob` 或 `File` 对象创建一个临时的对象 URL。
+- `URL.createObjectURL()`: 为 `Blob` 或 `File` 对象创建一个指向内存中文件的临时的对象 URL。
 - `URL.parse()`: （非标准方法）解析一个字符串并返回一个 `URL` 对象。
 - `URL.revokeObjectURL()`: 释放通过 `createObjectURL()` 创建的对象 URL。
 

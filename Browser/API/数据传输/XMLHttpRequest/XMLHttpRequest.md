@@ -2,18 +2,27 @@
 
 `XMLHttpRequest`（XHR）对象用于与服务器交互。通过 `XMLHttpRequest` 可以在不刷新页面的情况下请求特定 URL，获取数据。这允许网页在不影响用户操作的情况下，更新页面的局部内容。`XMLHttpRequest` 在 AJAX 编程中被大量使用。
 
+如果你的通信流程需要从服务器端接收事件或消息数据，请考虑通过 `EventSource` 接口使用服务器发送事件。对于全双工的通信，`WebSocket` 可能是更好的选择。
+
 ```js
-var xhr = new XMLHttpRequest();
+var xhr = new XMLHttpRequest()
 xhr.onreadystatechange = function () {
   if (xhr.readyState == 4) {
     if (xhr.status == 200) {
-      alert(xhr.responseText);
+      alert(xhr.responseText)
     }
   }
-};
-xhr.open("GET", "/api", false);
-xhr.send(null);
+}
+xhr.open("GET", "/api", false)
+xhr.send(null)
 ```
+
+`XMLHttpRequest` => `XMLHttpRequestEventTarget` => `EventTarget`
+
+当创建一个 `XMLHttpRequest` 实例时，实际上得到了两个可以监听事件的通道：
+
+- 对象本身 (`xhr`)：继承自 `XMLHttpRequestEventTarget`，用来监听**服务器数据返回**相关的进度和最终结果。
+- 上传属性 (`xhr.upload`)：同样继承自 `XMLHttpRequestEventTarget`，但它专门用来监听**发送数据到服务器**的过程。
 
 ## XMLHttpRequest的实例属性
 

@@ -2,16 +2,14 @@
 
 `ResizeObserver` 是一种用于监听元素尺寸变化的 API。当元素的大小发生变化时，`ResizeObserver` 会触发回调函数。这在响应式设计、动态布局调整以及需要跟踪元素尺寸变化的场景中非常有用。
 
-`ResizeObserver` 可以用来观察 `DOM` 元素尺寸的变化。
+`ResizeObserver` 可以用来观察 `DOM` 节点的增减/属性变化。
 
 ```js
-const resizeObserver = new ResizeObserver(callback)
-
-const callback = (entries) => {
+const resizeObserver = new ResizeObserver((entries) => {
   for (let entry of entries) {
     // Do something with the ResizeObserver entry
   }
-}
+})
 
 const target = document.querySelector("#target")
 
@@ -49,19 +47,10 @@ const resizeObserver = new ResizeObserver((entries) => {
         ? entry.contentBoxSize[0]
         : entry.contentBoxSize
 
-      h1Elem.style.fontSize = `${Math.max(
-        1.5,
-        contentBoxSize.inlineSize / 200
-      )}rem`
-      pElem.style.fontSize = `${Math.max(
-        1,
-        contentBoxSize.inlineSize / 600
-      )}rem`
+      h1Elem.style.fontSize = `${Math.max(1.5, contentBoxSize.inlineSize / 200)}rem`
+      pElem.style.fontSize = `${Math.max(1, contentBoxSize.inlineSize / 600)}rem`
     } else {
-      h1Elem.style.fontSize = `${Math.max(
-        1.5,
-        entry.contentRect.width / 200
-      )}rem`
+      h1Elem.style.fontSize = `${Math.max(1.5, entry.contentRect.width / 200)}rem`
       pElem.style.fontSize = `${Math.max(1, entry.contentRect.width / 600)}rem`
     }
   }

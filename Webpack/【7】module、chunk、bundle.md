@@ -14,9 +14,9 @@ a chunk is a group of modules within the webpack process, a bundle is an emitted
 
 ## chunk
 
-`chunk`是一个 `Webpack` 中的术语。`chunk` 不同于 `entry`、 `output`、`module`这样的概念，它们对应着 `Webpack` 配置对象中的一个字段，`chunk`没有单独的配置字段。`chunk`在`Webpack`里指一个代码块。
+`chunk`是一个 `Webpack` 中的术语。`chunk` 不同于 `entry`、`output`、`module`这样的概念，它们对应着 `Webpack` 配置对象中的一个字段，`chunk`没有单独的配置字段。`chunk` 在 `Webpack` 里指一个**代码块**。
 
-`chunk` 是 `Webpack` 打包过程中，一堆 `module` 打包结果的集合。我们知道 `Webpack` 的打包是从一个入口文件开始，也可以说是入口模块，入口模块引用这其他模块，模块再引用模块。`Webpack` 通过引用关系逐个打包模块，这些 `module` 打包之后就形成了一个`chunk`。
+`chunk` 是 `Webpack` 打包过程中，一堆 `module` 打包结果的集合。我们知道 `Webpack` 的打包是从一个入口文件开始，也可以说是入口模块，入口模块引用其他模块，模块再引用模块。`Webpack` 通过引用关系逐个打包模块，这些不同的 `module` 打包之后就形成了一个`chunk`。
 
 如果我们有多个入口文件，可能会产出多条打包路径，一条路径就会形成一个 `chunk`。
 
@@ -24,7 +24,7 @@ a chunk is a group of modules within the webpack process, a bundle is an emitted
 - `Async Chunk`：懒加载（如 import()）时拆分出来的块
 - `Vendor Chunk`：提取的第三方库（如 React、lodash）
 
-`Webpack` 源码里面有一个 `chunk` 类，这说明类`Webpack`在运行中，会生成`chunk`对象，也能证明`chunk`是过程中的代码块。`chunk` 类上面的有两句注释：`chunk`是一些模块的封装单元。`chunk`在构建完成就呈现为`bundle`。
+`Webpack` 源码里面有一个 `chunk` 类，这说明类 `Webpack` 在运行中，会生成 `chunk` 对象，也能证明 `chunk` 是过程中的代码块。`chunk` 类上面的有两句注释：`chunk` 是一些模块的封装单元。`chunk` 在构建完成就呈现为 `bundle`。
 
 ```js
 /**
@@ -70,26 +70,32 @@ module.exports = {
 }
 ```
 
-答案是 5 个，两个入口分别产生一个， `runtimeChunk: "single"`会将`Webpack`在浏览器端运行时需要的代码单独抽离到一个文件，`commons`下的配置会产生一个`chunk`，`vendor`下的配置会产生一个`chunk`。
+答案是 5 个，两个入口分别产生一个， `runtimeChunk: "single"` 会将 `Webpack` 在浏览器端运行时需要的代码单独抽离到一个文件，`commons` 下的配置会产生一个`chunk`，`vendor` 下的配置会产生一个`chunk`。`splitChunks` 用于配置 `chunks`。
 
 ## bundle
 
-`Bundle`是`Webpack`最终输出的文件。每个`bundle`通常对应于一个或多个`chunk`。这些`bundle`是可以直接被浏览器加载的文件，通常是`JavaScript`、`CSS`或其他资源文件。`Chunk` 经过优化（如压缩、添加 Hash）后，输出为 `Bundle`。
+`bundle` 是 `Webpack` 最终**输出的文件**。每个 `bundle` 通常对应于一个或多个 `chunk`。这些 `bundle` 是可以直接被浏览器加载的文件，通常是 `JavaScript`、`CSS` 或其他资源文件。`chunk` 经过优化（如压缩、添加 Hash）后，输出为 `bundle`。
 
-通常我们会弄混 `chunk` 和 `bundle`，以为`chunk`就是`bundle`，`bundle`就是我们最终输出的一个或多个打包文件。确实，大多数情况下，一个`chunk`会生产一个`bundle`。但有时候也不完全是一对一的关系，比如我们把`devtool`配置成`'source-map'`。然后只有一个入口文件，也不配置代码分割：
+通常我们会弄混 `chunk` 和 `bundle`，以为 `chunk` 就是 `bundle`，`bundle` 就是我们最终输出的一个或多个打包文件。确实，大多数情况下，一个 `chunk` 会生产一个`bundle`。但有时候也不完全是一对一的关系，比如我们把 `devtool` 配置成`'source-map'`。然后只有一个入口文件，也不配置代码分割：
 
 ```js
- entry: {
-    main: __dirname + "/app/main.js",
- },
- output: {
-    path: __dirname + "/public",//打包后的文件存放的地方
-    filename: "[name].js", //打包后输出文件的文件名
-  },
- devtool: 'source-map',
+entry: {
+  main: __dirname + "/app/main.js",
+},
+output: {
+  path: __dirname + "/public",//打包后的文件存放的地方
+  filename: "[name].js", //打包后输出文件的文件名
+},
+devtool: 'source-map',
 ```
 
-这样的配置，会产生一个`chunk`，但是会产生两个`bundle`。注意到`Chunk Names`那列，只有 `main` 这么一个 `chunk`，再看 `Asset` 这一列，产生了两个 `bundle`，还有一个 `.map` 文件。这就是`chunk`和`bundle`的区别，**Chunk 是过程中的代码块**，**Bundle 是结果的代码块**。
+这样的配置，会产生一个 `chunk`，但是会产生两个 `bundle`。注意到`Chunk Names`那列，只有 `main` 这么一个 `chunk`，再看 `Asset` 这一列，产生了两个 `bundle`，还有一个 `.map` 文件。这就是 `chunk` 和 `bundle` 的区别，**Chunk 是过程中的代码块**，**Bundle 是结果的代码块**。会根据 `webpack` 的具体配置而产生变化。
+
+## 作用
+
+- 性能优化（HTTP 请求控制）： 如果 1000 个模块都单独加载，网络请求会爆炸；如果 1000 个模块打成一个大包，文件太大首屏会卡死。`chunk` 的存在就是为了找到平衡点。
+- 长效缓存： 把不变的第三方库（如 `Vue`/`React`）单独打成一个 `chunk`。下次改业务代码，用户只需要下载业务包，第三方库包可以直接读浏览器缓存。
+- 按需加载： 比如只有用户点击“个人中心”页面时，才去加载对应的 `chunk`。
 
 ## 参考资料
 
