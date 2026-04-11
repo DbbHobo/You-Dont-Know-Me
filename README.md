@@ -136,9 +136,8 @@ Webpack
 - [ ] Module 模块概念
 - [ ] Hot Reload 热更新原理
 
-front-end-handbook-2024
-
-[front-end-handbook-2024](https://frontendmasters.com/guides/front-end-handbook/2024/)
+[What To Know in JavaScript (2026 Edition)](https://frontendmasters.com/blog/what-to-know-in-javascript-2026-edition/)
+[What You Need to Know about Modern CSS (2025 Edition)](https://frontendmasters.com/blog/what-you-need-to-know-about-modern-css-2025-edition/)
 
 ---
 

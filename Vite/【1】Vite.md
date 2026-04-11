@@ -29,7 +29,7 @@ import { someMethod } from "my-dep"
 
 可以看到`vue.js`是被强制缓存的，设置为`max-age=31536000,immutable`，并且引入路径都已经编译成了相对路径。
 
-一旦预构建完成，`Vite` 会把这些处理过的文件缓存在 `node_modules/.vite` 目录下。`Vite` 会把你代码里的 `import { debounce } from 'lodash'` 转换成 i`mport { debounce } from '/node_modules/.vite/deps/lodash.js?v=12345'`。
+一旦预构建完成，`Vite` 会把这些处理过的文件缓存在 `node_modules/.vite` 目录下。`Vite` 会把你代码里的 `import { debounce } from 'lodash'` 转换成 `import { debounce } from '/node_modules/.vite/deps/lodash.js?v=12345'`。
 
 ## 模块热替换
 
