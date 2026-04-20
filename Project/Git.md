@@ -495,3 +495,7 @@ git branch -d feature/xxx
 ## cheatsheet
 
 ![git](./assets/git-cheatsheet.png)
+
+## 参考资料
+
+[The Git Commands I Run Before Reading Any Code](https://piechowski.io/post/git-commands-before-reading-code/?utm_source=weeklyfoo&utm_medium=email&utm_campaign=weeklyfoo)
